@@ -1,12 +1,15 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
+import { Search } from "@element-plus/icons-vue";
 import { api } from "../api";
 
 const employees = ref([]);
 const loading = ref(false);
 const keyword = ref("");
 const selectedEmployeeId = ref(null);
+const selectedDepartmentId = ref("");
+const meta = reactive({ page: 1, pageSize: 10 });
 
 const adjustDialog = reactive({
   visible: false,
@@ -35,13 +38,30 @@ const filtered = computed(() => {
   return items.filter((item) => {
     const name = String(item.name || "").toLowerCase();
     const id = String(item.id || "");
-    return name.includes(key) || id.includes(key);
+    const dep = String(item.departmentId || "").toLowerCase();
+    return name.includes(key) || id.includes(key) || dep.includes(key);
   });
+});
+
+const total = computed(() => filtered.value.length);
+
+const pagedData = computed(() => {
+  const start = (meta.page - 1) * meta.pageSize;
+  return filtered.value.slice(start, start + meta.pageSize);
+});
+
+watch(filtered, () => {
+  const maxPage = Math.ceil(filtered.value.length / meta.pageSize) || 1;
+  if (meta.page > maxPage) meta.page = maxPage;
 });
 
 const employeeOptions = computed(() =>
   employees.value.slice().sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
 );
+
+const departmentOptions  = computed(() => {
+
+})
 
 function formatStatus(value) {
   const status = String(value || "");
@@ -66,6 +86,21 @@ function formatTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString();
+}
+
+function avatarColor(name) {
+  const palette = [
+    "#409EFF", "#67C23A", "#E6A23C", "#F56C6C",
+    "#9B59B6", "#1ABC9C", "#2ECC71", "#3498DB",
+    "#E74C3C", "#F39C12", "#8E44AD", "#16A085",
+    "#D35400", "#2980B9", "#27AE60", "#C0392B"
+  ];
+  const s = String(name || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
 }
 
 async function loadEmployees() {
@@ -157,29 +192,72 @@ onMounted(async () => {
   <h1 class="page-title">员工积分</h1>
   <el-card class="panel">
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
-      <el-input v-model="keyword" placeholder="搜索员工姓名/ID" style="width: 260px" clearable />
+      <el-input :prefix-icon="Search" v-model="keyword" placeholder="搜索员工姓名/ID" style="width: 260px" clearable />
       <el-select v-model="selectedEmployeeId" clearable placeholder="快速定位员工" style="width: 260px">
         <el-option v-for="item in employeeOptions" :key="item.id" :label="`${item.name} (${item.id})`" :value="item.id" />
       </el-select>
+      <el-select v-model="selectedDepartmentId" clearable placeholder="快速定位部门" style="width: 260px">
+        <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
+      </el-select>
       <el-button @click="loadEmployees" :loading="loading">刷新</el-button>
     </div>
+  </el-card>
 
-    <el-table :data="filtered" border v-loading="loading" row-key="id" highlight-current-row @current-change="(row) => (selectedEmployeeId = row?.id ?? null)">
-      <el-table-column prop="id" label="员工ID" width="100" />
-      <el-table-column prop="name" label="姓名" width="160" />
-      <el-table-column prop="departmentId" label="部门" width="120" />
-      <el-table-column prop="pointsBalance" label="当前积分" width="120" />
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="{ row }">{{ formatStatus(row.status) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="240">
+  <el-card>
+    <el-table :data="pagedData" v-loading="loading" row-key="id" highlight-current-row @current-change="(row) => (selectedEmployeeId = row?.id ?? null)">
+      <el-table-column prop="id" label="员工ID" min-width="100" />
+      <el-table-column label="姓名" min-width="120">
         <template #default="{ row }">
-          <el-button size="small" type="primary" @click="openAdjust(row)">加减积分</el-button>
-          <el-button size="small" @click="openDrawer(row)">查看流水</el-button>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div class="nameAvatar" :style="{ backgroundColor: avatarColor(row.name) }">
+              {{ String(row.name || '').charAt(0) }}
+            </div>
+            <span>{{ row.name }}</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="departmentId" label="部门" min-width="100" />
+      <el-table-column prop="pointsBalance" label="当前积分" min-width="120" />
+      <el-table-column prop="status" label="状态" min-width="100">
+        <template #default="{ row }">
+          <div style="display: flex; align-items: center; gap: 6px">
+            <span
+              :style="{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: row.status === 'active' ? '#52c41a' : '#d9d9d9'
+              }"
+            />
+            <span :style="{ color: row.status === 'active' ? '#52c41a' : '#999' }">
+              {{ formatStatus(row.status) }}
+            </span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="350">
+        <template #default="{ row }">
+          <el-button plain size="small" color="#003d9b" @click="openAdjust(row)">加减积分</el-button>
+          <el-button plain size="small" @click="openDrawer(row)">查看流水</el-button>
         </template>
       </el-table-column>
     </el-table>
   </el-card>
+
+  <div style="display: flex; justify-content: flex-end; margin-top: 12px">
+      <el-pagination
+        background
+        layout="total, prev, pager, next, jumper"
+        :total="total"
+        :page-size="meta.pageSize"
+        :current-page="meta.page"
+        @current-change="
+          (p) => {
+            meta.page = p;
+          }
+        "
+      />
+  </div>
 
   <el-dialog v-model="adjustDialog.visible" title="积分加减" width="560px">
     <el-form label-width="100px">
@@ -231,3 +309,4 @@ onMounted(async () => {
     </div>
   </el-drawer>
 </template>
+

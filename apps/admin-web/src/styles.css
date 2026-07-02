@@ -138,3 +138,15 @@ el-badge {
     }
   }
 }
+
+.nameAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #eee;
+}
