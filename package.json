@@ -16,6 +16,7 @@
     "unplugin-auto-import": "^21.0.0"
   },
   "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.62.2",
     "vue": "^3.5.35"
   }
 }
