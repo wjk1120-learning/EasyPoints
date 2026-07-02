@@ -1,0 +1,147 @@
+CREATE DATABASE IF NOT EXISTS easy_points
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_0900_ai_ci;
+
+USE easy_points;
+
+SET NAMES utf8mb4;
+
+CREATE TABLE departments (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  parent_id BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE employees (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  wecom_user_id VARCHAR(128) NOT NULL UNIQUE,
+  name VARCHAR(80) NOT NULL,
+  department_id BIGINT NOT NULL,
+  points_balance INT NOT NULL DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (department_id) REFERENCES departments(id)
+);
+
+CREATE TABLE admins (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(80) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  role VARCHAR(40) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE admin_departments (
+  admin_id BIGINT NOT NULL,
+  department_id BIGINT NOT NULL,
+  PRIMARY KEY (admin_id, department_id),
+  FOREIGN KEY (admin_id) REFERENCES admins(id),
+  FOREIGN KEY (department_id) REFERENCES departments(id)
+);
+
+CREATE TABLE point_records (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  employee_id BIGINT NOT NULL,
+  points_delta INT NOT NULL,
+  type VARCHAR(40) NOT NULL,
+  source_type VARCHAR(60) NOT NULL,
+  source_id VARCHAR(128) NULL,
+  operator_id BIGINT NULL,
+  operator_name VARCHAR(80) NOT NULL,
+  remark TEXT NOT NULL,
+  reversal_of_id BIGINT NULL,
+  occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (points_delta <> 0),
+  CHECK (CHAR_LENGTH(TRIM(remark)) > 0),
+  FOREIGN KEY (employee_id) REFERENCES employees(id),
+  FOREIGN KEY (reversal_of_id) REFERENCES point_records(id)
+);
+
+CREATE TABLE appeals (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  point_record_id BIGINT NOT NULL,
+  employee_id BIGINT NOT NULL,
+  reason TEXT NOT NULL,
+  status VARCHAR(60) NOT NULL,
+  department_reviewer_id BIGINT NULL,
+  hr_reviewer_id BIGINT NULL,
+  result_remark TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (point_record_id) REFERENCES point_records(id),
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE gifts (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(160) NOT NULL,
+  points_cost INT NOT NULL,
+  stock INT NOT NULL DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  limit_per_user INT NULL,
+  cover_image_url VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE orders (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  employee_id BIGINT NOT NULL,
+  gift_id BIGINT NOT NULL,
+  gift_name VARCHAR(160) NOT NULL,
+  points_cost INT NOT NULL,
+  status VARCHAR(60) NOT NULL,
+  review_remark TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (employee_id) REFERENCES employees(id),
+  FOREIGN KEY (gift_id) REFERENCES gifts(id)
+);
+
+CREATE TABLE operation_logs (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  actor_id VARCHAR(80) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  payload JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE message_outbox (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  employee_id BIGINT NOT NULL,
+  type VARCHAR(80) NOT NULL,
+  payload JSON NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  retry_count INT NOT NULL DEFAULT 0,
+  read_at TIMESTAMP NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE admin_seen (
+  admin_id BIGINT NOT NULL,
+  badge_key VARCHAR(60) NOT NULL,
+  seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (admin_id, badge_key),
+  FOREIGN KEY (admin_id) REFERENCES admins(id)
+);
+
+DELIMITER //
+CREATE TRIGGER point_records_no_update
+BEFORE UPDATE ON point_records
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'point_records are immutable; create a reversal record instead';
+END//
+
+CREATE TRIGGER point_records_no_delete
+BEFORE DELETE ON point_records
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'point_records cannot be deleted';
+END//
+DELIMITER ;

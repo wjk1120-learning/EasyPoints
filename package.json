@@ -1,0 +1,21 @@
+{
+  "name": "easy-points",
+  "version": "0.1.0",
+  "private": true,
+  "description": "企业微信小程序易积分系统",
+  "workspaces": [
+    "apps/api",
+    "apps/admin-web",
+    "apps/miniapp"
+  ],
+  "scripts": {
+    "dev:api": "node apps/api/src/server.js",
+    "test": "node --test apps/api/tests/*.test.js"
+  },
+  "devDependencies": {
+    "unplugin-auto-import": "^21.0.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.35"
+  }
+}

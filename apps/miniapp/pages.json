@@ -1,0 +1,22 @@
+{
+  "pages": [
+    { "path": "pages/home/index", "style": { "navigationBarTitleText": "易积分" } },
+    { "path": "pages/messages/index", "style": { "navigationBarTitleText": "通知列表" } },
+    { "path": "pages/points/index", "style": { "navigationBarTitleText": "积分明细" } },
+    { "path": "pages/appeal/index", "style": { "navigationBarTitleText": "积分申诉" } },
+    { "path": "pages/hall/index", "style": { "navigationBarTitleText": "大厅" } },
+    { "path": "pages/mall/index", "style": { "navigationBarTitleText": "积分商城" } },
+    { "path": "pages/orders/index", "style": { "navigationBarTitleText": "我的订单" } }
+  ],
+  "tabBar": {
+    "color": "#6b7280",
+    "selectedColor": "#1677ff",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页" },
+      { "pagePath": "pages/hall/index", "text": "大厅" },
+      { "pagePath": "pages/points/index", "text": "明细" },
+      { "pagePath": "pages/mall/index", "text": "商城" },
+      { "pagePath": "pages/orders/index", "text": "订单" }
+    ]
+  }
+}

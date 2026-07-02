@@ -1,0 +1,19 @@
+{
+  "name": "易积分",
+  "appid": "__UNI__EASYPOINTS",
+  "description": "企业微信小程序积分管理系统",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "vueVersion": "3",
+  "mp-weixin": {
+    "appid": "wxfc837efea0700826",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "enhance": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true
+  }
+}
