@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
+import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, Bell } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import { api } from "./api";
 
@@ -8,6 +9,7 @@ const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
 const admin = ref(loadAdmin());
+const avatarUrl = ref('/images/avatar.png')
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
@@ -167,42 +169,72 @@ watch(
   <el-container v-else class="shell">
     <el-aside width="232px" class="sidebar">
       <div class="brand">
-        <strong>易积分</strong>
+        <strong style="color: #003d9b;">易积分</strong>
         <span>企业微信积分管理</span>
       </div>
       <el-menu router :default-active="activeMenu">
         <el-menu-item index="/">
+          <el-icon><Menu /></el-icon>
           <el-badge :value="dashboardBadge" :hidden="!dashboardBadge" :max="99">
             <span>工作台</span>
           </el-badge>
         </el-menu-item>
-        <el-menu-item index="/employee-points">员工积分</el-menu-item>
-        <el-menu-item index="/points">积分录入</el-menu-item>
-        <el-menu-item index="/reports">明细报表</el-menu-item>
+        <el-menu-item index="/employee-points">
+          <el-icon><Star /></el-icon>
+          <span>员工积分</span>
+        </el-menu-item>
+        <el-menu-item index="/points">
+          <el-icon><EditPen /></el-icon>
+          <span>积分录入</span>
+        </el-menu-item>
+        <el-menu-item index="/reports">
+          <el-icon><DataLine /></el-icon>
+          <span>明细报表</span>
+        </el-menu-item>
         <el-menu-item index="/appeals">
+          <el-icon><Check /></el-icon>
           <el-badge :value="badges.appeals" :hidden="!badges.appeals" :max="99">
             <span>申诉审核</span>
           </el-badge>
         </el-menu-item>
-        <el-menu-item index="/mall">商城礼品</el-menu-item>
+        <el-menu-item index="/mall">
+          <el-icon><Present /></el-icon>
+          <span>商城礼品</span>
+        </el-menu-item>
         <el-menu-item index="/orders">
+          <el-icon><Ticket /></el-icon>
           <el-badge :value="badges.orders" :hidden="!badges.orders" :max="99">
             <span>订单核销</span>
           </el-badge>
         </el-menu-item>
-        <el-menu-item index="/logs">操作日志</el-menu-item>
+        <el-menu-item index="/logs">
+          <el-icon><Document /></el-icon>
+          <span>操作日志</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
+
     <el-container>
       <el-header class="topbar">
         <div>
-          <strong>PC 管理后台</strong>
-          <span>备注必填、流水留痕、导出可追溯</span>
+          <strong>易积分后台管理系统</strong>
         </div>
-        <div>
-          <el-tag v-if="admin" style="margin-right: 10px">{{ admin.name }} · {{ formatRole(admin.role) }}</el-tag>
+        <div class="topbar-right">
+          <!-- <el-tag v-if="admin" style="margin-right: 10px">{{ admin.name }} · {{ formatRole(admin.role) }}</el-tag>
           <el-button size="small" @click="logout">退出</el-button>
-          <el-tag type="success" style="margin-left: 10px">生产版骨架</el-tag>
+          <el-tag type="success" style="margin-left: 10px">生产版骨架</el-tag> -->
+          
+          <el-icon style="font-size: 20px;"><Bell /></el-icon>
+          <span class="divider"></span>
+          <div class="userInfo">
+            <div class="user-des">
+              <div class="username">{{ admin.name }}</div>
+              <div class="role">{{ formatRole(admin.role) }}</div>
+            </div>
+            <div class="avatar">
+              <el-avatar shape="square" :size="40" :src="avatarUrl" />
+            </div>
+          </div>
         </div>
       </el-header>
       <el-main>

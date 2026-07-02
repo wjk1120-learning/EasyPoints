@@ -70,10 +70,22 @@ body {
 }
 
 .metric {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 18px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
+
+  .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 54px;
+    background: #f3f4f6;
+  }
 }
 
 .metric span {
@@ -83,6 +95,58 @@ body {
 
 .metric strong {
   display: block;
-  margin-top: 8px;
   font-size: 28px;
+}
+
+el-badge {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .divider {
+    display: inline-block;
+    width: 1px;
+    height: 20px;
+    background: #c4c7d7;
+  }
+
+  .userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .user-des {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .username {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: left;
+      }
+
+      .role {
+        font-size: 14px;
+        color: #434654;
+      }
+    }
+  }
+}
+
+.nameAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #eee;
 }
