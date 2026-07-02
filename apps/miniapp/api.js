@@ -1,10 +1,16 @@
 let loginPromise = null;
-const LAN_API_BASE = "http://192.168.1.105:3000";
+const LAN_API_BASE = "http://localhost:3000";
 
 function normalizeApiBase(value) {
+  if (value === false || value === true || value == null) return "";
   const raw = String(value || "").trim();
-  if (!raw) return "";
+  if (!raw || raw === "false" || raw === "true") return "";
   return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+}
+
+function isValidApiBase(value) {
+  const base = normalizeApiBase(value);
+  return /^https?:\/\/.+/i.test(base);
 }
 
 function isLocalhostBase(apiBase) {
@@ -14,8 +20,9 @@ function isLocalhostBase(apiBase) {
 
 export function getApiBase() {
   const stored = normalizeApiBase(uni.getStorageSync("apiBase"));
-  if (stored && !isLocalhostBase(stored)) return stored;
-  return normalizeApiBase(LAN_API_BASE) || normalizeApiBase("http://localhost:3000");
+  if (isValidApiBase(stored) && !isLocalhostBase(stored)) return stored;
+  if (isValidApiBase(LAN_API_BASE)) return normalizeApiBase(LAN_API_BASE);
+  return "http://localhost:3000";
 }
 
 export function clearEmployeeAuth(reason) {
@@ -25,8 +32,9 @@ export function clearEmployeeAuth(reason) {
 
 export function loginEmployee(payload = {}) {
   if (loginPromise) return loginPromise;
-  const wecomUserId = payload.wecomUserId || uni.getStorageSync("wecomUserId") || "zhangsan";
+  const wecomUserId = String(payload.wecomUserId || uni.getStorageSync("wecomUserId") || "zhangsan").trim();
   const employeeId = payload.employeeId || "";
+  uni.removeStorageSync("employeeToken");
   loginPromise = new Promise((resolve, reject) => {
     uni.request({
       url: `${getApiBase()}/miniapp/auth/login`,
@@ -59,7 +67,7 @@ export function loginEmployee(payload = {}) {
 function rawRequest(path, options = {}) {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync("employeeToken") || "";
-    const header = token
+    const authHeader = token
       ? { authorization: `Bearer ${token}` }
       : { "x-employee-id": uni.getStorageSync("employeeId") || "1" };
     const apiBase = getApiBase();
@@ -67,7 +75,10 @@ function rawRequest(path, options = {}) {
       url: `${apiBase}${path}`,
       method: options.method || "GET",
       data: options.data || {},
-      header,
+      header: {
+        ...authHeader,
+        ...(options.header || {})
+      },
       success(response) {
         resolve(response);
       },
@@ -107,4 +118,12 @@ export async function requestPaged(path, options = {}) {
     return { data: response.data.data, meta: response.data.meta || null };
   }
   throw new Error(response.data?.message || "请求失败");
+}
+
+export async function askAi(question) {
+  return request("/miniapp/ai/ask", {
+    method: "POST",
+    header: { "content-type": "application/json" },
+    data: { question }
+  });
 }

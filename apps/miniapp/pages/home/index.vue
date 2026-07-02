@@ -18,8 +18,12 @@ let debugTapCount = 0
 let debugTapTimer = null
 
 onShow(async () => {
-  apiBase.value = getApiBase()
-  wecomUserId.value = uni.getStorageSync('wecomUserId') || 'zhangsan'
+  const storedApiBase = uni.getStorageSync("apiBase");
+  if (storedApiBase === false || storedApiBase === true || String(storedApiBase || "").trim() === "false") {
+    uni.removeStorageSync("apiBase");
+  }
+  apiBase.value = getApiBase();
+  wecomUserId.value = uni.getStorageSync("wecomUserId") || "zhangsan";
   authError.value = uni.getStorageSync('employeeAuthError') || ''
   debugEnabled.value = uni.getStorageSync('enableDebug') === '1'
   try {
@@ -31,15 +35,27 @@ onShow(async () => {
 })
 
 function saveSettings() {
-  apiBase.value = String(apiBase.value || '').trim()
-  uni.setStorageSync('apiBase', apiBase.value)
-  uni.setStorageSync('wecomUserId', wecomUserId.value)
-  uni.showToast({ title: '设置已保存' })
+  const nextApiBase = normalizeApiBaseInput(apiBase.value);
+  apiBase.value = nextApiBase || getApiBase();
+  if (nextApiBase) {
+    uni.setStorageSync("apiBase", nextApiBase);
+  } else {
+    uni.removeStorageSync("apiBase");
+  }
+  uni.setStorageSync("wecomUserId", String(wecomUserId.value || "").trim() || "zhangsan");
+  uni.showToast({ title: "设置已保存" });
+}
+
+function normalizeApiBaseInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "false" || raw === "true") return "";
+  return raw.endsWith("/") ? raw.slice(0, -1) : raw;
 }
 
 async function relogin() {
+  saveSettings();
   try {
-    await loginEmployee({ wecomUserId: wecomUserId.value })
+    await loginEmployee({ wecomUserId: wecomUserId.value });
     uni.removeStorageSync('employeeAuthError')
     authError.value = ''
     uni.showToast({ title: '登录成功' })
@@ -126,6 +142,7 @@ async function refreshHallBadge() {
       </view>
     </view>
     <view class="button" @tap="uni.switchTab({ url: '/pages/points/index' })">查看积分明细</view>
+    <view class="button ghost" style="margin-top: 16rpx" @tap="uni.navigateTo({ url: '/pages/orders/index' })">我的订单</view>
 
     <view class="muted" style="margin-top: 18rpx" @tap="toggleSettings">
       {{ showSettings ? '收起设置' : '展开设置' }}
@@ -134,9 +151,10 @@ async function refreshHallBadge() {
     <view v-if="showSettings" class="card">
       <text class="muted">API_BASE</text>
       <input v-model="apiBase" class="input" placeholder="真机调试请填电脑局域网IP，例如：http://192.168.x.x:3000" />
-      <view class="small-button ghost" style="margin-top: 12rpx" @tap="apiBase = 'http://192.168.1.105:3000'">使用当前电脑地址</view>
-      <text class="muted" style="margin-top: 16rpx; display: block">wecomUserId</text>
-      <input v-model="wecomUserId" class="input" placeholder="例如：zhangsan" />
+      <view class="small-button ghost" style="margin-top: 12rpx" @tap="apiBase = getApiBase()">使用默认 API 地址</view>
+      <text class="muted" style="margin-top: 16rpx; display: block">wecomUserId</text>  
+      <input v-model="wecomUserId" class="input" placeholder="例如：zhangsan 或 lisi" />
+      <text class="muted" style="margin-top: 10rpx; display: block">切换账号：改成 lisi 后点「保存并登录」</text>
       <view style="display: flex; gap: 18rpx; margin-top: 18rpx">
         <view class="small-button" @tap="saveSettings">保存</view>
         <view class="small-button ghost" @tap="relogin">保存并登录</view>
@@ -224,6 +242,12 @@ async function refreshHallBadge() {
   color: #fff;
   text-align: center;
   padding: 0 18rpx;
+}
+
+.button.ghost {
+  margin-top: 16rpx;
+  background: #ecfeff;
+  color: #0f766e;
 }
 
 .ghost {

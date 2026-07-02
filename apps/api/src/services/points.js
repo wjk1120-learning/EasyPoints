@@ -108,12 +108,21 @@ async function monthlyBatch(store, adminId, payload) {
   });
 }
 
-async function listEmployeeRecords(store, employeeId) {
-  const records = await store.listPointRecordsByEmployee(employeeId);
-  return records
+async function listEmployeeRecords(store, employeeId, options = {}) {
+  let records = await store.listPointRecordsByEmployee(employeeId);
+  records = records
     .slice()
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-    .map((record) => ({ ...record, month: record.occurredAt.slice(0, 7) }));
+    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  if (options.month) {
+    const month = String(options.month);
+    records = records.filter((record) => String(record.occurredAt || "").slice(0, 7) === month);
+  }
+  if (options.pointsDirection === "positive") {
+    records = records.filter((record) => Number(record.pointsDelta) > 0);
+  } else if (options.pointsDirection === "negative") {
+    records = records.filter((record) => Number(record.pointsDelta) < 0);
+  }
+  return records.map((record) => ({ ...record, month: record.occurredAt.slice(0, 7) }));
 }
 
 function updatePointRecord() {

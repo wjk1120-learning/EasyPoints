@@ -173,6 +173,21 @@ function createMemoryStore() {
         const month = String(options.month);
         items = items.filter((row) => String(row.occurredAt || "").slice(0, 7) === month);
       }
+      if (options.pointsDirection === "positive") {
+        items = items.filter((row) => Number(row.pointsDelta) > 0);
+      } else if (options.pointsDirection === "negative") {
+        items = items.filter((row) => Number(row.pointsDelta) < 0);
+      }
+      if (options.keyword) {
+        const key = String(options.keyword).trim().toLowerCase();
+        if (key) {
+          items = items.filter((row) => {
+            const name = String(row.employeeName || "").toLowerCase();
+            const id = String(row.employeeId || "");
+            return name.includes(key) || id.includes(key);
+          });
+        }
+      }
       return paginate(items, options);
     },
     createPointRecord: async (input) => {
@@ -824,6 +839,23 @@ function createMysqlStore() {
         if (options.month) {
           where.push("DATE_FORMAT(pr.occurred_at, '%Y-%m') = ?");
           params.push(String(options.month));
+        }
+        if (options.pointsDirection === "positive") {
+          where.push("pr.points_delta > 0");
+        } else if (options.pointsDirection === "negative") {
+          where.push("pr.points_delta < 0");
+        }
+        if (options.keyword) {
+          const key = String(options.keyword).trim();
+          if (key) {
+            if (/^\d+$/.test(key)) {
+              where.push("(e.name LIKE ? OR e.id = ?)");
+              params.push(`%${key}%`, toNumberId(key));
+            } else {
+              where.push("e.name LIKE ?");
+              params.push(`%${key}%`);
+            }
+          }
         }
         const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
         const [countRows] = await executor.query(

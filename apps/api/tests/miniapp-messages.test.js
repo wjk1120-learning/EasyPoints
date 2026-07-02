@@ -272,6 +272,33 @@ test("员工端大厅返回全员积分变动（仅 PC 侧来源）", async () =
   assert.ok(response.json.data.every((row) => ["manual_adjustment", "monthly_performance", "reversal"].includes(row.sourceType)));
 });
 
+test("员工端大厅支持按月份、加减分和员工筛选", async () => {
+  const store = createStore();
+  const app = createApp(store);
+  const points = require("../src/services/points");
+
+  await points.adjustment(store, 1, { employeeId: 1, pointsDelta: 10, remark: "张三加分" });
+  await points.adjustment(store, 1, { employeeId: 2, pointsDelta: -5, remark: "李四扣分" });
+
+  const positive = await call(app, {
+    method: "GET",
+    url: "/miniapp/hall?page=1&pageSize=50&pointsDirection=positive&keyword=张三",
+    headers: { "x-employee-id": "1" }
+  });
+  assert.equal(positive.statusCode, 200);
+  assert.ok(positive.json.data.every((row) => row.pointsDelta > 0));
+  assert.ok(positive.json.data.every((row) => String(row.employeeName).includes("张三") || String(row.employeeId) === "1"));
+
+  const negative = await call(app, {
+    method: "GET",
+    url: "/miniapp/hall?page=1&pageSize=50&pointsDirection=negative&keyword=2",
+    headers: { "x-employee-id": "1" }
+  });
+  assert.equal(negative.statusCode, 200);
+  assert.ok(negative.json.data.every((row) => row.pointsDelta < 0));
+  assert.ok(negative.json.data.every((row) => String(row.employeeId) === "2"));
+});
+
 test("员工端大厅未读数基于 hallSeenAt 统计", async () => {
   const store = createStore();
   const app = createApp(store);

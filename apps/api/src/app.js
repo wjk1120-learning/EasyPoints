@@ -3,6 +3,7 @@ const points = require("./services/points");
 const appeals = require("./services/appeals");
 const orders = require("./services/orders");
 const wecom = require("./services/wecom");
+const employeeAi = require("./services/employee-ai");
 const { sendJson, readBody, getAdminId, getEmployeeId } = require("./http");
 const { canManageEmployee } = require("./services/permissions");
 const { scryptSync, timingSafeEqual, randomUUID, randomBytes } = require("node:crypto");
@@ -969,7 +970,10 @@ function createApp(store = createStore()) {
         const options = {
           page: url.searchParams.get("page") || "1",
           pageSize: url.searchParams.get("pageSize") || "50",
-          sourceTypes: ["manual_adjustment", "monthly_performance", "reversal"]
+          sourceTypes: ["manual_adjustment", "monthly_performance", "reversal"],
+          month: url.searchParams.get("month") || undefined,
+          pointsDirection: url.searchParams.get("pointsDirection") || undefined,
+          keyword: url.searchParams.get("keyword") || undefined
         };
         const result = await store.listPointRecordsWithEmployeePaged(options);
         const rows = result.rows.map((row) => ({
@@ -1042,7 +1046,12 @@ function createApp(store = createStore()) {
       }
 
       if (req.method === "GET" && path === "/miniapp/points/records") {
-        const records = await points.listEmployeeRecords(store, requireEmployeeAccess(req));
+        const employeeId = requireEmployeeAccess(req);
+        const options = {
+          month: url.searchParams.get("month") || undefined,
+          pointsDirection: url.searchParams.get("pointsDirection") || undefined
+        };
+        const records = await points.listEmployeeRecords(store, employeeId, options);
         return sendJson(res, 200, { data: groupByMonth(records) });
       }
 
@@ -1065,6 +1074,15 @@ function createApp(store = createStore()) {
 
       if (req.method === "GET" && path === "/miniapp/orders") {
         return sendJson(res, 200, { data: await store.listOrdersByEmployee(requireEmployeeAccess(req)) });
+      }
+
+      if (req.method === "POST" && path === "/miniapp/ai/ask") {
+        const employeeId = requireEmployeeAccess(req);
+        const body = await readBody(req);
+        const question = String(body.question || "").trim();
+        if (!question) return sendJson(res, 400, { message: "请输入问题" });
+        const result = await employeeAi.askEmployeeQuestion(store, employeeId, question);
+        return sendJson(res, 200, { data: result });
       }
 
       return sendJson(res, 404, { message: "接口不存在" });
