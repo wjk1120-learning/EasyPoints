@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, Bell } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, Bell, SwitchButton } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import { api } from "./api";
 
@@ -169,8 +169,8 @@ watch(
   <el-container v-else class="shell">
     <el-aside width="232px" class="sidebar">
       <div class="brand">
-        <strong style="color: #003d9b;">易积分</strong>
-        <span>企业微信积分管理</span>
+        <strong style="color: #fdfbff;">易积分</strong>
+        <span style="color: #9498a6;">企业微信积分管理</span>
       </div>
       <el-menu router :default-active="activeMenu">
         <el-menu-item index="/">
@@ -212,6 +212,10 @@ watch(
           <span>操作日志</span>
         </el-menu-item>
       </el-menu>
+      <div class="sidebar-footer" @click="logout">
+        <el-icon ><SwitchButton /></el-icon>
+        <span style="margin-left: 10px;">退出</span>
+      </div>
     </el-aside>
 
     <el-container>
@@ -220,10 +224,6 @@ watch(
           <strong>易积分后台管理系统</strong>
         </div>
         <div class="topbar-right">
-          <!-- <el-tag v-if="admin" style="margin-right: 10px">{{ admin.name }} · {{ formatRole(admin.role) }}</el-tag>
-          <el-button size="small" @click="logout">退出</el-button>
-          <el-tag type="success" style="margin-left: 10px">生产版骨架</el-tag> -->
-          
           <el-icon style="font-size: 20px;"><Bell /></el-icon>
           <span class="divider"></span>
           <div class="userInfo">
@@ -243,3 +243,48 @@ watch(
     </el-container>
   </el-container>
 </template>
+
+<style scoped lang="scss">
+.sidebar {
+  position: relative;
+  background-color: #2d2f38;
+
+  :deep(.el-menu) {
+    background: #2d2f38;
+    border-bottom: 1px solid #41434b;
+  }
+
+  :deep(.el-menu-item) {
+    padding-left: 10px !important;
+    margin: 5px 20px;
+    color: #dfe2ed !important; /* 默认文字 */
+    border-radius: 10px;
+  }
+
+  :deep(.el-menu-item:hover) {
+    color: #fff !important; /* hover文字色 */
+    background-color: #0056c1 !important; /* hover背景 */
+  }
+
+  :deep(.el-menu-item.is-active) {
+    color: #fff !important; /* 选中文字 */
+    background-color: #0056c1 !important; /* 选中背景 */
+  }
+
+  .brand {
+    border-bottom: 1px solid #41434b;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    cursor: pointer;
+    color: #dfe2ed;
+    margin-left: 10px;
+  }
+}
+</style>
