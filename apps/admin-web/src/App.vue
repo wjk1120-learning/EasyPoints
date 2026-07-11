@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, Bell, SwitchButton } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, SwitchButton } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import { api } from "./api";
 
@@ -221,7 +221,7 @@ watch(
     <el-container>
       <el-header class="topbar">
         <div>
-          <strong style="color: #0056c1; font-size: 20px;">易积分后台管理系统</strong>
+          <strong style="color: #0056c1; font-size: 20px;">{{ route.meta.title || "易积分后台管理系统" }}</strong>
         </div>
         <div class="topbar-right">
           <div class="userInfo">
@@ -319,4 +319,15 @@ watch(
     }
   }
 }
+
+/* 全局分页组件背景色统一 */
+:deep(.el-pagination.is-background) {
+  .el-pager li.is-active {
+    background-color: #0056c1;
+  }
+  .el-pager li:not(.is-active):hover {
+    color: #0056c1;
+  }
+}
+
 </style>

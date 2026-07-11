@@ -43,7 +43,6 @@ async function submitBatch() {
 </script>
 
 <template>
-  <h1 class="page-title">积分录入</h1>
   <el-card class="panel">
     <template #header>单笔奖惩加减分</template>
     <el-form :model="single" label-width="110px">

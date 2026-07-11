@@ -189,7 +189,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1 class="page-title">员工积分</h1>
   <el-card class="panel">
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
       <el-input :prefix-icon="Search" v-model="keyword" placeholder="搜索员工姓名/ID" style="width: 260px" clearable />

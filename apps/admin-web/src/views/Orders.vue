@@ -95,7 +95,6 @@ watch(
 </script>
 
 <template>
-  <h1 class="page-title">订单核销</h1>
   <el-card class="panel">
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
       <el-select v-model="query.status" clearable placeholder="状态" style="width: 240px">

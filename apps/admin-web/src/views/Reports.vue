@@ -83,7 +83,6 @@ async function downloadXlsx() {
 </script>
 
 <template>
-  <h1 class="page-title">明细报表</h1>
   <el-card class="panel">
     <div style="margin-bottom: 12px">
       <el-button type="primary" :loading="downloading" @click="downloadXlsx">导出 Excel</el-button>

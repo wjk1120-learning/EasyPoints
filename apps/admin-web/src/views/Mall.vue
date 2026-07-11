@@ -149,7 +149,6 @@ onMounted(load);
 </script>
 
 <template>
-  <h1 class="page-title">商城礼品</h1>
   <el-card class="panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px">
       <div style="color: var(--el-text-color-secondary)">支持新增/编辑/上下架/上传封面图</div>

@@ -243,7 +243,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1 class="page-title">操作日志</h1>
   <el-card class="panel">
     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
       <el-select v-model="meta.pageSize" placeholder="每页" style="width: 120px">
