@@ -376,12 +376,13 @@ function createApp(store = createStore()) {
       }
 
       if (req.method === "GET" && path === "/health") {
-        const health = { ok: true, service: "easy-points-api", driver: store.driver || "memory" };
+        const health = { ok: true, service: "easy-points-api", driver: store.driver || "memory", mysqlHost: process.env.MYSQL_HOST, mysqlPort: process.env.MYSQL_PORT };
         if (store.driver === "mysql") {
           try {
             await store.listEmployees();
             health.db = "ok";
-          } catch {
+          } catch (e) {
+            console.error("[health] db error:", e?.message || e);
             health.db = "error";
             health.ok = false;
           }

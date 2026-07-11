@@ -603,6 +603,7 @@ function mapMessage(row) {
 }
 
 function createMysqlStore() {
+  console.log("[mysql] pool config:", process.env.MYSQL_HOST, process.env.MYSQL_PORT, process.env.MYSQL_USER, process.env.MYSQL_DATABASE);
   const pool = mysql.createPool({
     host: process.env.MYSQL_HOST,
     port: Number(process.env.MYSQL_PORT || 3306),

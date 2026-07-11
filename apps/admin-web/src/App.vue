@@ -221,19 +221,15 @@ watch(
     <el-container>
       <el-header class="topbar">
         <div>
-          <strong>易积分后台管理系统</strong>
+          <strong style="color: #0056c1; font-size: 20px;">易积分后台管理系统</strong>
         </div>
         <div class="topbar-right">
-          <el-icon style="font-size: 20px;"><Bell /></el-icon>
-          <span class="divider"></span>
           <div class="userInfo">
             <div class="user-des">
               <div class="username">{{ admin.name }}</div>
               <div class="role">{{ formatRole(admin.role) }}</div>
             </div>
-            <div class="avatar">
-              <el-avatar shape="square" :size="40" :src="avatarUrl" />
-            </div>
+            <el-avatar class="user-avatar" shape="square" :size="40" :src="avatarUrl" />
           </div>
         </div>
       </el-header>
@@ -285,6 +281,42 @@ watch(
     cursor: pointer;
     color: #dfe2ed;
     margin-left: 10px;
+  }
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .user-des {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .username {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: left;
+      }
+
+      .role {
+        font-size: 14px;
+        color: #434654;
+      }
+    }
+
+    .user-avatar {
+      width: 46px;
+      height: 46px;
+      border: 2px solid #c1c6d6;
+      border-radius: 12px;
+    }
   }
 }
 </style>
