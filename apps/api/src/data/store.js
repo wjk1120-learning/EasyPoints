@@ -59,13 +59,24 @@ function createMemoryStore() {
     getAdmin: async (id) => state.admins.find((item) => item.id === toNumberId(id)) || null,
     findAdminByUsername: async (username) =>
       state.admins.find((item) => item.username === String(username || "")) || null,
-    getEmployee: async (id) => state.employees.find((item) => item.id === toNumberId(id)) || null,
+    getEmployee: async (id) => {
+      const emp = state.employees.find((item) => item.id === toNumberId(id));
+      if (!emp) return null;
+      const dept = state.departments.find((d) => d.id === emp.departmentId);
+      return { ...emp, departmentName: dept?.name || null };
+    },
     findEmployeeByWecomUserId: async (wecomUserId) => {
       const value = String(wecomUserId || "").trim();
       if (!value) return null;
-      return state.employees.find((item) => item.wecomUserId === value) || null;
+      const emp = state.employees.find((item) => item.wecomUserId === value) || null;
+      if (!emp) return null;
+      const dept = state.departments.find((d) => d.id === emp.departmentId);
+      return { ...emp, departmentName: dept?.name || null };
     },
-    listEmployees: async () => state.employees.slice(),
+    listEmployees: async () => {
+      const deptMap = new Map(state.departments.map((d) => [d.id, d.name]));
+      return state.employees.map((e) => ({ ...e, departmentName: deptMap.get(e.departmentId) || null }));
+    },
     upsertEmployeeByWecomUserId: async (payload) => {
       const wecomUserId = String(payload.wecomUserId || "").trim();
       if (!wecomUserId) return null;
@@ -509,6 +520,7 @@ function mapEmployee(row) {
     wecomUserId: row.wecom_user_id,
     name: row.name,
     departmentId: Number(row.department_id),
+    departmentName: row.department_name || null,
     pointsBalance: Number(row.points_balance),
     status: row.status
   };
@@ -623,6 +635,26 @@ function createMysqlStore() {
   }
 
   let ensureAdminSeenTablePromise = null;
+  let ensureDepartmentsTablePromise = null;
+  function ensureDepartmentsTable(executor) {
+    if (!ensureDepartmentsTablePromise) {
+      ensureDepartmentsTablePromise = executor.execute(
+        "CREATE TABLE IF NOT EXISTS departments (id BIGINT PRIMARY KEY, name VARCHAR(100) NOT NULL, parent_id BIGINT NULL)"
+      ).then(() =>
+        executor.execute("SELECT COUNT(1) AS cnt FROM departments")
+      ).then(([rows]) => {
+        if (Number(rows[0]?.cnt || 0) === 0) {
+          const deptData = seed.departments;
+          if (deptData.length) {
+            const placeholders = deptData.map(() => "(?,?,?)").join(",");
+            const params = deptData.flatMap((d) => [d.id, d.name, d.parentId ?? null]);
+            return executor.execute(`INSERT INTO departments (id, name, parent_id) VALUES ${placeholders}`, params);
+          }
+        }
+      });
+    }
+    return ensureDepartmentsTablePromise;
+  }
   function ensureAdminSeenTable(executor) {
     if (!ensureAdminSeenTablePromise) {
       ensureAdminSeenTablePromise = executor.execute(
@@ -675,20 +707,28 @@ function createMysqlStore() {
         return mapAdmin(rows[0], deptRows.map((r) => r.department_id));
       },
       listEmployees: async () => {
-        const [rows] = await executor.execute("SELECT * FROM employees ORDER BY id ASC");
+        await ensureDepartmentsTable(executor);
+        const [rows] = await executor.execute(
+          "SELECT e.*, d.name AS department_name FROM employees e LEFT JOIN departments d ON e.department_id = d.id ORDER BY e.id ASC"
+        );
         return rows.map(mapEmployee);
       },
       getEmployee: async (id, options = {}) => {
         const employeeId = toNumberId(id);
         if (!employeeId) return null;
-        const sql = `SELECT * FROM employees WHERE id = ?${options.forUpdate ? " FOR UPDATE" : ""}`;
+        await ensureDepartmentsTable(executor);
+        const sql = `SELECT e.*, d.name AS department_name FROM employees e LEFT JOIN departments d ON e.department_id = d.id WHERE e.id = ?${options.forUpdate ? " FOR UPDATE" : ""}`;
         const [rows] = await executor.execute(sql, [employeeId]);
         return mapEmployee(rows[0]);
       },
       findEmployeeByWecomUserId: async (wecomUserId) => {
         const value = String(wecomUserId || "").trim();
         if (!value) return null;
-        const [rows] = await executor.execute("SELECT * FROM employees WHERE wecom_user_id = ?", [value]);
+        await ensureDepartmentsTable(executor);
+        const [rows] = await executor.execute(
+          "SELECT e.*, d.name AS department_name FROM employees e LEFT JOIN departments d ON e.department_id = d.id WHERE e.wecom_user_id = ?",
+          [value]
+        );
         return mapEmployee(rows[0]);
       },
       upsertEmployeeByWecomUserId: async (payload) => {
@@ -697,13 +737,15 @@ function createMysqlStore() {
         const departmentId = toNumberId(payload.departmentId);
         const name = String(payload.name || "").trim();
         const status = String(payload.status || "active");
+        await ensureDepartmentsTable(executor);
         await executor.execute(
           "INSERT INTO employees (wecom_user_id, name, department_id, status) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), department_id=VALUES(department_id), status=VALUES(status)",
           [wecomUserId, name, departmentId, status]
         );
-        const [rows] = await executor.execute("SELECT * FROM employees WHERE wecom_user_id = ?", [
-          wecomUserId
-        ]);
+        const [rows] = await executor.execute(
+          "SELECT e.*, d.name AS department_name FROM employees e LEFT JOIN departments d ON e.department_id = d.id WHERE e.wecom_user_id = ?",
+          [wecomUserId]
+        );
         return mapEmployee(rows[0]);
       },
       getGift: async (id, options = {}) => {

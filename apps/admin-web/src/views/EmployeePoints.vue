@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Search } from "@element-plus/icons-vue";
+import { Refresh, Search } from "@element-plus/icons-vue";
 import { api } from "../api";
 
 const employees = ref([]);
@@ -32,13 +32,16 @@ const drawer = reactive({
 
 const filtered = computed(() => {
   const key = String(keyword.value || "").trim().toLowerCase();
-  const items = employees.value.slice();
+  let items = employees.value.slice();
   items.sort((a, b) => Number(b.pointsBalance || 0) - Number(a.pointsBalance || 0));
+  if (selectedDepartmentId.value) {
+    items = items.filter((item) => String(item.departmentId) === String(selectedDepartmentId.value));
+  }
   if (!key) return items;
   return items.filter((item) => {
     const name = String(item.name || "").toLowerCase();
     const id = String(item.id || "");
-    const dep = String(item.departmentId || "").toLowerCase();
+    const dep = String(item.departmentName || item.departmentId || "").toLowerCase();
     return name.includes(key) || id.includes(key) || dep.includes(key);
   });
 });
@@ -55,13 +58,24 @@ watch(filtered, () => {
   if (meta.page > maxPage) meta.page = maxPage;
 });
 
-const employeeOptions = computed(() =>
-  employees.value.slice().sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
-);
+watch([keyword, selectedDepartmentId], () => {
+  meta.page = 1;
+});
 
-const departmentOptions  = computed(() => {
+// const employeeOptions = computed(() =>
+//   employees.value.slice().sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+// );
 
-})
+const departmentOptions = computed(() => {
+  const seen = new Map();
+  for (const emp of employees.value) {
+    const id = emp.departmentId;
+    if (id != null && !seen.has(id)) {
+      seen.set(id, { departmentId: id, name: emp.departmentName || `部门(${id})` });
+    }
+  }
+  return [...seen.values()].sort((a, b) => Number(a.departmentId || 0) - Number(b.departmentId || 0));
+});
 
 function formatStatus(value) {
   const status = String(value || "");
@@ -88,19 +102,10 @@ function formatTime(value) {
   return date.toLocaleString();
 }
 
-function avatarColor(name) {
-  const palette = [
-    "#409EFF", "#67C23A", "#E6A23C", "#F56C6C",
-    "#9B59B6", "#1ABC9C", "#2ECC71", "#3498DB",
-    "#E74C3C", "#F39C12", "#8E44AD", "#16A085",
-    "#D35400", "#2980B9", "#27AE60", "#C0392B"
-  ];
-  const s = String(name || "");
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = s.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return palette[Math.abs(hash) % palette.length];
+function resetFilters() {
+  keyword.value = "";
+  selectedDepartmentId.value = "";
+  loadEmployees();
 }
 
 async function loadEmployees() {
@@ -190,36 +195,42 @@ onMounted(async () => {
 
 <template>
   <el-card class="panel">
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
+    <div style="color: #a8abb2; margin-bottom: 5px; font-size: 12px;">
+      <span>员工姓名/ID</span>
+      <span style="margin-left: 210px;">选择部门</span>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
       <el-input :prefix-icon="Search" v-model="keyword" placeholder="搜索员工姓名/ID" style="width: 260px" clearable />
-      <el-select v-model="selectedEmployeeId" clearable placeholder="快速定位员工" style="width: 260px">
-        <el-option v-for="item in employeeOptions" :key="item.id" :label="`${item.name} (${item.id})`" :value="item.id" />
+      <!-- <el-select v-model="selectedEmployeeId" clearable placeholder="全部员工" style="width: 200px">
+        <el-option v-for="item in employeeOptions" :key="item.id" :label="`${item.name} (${item.departmentName || item.departmentId})`" :value="item.id" />
+      </el-select> -->
+      <el-select v-model="selectedDepartmentId" clearable placeholder="全部部门" style="width: 200px">
+        <el-option v-for="item in departmentOptions" :key="item.departmentId" :label="item.name" :value="item.departmentId" />
       </el-select>
-      <el-select v-model="selectedDepartmentId" clearable placeholder="快速定位部门" style="width: 260px">
-        <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
-      </el-select>
-      <el-button @click="loadEmployees" :loading="loading">刷新</el-button>
+      <el-button :icon="Refresh" @click="resetFilters" :loading="loading">重置</el-button>
+      <!-- <el-button :icon="Refresh" @click="loadEmployees" :loading="loading">刷新</el-button> -->
     </div>
   </el-card>
 
   <el-card>
     <el-table :data="pagedData" v-loading="loading" row-key="id" highlight-current-row @current-change="(row) => (selectedEmployeeId = row?.id ?? null)">
       <el-table-column prop="id" label="员工ID" min-width="100" />
-      <el-table-column label="姓名" min-width="120">
+      <el-table-column label="姓名" min-width="120" prop="name" />
+      <el-table-column label="部门" min-width="100">
+        <template #default="{ row }">{{ row.departmentName || `部门(${row.departmentId})` }}</template>
+      </el-table-column>
+      <el-table-column prop="pointsBalance" label="当前积分" min-width="120">
         <template #default="{ row }">
-          <div style="display: flex; align-items: center; gap: 10px">
-            <div class="nameAvatar" :style="{ backgroundColor: avatarColor(row.name) }">
-              {{ String(row.name || '').charAt(0) }}
-            </div>
-            <span>{{ row.name }}</span>
-          </div>
+          <span :style="{ color: row.pointsBalance > 0 ? '#0056c1' : '#ba1a1a' }">
+            {{ row.pointsBalance }}
+          </span>
         </template>
       </el-table-column>
-      <el-table-column prop="departmentId" label="部门" min-width="100" />
-      <el-table-column prop="pointsBalance" label="当前积分" min-width="120" />
       <el-table-column prop="status" label="状态" min-width="100">
         <template #default="{ row }">
-          <div style="display: flex; align-items: center; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 5px 10px; width: fit-content; border-radius: 30px;" :style="{
+            backgroundColor: row.status === 'active' ? '#effdf4' : '#f2f4f6'
+          }">
             <span
               :style="{
                 width: '8px',
@@ -241,9 +252,8 @@ onMounted(async () => {
         </template>
       </el-table-column>
     </el-table>
-  </el-card>
 
-  <div style="display: flex; justify-content: flex-end; margin-top: 12px">
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px">
       <el-pagination
         background
         layout="total, prev, pager, next, jumper"
@@ -257,6 +267,7 @@ onMounted(async () => {
         "
       />
   </div>
+  </el-card>
 
   <el-dialog v-model="adjustDialog.visible" title="积分加减" width="560px">
     <el-form label-width="100px">
