@@ -243,9 +243,15 @@ watch(
 <style scoped lang="scss">
 .sidebar {
   position: relative;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background-color: #2d2f38;
 
   :deep(.el-menu) {
+    flex: 1;
+    overflow-y: auto;
     background: #2d2f38;
     border-bottom: 1px solid #41434b;
   }
@@ -274,14 +280,16 @@ watch(
   .sidebar-footer {
     display: flex;
     align-items: center;
-    justify-content: center;
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
+    padding: 16px 30px;
     cursor: pointer;
     color: #dfe2ed;
-    margin-left: 10px;
+    transition: background-color 0.2s, color 0.2s;
+
+    &:hover {
+      color: #FF4444;
+    }
   }
+
 }
 
 .topbar-right {
