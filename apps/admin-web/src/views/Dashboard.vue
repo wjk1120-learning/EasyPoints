@@ -1,48 +1,12 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { User, ShoppingBag, View, Document, Reading, RefreshRight, UploadFilled, Download, Stamp, Goods } from "@element-plus/icons-vue";
+import { User, ShoppingBag, View, Document, Reading } from "@element-plus/icons-vue";
 import { api } from "../api";
 
 const employeesCount = ref(0);
 const giftsCount = ref(0);
 const pendingAppealsCount = ref(0);
 const pendingOrdersCount = ref(0);
-const tableData = ref([]);
-const total = ref(0);
-const meta = ref({
-  page: 1,
-  pageSize: 10,
-});
-
-function getTableData() {
-  tableData.value = [
-    {
-      occurred_at: "2023-08-01 10:00:00",
-      employee_name: "张三",
-      department_name: "研发部",
-      remark: "积分变动",
-      points_delta: 10,
-      operator_name: "系统管理员",
-    },
-    {
-      occurred_at: "2023-08-01 10:00:00",
-      employee_name: "李四",
-      department_name: "销售部",
-      remark: "积分变动",
-      points_delta: -20,
-      operator_name: "系统管理员",
-    },
-    {
-      occurred_at: "2023-08-01 10:00:00",
-      employee_name: "王五",
-      department_name: "销售部",
-      remark: "积分变动",
-      points_delta: 5,
-      operator_name: "系统管理员",
-    },
-  ]
-  total.value = tableData.value.length;
-}
 
 function getPendingAppealStatuses() {
   return ["pending_department_review"];
@@ -69,7 +33,6 @@ async function loadDashboard() {
 
 onMounted(() => {
   loadDashboard();
-  getTableData();
 });
 </script>
 
@@ -116,7 +79,7 @@ onMounted(() => {
   <div class="main">
     <el-card class="business-rules-des">
       <div class="rule-title">
-        <el-icon color="#0056c1" size="24"><Reading /></el-icon>
+        <el-icon color="#0056c1" size="24" style="transform: translateY(2px)"><Reading /></el-icon>
         <h3>关键业务规则说明</h3>
       </div>
       <div class="rules">
@@ -150,82 +113,6 @@ onMounted(() => {
         </div>
       </div>
     </el-card>
-    <div class="main_right">
-      <el-card class="system-running_statu">
-        <div style="font-size: 18px;">系统运行状态</div>
-        <div class="statu-info">
-          <div class="statu-item">
-            <div class="statu-name">人事数据同步</div>
-            <div class="statu-value">正常</div>
-          </div>
-          <div class="statu-item">
-            <div class="statu-name">商城库存对账</div>
-            <div class="statu-value">正常</div>
-          </div>
-          <div class="statu-item" style="margin-bottom: 10px;">
-            <div class="statu-name">审核链路延迟</div>
-            <div class="statu-value" style="background-color: #d8e2ff; color: #004297;">&lt;1min</div>
-          </div>
-        </div>
-        <el-button :icon="RefreshRight" color="#ebedf9" class="manual-sync-btn">手动强制同步</el-button>
-      </el-card>
-      <el-card class="quick-access">
-        <div style="font-size: 18px;">快捷入口</div>
-        <div class="quick-access-list">
-          <div class="quick-access-item">
-            <el-icon size="24"><UploadFilled /></el-icon>
-            <div class="quick-access-name">批量录入</div>
-          </div>
-          <div class="quick-access-item">
-            <el-icon size="24"><Download /></el-icon>
-            <div class="quick-access-name">导出报表</div>
-          </div>
-          <div class="quick-access-item">
-            <el-icon size="24"><Goods /></el-icon>
-            <div class="quick-access-name">礼品上架</div>
-          </div>
-          <div class="quick-access-item">
-            <el-icon size="24"><Stamp /></el-icon>
-            <div class="quick-access-name">员工查询</div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-  </div>
-  <div class="recent-points-overview">
-    <div class="header">
-      <div style="font-size: 18px;">近期积分变动概况</div>
-      <el-button text style="color: #0056c1;">查看完整明细</el-button>
-    </div>
-    <el-table :data="tableData" style="width: 100%;">
-      <el-table-column label="操作时间" prop="occurred_at" />
-      <el-table-column label="操作人" prop="operator_name"/>
-      <el-table-column label="相关人员">
-        <template #default="{ row }">
-          {{ row.employee_name }}（{{ row.department_name }}）
-        </template>
-      </el-table-column>
-      <el-table-column label="事由" prop="remark"/>
-      <el-table-column label="积分变动" prop="points_delta">
-        <template #default="{ row }" >
-          <p :style="{ color: row.points_delta > 0 ? '#0056c1' : '#ba1a1a' }">{{ row.points_delta > 0 ? '+' + row.points_delta : row.points_delta }}</p>
-        </template>
-      </el-table-column>
-    </el-table>
-    <div style="display: flex; justify-content: flex-end; margin-top: 12px">
-      <el-pagination
-        background
-        layout="total, prev, pager, next, jumper"
-        :total="total"
-        :page-size="meta.pageSize"
-        :current-page="meta.page"
-        @current-change="
-          (p) => {
-            meta.page = p;
-          }
-        "
-      />
-  </div>
   </div>
 </div>
 </template>
@@ -294,6 +181,7 @@ onMounted(() => {
       display: flex;
       align-items: center;
       justify-content: flex-start;
+      vertical-align: middle;
       height: 40px;
       border-bottom: 2px solid #c1c6d6;
       gap: 10px;
@@ -332,88 +220,6 @@ onMounted(() => {
       }
     }
    }
-
-  .main_right {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1.5;
-
-    .system-running_statu {
-
-      .statu-info {
-        margin-top: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        border-bottom: 1px solid #c1c6d6;
-
-        .statu-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-
-          .statu-value {
-            padding: 0 10px;
-            font-size: 13px;
-            color: #15803d;
-            background-color: #dbfbe6;
-          }
-        }
-      }
-
-      .manual-sync-btn {
-        margin-top: 10px;
-        width: 100%;
-      }
-    }
-
-    .quick-access {
-      .quick-access-list {
-        margin-top: 10px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-
-        .quick-access-item {
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          border: 1px solid #c1c6d6;
-        }
-      }
-    }
-  }
 }
 
-.recent-points-overview {
-  margin-top: 20px;
-  background-color: #fff;
-
-  .header {
-    padding: 5px 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid #c1c6d6;
-  }
-
-  :deep(.el-table__header th) {
-    background-color: #f9f9ff;
-    font-size: 14px;
-  }
-
-  :deep(.el-table__body) {
-    font-size: 14px;
-  }
-
-  p {
-    margin: 0;
-  }
-}
 </style>
