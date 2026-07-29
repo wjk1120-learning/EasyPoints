@@ -1086,6 +1086,22 @@ function createApp(store = createStore()) {
         return sendJson(res, 200, { data: result });
       }
 
+      if (req.method === "GET" && path === "/miniapp/leaderboard") {
+        requireEmployeeAccess(req);
+        const employees = await store.listEmployees();
+        const active = employees
+          .filter((e) => e.status !== "inactive")
+          .sort((a, b) => b.pointsBalance - a.pointsBalance);
+        const ranked = active.map((e, i) => ({
+          rank: i + 1,
+          id: e.id,
+          name: e.name,
+          departmentName: e.departmentName || "",
+          pointsBalance: e.pointsBalance
+        }));
+        return sendJson(res, 200, { data: ranked });
+      }
+
       return sendJson(res, 404, { message: "接口不存在" });
     } catch (error) {
       return sendJson(res, error.statusCode || 500, {

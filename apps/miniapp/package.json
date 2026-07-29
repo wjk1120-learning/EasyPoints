@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.61.1",
+    "sharp": "^0.35.3",
     "vite": "5.2.8"
   }
 }
