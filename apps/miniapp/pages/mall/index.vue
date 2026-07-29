@@ -46,53 +46,42 @@ async function redeem(gift) {
 </script>
 
 <template>
-  <view class="page">
-    <view v-for="gift in gifts" :key="gift.id" class="card">
+  <view class="page page-tab">
+    <view v-for="gift in gifts" :key="gift.id" class="card gift-card">
       <view class="row">
-        <view v-if="gift.coverImageUrl" class="cover">
-          <image :src="apiBase + gift.coverImageUrl" mode="aspectFill" class="cover-image" />
+        <view v-if="gift.coverImageUrl" class="gift-cover">
+          <image :src="apiBase + gift.coverImageUrl" mode="aspectFill" class="gift-cover-image" />
         </view>
-        <view class="info">
+        <view v-else class="gift-cover gift-cover-placeholder">
+          <text class="placeholder-icon">🎁</text>
+        </view>
+        <view class="gift-info">
           <view class="row between">
-            <text style="font-weight: 500">{{ gift.name }}</text>
-            <text style="font-weight: 600; color: #00a870">
-              {{ gift.pointsCost }} 积分
-            </text>
+            <text class="gift-name">{{ gift.name }}</text>
+            <text class="gift-price">{{ gift.pointsCost }} 积分</text>
           </view>
-          <view class="row between" style="margin-top: 12rpx">
-            <text class="muted">库存：{{ gift.stock }}</text>
+          <view class="row between" style="margin-top: 16rpx">
+            <text class="muted">库存 {{ gift.stock }}</text>
             <view class="small-button" @tap="redeem(gift)">立即兑换</view>
           </view>
         </view>
       </view>
     </view>
+    <view v-if="gifts.length === 0" class="card card-empty">
+      <text class="muted">暂无礼品</text>
+    </view>
   </view>
 </template>
 
 <style scoped>
-.cover {
-  width: 160rpx;
-  height: 160rpx;
-  background: #f0f0f0;
-  border-radius: 8rpx;
-  overflow: hidden;
-  margin-right: 20rpx;
+.gift-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(168, 230, 207, 0.35), rgba(168, 216, 234, 0.35));
 }
 
-.cover-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.small-button {
-  min-width: 140rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  border-radius: 8rpx;
-  background: #1677ff;
-  color: #fff;
-  text-align: center;
-  padding: 0 18rpx;
+.placeholder-icon {
+  font-size: 56rpx;
 }
 </style>

@@ -1,11 +1,16 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { askAi } from '../../api'
+import { askAi, request } from '../../api'
+
+const AI_AVATAR = '/static/ai-avatar.png'
+const USER_AVATAR_KEY = 'chatUserAvatar'
 
 const input = ref('')
 const sending = ref(false)
 const scrollIntoView = ref('msg-0')
+const userAvatar = ref('')
+const employeeName = ref('')
 const messages = ref([
   {
     role: 'assistant',
@@ -14,12 +19,65 @@ const messages = ref([
 ])
 
 onShow(async () => {
+  userAvatar.value = uni.getStorageSync(USER_AVATAR_KEY) || ''
+  try {
+    const home = await request('/miniapp/home')
+    employeeName.value = home?.employee?.name || ''
+  } catch {
+    employeeName.value = ''
+  }
   await scrollToBottom()
 })
+
+function userInitial() {
+  const name = String(employeeName.value || '').trim()
+  return name ? name.slice(0, 1) : '我'
+}
 
 async function scrollToBottom() {
   await nextTick()
   scrollIntoView.value = `msg-${messages.value.length - 1}`
+}
+
+function chooseUserAvatar() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album', 'camera'],
+    success(res) {
+      const tempPath = res.tempFilePaths?.[0]
+      if (!tempPath) return
+      uni.saveFile({
+        tempFilePath: tempPath,
+        success(saveRes) {
+          userAvatar.value = saveRes.savedFilePath
+          uni.setStorageSync(USER_AVATAR_KEY, saveRes.savedFilePath)
+          uni.showToast({ title: '头像已更新', icon: 'success' })
+        },
+        fail() {
+          userAvatar.value = tempPath
+          uni.setStorageSync(USER_AVATAR_KEY, tempPath)
+          uni.showToast({ title: '头像已更新', icon: 'success' })
+        }
+      })
+    }
+  })
+}
+
+function resetUserAvatar() {
+  userAvatar.value = ''
+  uni.removeStorageSync(USER_AVATAR_KEY)
+  uni.showToast({ title: '已恢复默认头像', icon: 'none' })
+}
+
+function onUserAvatarTap() {
+  uni.showActionSheet({
+    itemList: ['更换头像', '恢复默认'],
+    success(res) {
+      if (res.tapIndex === 0) chooseUserAvatar()
+      if (res.tapIndex === 1) resetUserAvatar()
+    }
+  })
 }
 
 async function sendQuestion() {
@@ -31,6 +89,9 @@ async function sendQuestion() {
   await scrollToBottom()
   try {
     const result = await askAi(question)
+    if (result.notice) {
+      messages.value.push({ role: 'assistant', content: result.notice })
+    }
     messages.value.push({ role: 'assistant', content: result.answer || '暂时无法回答，请稍后再试。' })
   } catch (error) {
     messages.value.push({
@@ -50,13 +111,34 @@ function useQuickQuestion(text) {
 </script>
 
 <template>
-  <view class="page ai-page">
-    <view class="hero card">
-      <text class="hero-title">积分 AI 助手</text>
-      <text class="hero-sub">仅回答当前登录员工的积分问题</text>
+  <view class="page ai-page page-tab">
+    <view class="hero card card-hero">
+      <view class="hero-top">
+        <view class="hero-avatars">
+          <view class="hero-avatar-wrap">
+            <view class="avatar-circle hero-size ai-style">
+              <image class="avatar-img" :src="AI_AVATAR" mode="aspectFill" />
+            </view>
+            <text class="hero-avatar-label">AI 助手</text>
+          </view>
+          <view class="hero-avatar-wrap" @tap="onUserAvatarTap">
+            <view class="avatar-circle hero-size user-style">
+              <image v-if="userAvatar" class="avatar-img" :src="userAvatar" mode="aspectFill" />
+              <text v-else class="avatar-initial">{{ userInitial() }}</text>
+            </view>
+            <text class="hero-avatar-label">{{ employeeName || '我' }}</text>
+          </view>
+        </view>
+        <view class="hero-text">
+          <text class="hero-title">积分 AI 助手</text>
+          <text class="hero-sub">仅回答当前登录员工的积分问题</text>
+          <text class="hero-tip">点击右侧头像可更换</text>
+        </view>
+      </view>
     </view>
 
     <scroll-view scroll-y class="chat-list card" :scroll-into-view="scrollIntoView" scroll-with-animation>
+      <view class="chat-list-inner">
       <view
         v-for="(item, index) in messages"
         :key="index"
@@ -64,10 +146,31 @@ function useQuickQuestion(text) {
         class="chat-item"
         :class="item.role"
       >
-        <text class="chat-bubble">{{ item.content }}</text>
+        <view v-if="item.role === 'assistant'" class="avatar-circle chat-size ai-style">
+          <image class="avatar-img" :src="AI_AVATAR" mode="aspectFill" />
+        </view>
+        <view class="chat-body">
+          <text class="chat-name">{{ item.role === 'assistant' ? '积分 AI' : (employeeName || '我') }}</text>
+          <text class="chat-bubble">{{ item.content }}</text>
+        </view>
+        <view
+          v-if="item.role === 'user'"
+          class="avatar-circle chat-size user-style"
+          @tap="onUserAvatarTap"
+        >
+          <image v-if="userAvatar" class="avatar-img" :src="userAvatar" mode="aspectFill" />
+          <text v-else class="avatar-initial">{{ userInitial() }}</text>
+        </view>
       </view>
-      <view v-if="sending" class="chat-item assistant">
-        <text class="chat-bubble muted-bubble">正在分析你的积分数据...</text>
+      <view v-if="sending" id="msg-loading" class="chat-item assistant">
+        <view class="avatar-circle chat-size ai-style">
+          <image class="avatar-img" :src="AI_AVATAR" mode="aspectFill" />
+        </view>
+        <view class="chat-body">
+          <text class="chat-name">积分 AI</text>
+          <text class="chat-bubble muted-bubble">正在分析你的积分数据...</text>
+        </view>
+      </view>
       </view>
     </scroll-view>
 
@@ -78,6 +181,10 @@ function useQuickQuestion(text) {
     </view>
 
     <view class="input-row">
+      <view class="avatar-circle chat-size user-style input-avatar" @tap="onUserAvatarTap">
+        <image v-if="userAvatar" class="avatar-img" :src="userAvatar" mode="aspectFill" />
+        <text v-else class="avatar-initial">{{ userInitial() }}</text>
+      </view>
       <input
         v-model="input"
         class="chat-input"
@@ -95,74 +202,185 @@ function useQuickQuestion(text) {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
+.hero-top {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
 
-.hero {
-  padding-top: 20rpx;
-  padding-bottom: 20rpx;
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(14, 165, 233, 0.1));
-  border: 1px solid rgba(20, 184, 166, 0.18);
+.hero-avatars {
+  display: flex;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
+.hero-avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.hero-avatar-label {
+  font-size: 20rpx;
+  color: #8e8e93;
+  max-width: 96rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero-title {
   display: block;
   font-size: 34rpx;
   font-weight: 700;
-  color: #0f766e;
+  color: #3a7ca5;
 }
 
 .hero-sub {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #64748b;
+  color: #8e8e93;
+}
+
+.hero-tip {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #aeaeb2;
 }
 
 .chat-list {
   flex: 1;
   min-height: 420rpx;
-  max-height: calc(100vh - 420rpx);
+  max-height: calc(100vh - 480rpx);
   margin-bottom: 16rpx;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.chat-list-inner {
+  padding: 24rpx 20rpx 8rpx;
+  box-sizing: border-box;
 }
 
 .chat-item {
   display: flex;
-  margin-bottom: 16rpx;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
 }
 
 .chat-item.user {
   justify-content: flex-end;
+  padding-left: 48rpx;
 }
 
 .chat-item.assistant {
-  justify-content: flex-start;
+  padding-right: 48rpx;
+}
+
+.avatar-circle {
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.avatar-circle.hero-size {
+  width: 80rpx;
+  height: 80rpx;
+}
+
+.avatar-circle.chat-size {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.avatar-circle.ai-style {
+  background: rgba(255, 255, 255, 0.75);
+  border: 2rpx solid rgba(168, 216, 234, 0.6);
+  box-shadow: 0 4rpx 12rpx rgba(91, 155, 213, 0.1);
+}
+
+.avatar-circle.user-style {
+  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4rpx 12rpx rgba(91, 155, 213, 0.15);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.avatar-initial {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.avatar-circle.hero-size .avatar-initial {
+  font-size: 32rpx;
+}
+
+.chat-body {
+  max-width: 520rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.chat-item.user .chat-body {
+  align-items: flex-end;
+}
+
+.chat-name {
+  font-size: 22rpx;
+  color: #aeaeb2;
+  padding: 0 8rpx;
 }
 
 .chat-bubble {
-  max-width: 88%;
-  padding: 18rpx 22rpx;
-  border-radius: 18rpx;
-  font-size: 26rpx;
-  line-height: 1.6;
+  max-width: 100%;
+  padding: 20rpx 24rpx;
+  border-radius: 22rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .chat-item.user .chat-bubble {
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
   color: #fff;
+  border-top-right-radius: 6rpx;
+  box-shadow: 0 4rpx 16rpx rgba(91, 155, 213, 0.2);
 }
 
 .chat-item.assistant .chat-bubble {
-  background: #f0fdfa;
-  color: #134e4a;
-  border: 1px solid #ccfbf1;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1c1c1e;
+  border: 1rpx solid rgba(168, 216, 234, 0.35);
+  border-top-left-radius: 6rpx;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .muted-bubble {
-  color: #64748b;
+  color: #8e8e93;
 }
 
 .quick-row {
@@ -173,42 +391,57 @@ function useQuickQuestion(text) {
 }
 
 .quick-chip {
-  padding: 10rpx 18rpx;
+  padding: 12rpx 22rpx;
   border-radius: 999rpx;
-  background: #ecfeff;
-  color: #0f766e;
-  font-size: 22rpx;
-  border: 1px solid #a5f3fc;
+  background: rgba(255, 255, 255, 0.55);
+  color: #3a7ca5;
+  font-size: 24rpx;
+  font-weight: 500;
+  border: 1rpx solid rgba(91, 155, 213, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .input-row {
   display: flex;
   gap: 12rpx;
   align-items: center;
+  padding: 12rpx 16rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1rpx solid rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4rpx 20rpx rgba(91, 155, 213, 0.08);
+}
+
+.input-avatar {
+  flex-shrink: 0;
 }
 
 .chat-input {
   flex: 1;
   height: 72rpx;
   padding: 0 20rpx;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 999rpx;
-  font-size: 26rpx;
+  background: transparent;
+  border: none;
+  font-size: 28rpx;
 }
 
 .send-btn {
   min-width: 112rpx;
-  height: 72rpx;
-  line-height: 72rpx;
+  height: 64rpx;
+  line-height: 64rpx;
   text-align: center;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+  border-radius: 18rpx;
+  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
   color: #fff;
   font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(91, 155, 213, 0.22);
 }
 
 .send-btn.disabled {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 </style>

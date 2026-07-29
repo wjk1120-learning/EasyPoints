@@ -130,9 +130,10 @@ function formatTime(value) {
 </script>
 
 <template>
-  <view class="page">
-    <view class="card search-card">
-      <view class="search-row picker-row">
+  <view class="page page-tab">
+    <view class="card filter-panel">
+      <text class="section-label">筛选</text>
+      <view class="filter-row" style="margin-top: 12rpx; margin-bottom: 16rpx">
         <view class="picker-wrap">
           <picker mode="selector" :range="monthOptions" range-key="label" :value="filters.monthIndex" @change="onMonthChange">
             <view class="picker-field">
@@ -150,7 +151,7 @@ function formatTime(value) {
           </picker>
         </view>
       </view>
-      <view class="search-row keyword-row">
+      <view class="filter-row" style="margin-bottom: 12rpx">
         <input
           v-model="filters.keyword"
           class="keyword-input"
@@ -163,146 +164,56 @@ function formatTime(value) {
       <view class="reset-link" @tap="resetFilters">重置筛选</view>
     </view>
 
-    <view class="card" v-for="item in rows" :key="item.id">
-      <view class="head">
-        <text class="name">{{ item.employeeName || `员工 ${item.employeeId}` }}</text>
-        <text class="delta" :style="{ color: item.pointsDelta > 0 ? '#00a870' : '#e54b4f' }">
+    <view class="card record-card" v-for="item in rows" :key="item.id">
+      <view class="row between">
+        <text class="record-name">{{ item.employeeName || `员工 ${item.employeeId}` }}</text>
+        <text class="record-delta" :class="item.pointsDelta > 0 ? 'pos' : 'neg'">
           {{ item.pointsDelta > 0 ? '+' : '' }}{{ item.pointsDelta }}
         </text>
       </view>
-      <text class="summary">{{ item.remark }}</text>
-      <text class="muted meta">
+      <text class="record-remark">{{ item.remark }}</text>
+      <text class="muted record-meta">
         {{ formatTime(item.occurredAt) }} · {{ item.operatorName || '系统' }}
       </text>
     </view>
-    <view v-if="!loading && rows.length === 0" class="card">
+
+    <view v-if="!loading && rows.length === 0" class="card card-empty">
       <text class="muted">暂无符合条件的记录</text>
     </view>
-    <view v-if="loading" class="card">
+    <view v-if="loading" class="card card-empty">
       <text class="muted">加载中...</text>
     </view>
-    <view v-if="!loading && total != null && rows.length >= total && total > 0" class="card">
+    <view v-if="!loading && total != null && rows.length >= total && total > 0" class="card card-empty">
       <text class="muted">已加载全部</text>
     </view>
   </view>
 </template>
 
 <style scoped>
-.search-card {
-  padding-bottom: 20rpx;
+.filter-panel {
+  padding-bottom: 24rpx;
 }
 
-.search-row {
-  display: flex;
-  align-items: stretch;
-  gap: 16rpx;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.picker-row,
-.keyword-row {
-  margin-bottom: 16rpx;
-}
-
-.picker-wrap {
-  flex: 1;
-  min-width: 0;
-}
-
-.picker-wrap picker {
-  display: block;
-  width: 100%;
-}
-
-.picker-field,
-.keyword-input,
-.search-button {
-  height: 72rpx;
-  box-sizing: border-box;
-  border-radius: 12rpx;
-  font-size: 26rpx;
-}
-
-.picker-field,
-.keyword-input {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0 20rpx;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-}
-
-.picker-field {
-  justify-content: space-between;
-}
-
-.picker-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #1f2937;
-}
-
-.arrow {
-  margin-left: 12rpx;
-  color: #9ca3af;
-  font-size: 20rpx;
-  flex-shrink: 0;
-}
-
-.keyword-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.search-button {
-  width: 120rpx;
-  flex-shrink: 0;
-  line-height: 72rpx;
-  background: #1677ff;
-  color: #fff;
-  text-align: center;
-  box-shadow: 0 8rpx 18rpx rgba(22, 119, 255, 0.18);
-}
-
-.reset-link {
-  color: #1677ff;
-  font-size: 24rpx;
-  text-align: right;
-  padding-top: 4rpx;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.name {
+.record-name {
   font-size: 30rpx;
   font-weight: 600;
 }
 
-.delta {
-  font-size: 30rpx;
+.record-delta {
+  font-size: 32rpx;
   font-weight: 700;
   flex-shrink: 0;
 }
 
-.summary {
+.record-remark {
   display: block;
   margin-top: 14rpx;
-  font-size: 26rpx;
-  line-height: 1.6;
-  color: #374151;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #3a3a3c;
 }
 
-.meta {
+.record-meta {
   display: block;
   margin-top: 14rpx;
 }

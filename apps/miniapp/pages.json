@@ -2,9 +2,16 @@
   "easycom": {
     "autoscan": true
   },
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#E8F4FC",
+    "navigationBarTitleText": "易积分",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#E8F4FC",
+    "backgroundTextStyle": "dark"
+  },
   "pages": [
     { "path": "pages/home/index", "style": { "navigationBarTitleText": "易积分" } },
-    { "path": "pages/hall/index", "style": { "navigationBarTitleText": "大厅" } },
+    { "path": "pages/hall/index", "style": { "navigationBarTitleText": "大厅", "enablePullDownRefresh": true } },
     { "path": "pages/ai/index", "style": { "navigationBarTitleText": "AI 助手" } },
     { "path": "pages/points/index", "style": { "navigationBarTitleText": "积分明细" } },
     { "path": "pages/mall/index", "style": { "navigationBarTitleText": "积分商城" } },
@@ -13,14 +20,41 @@
     { "path": "pages/appeal/index", "style": { "navigationBarTitleText": "积分申诉" } }
   ],
   "tabBar": {
-    "color": "#6b7280",
-    "selectedColor": "#0d9488",
+    "color": "#8E8E93",
+    "selectedColor": "#5B9BD5",
+    "backgroundColor": "#F9FCFE",
+    "borderStyle": "white",
     "list": [
-      { "pagePath": "pages/home/index", "text": "首页" },
-      { "pagePath": "pages/hall/index", "text": "大厅" },
-      { "pagePath": "pages/ai/index", "text": "AI" },
-      { "pagePath": "pages/points/index", "text": "明细" },
-      { "pagePath": "pages/mall/index", "text": "商城" }
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/hall/index",
+        "text": "大厅",
+        "iconPath": "static/tabbar/hall.png",
+        "selectedIconPath": "static/tabbar/hall-active.png"
+      },
+      {
+        "pagePath": "pages/ai/index",
+        "text": "AI",
+        "iconPath": "static/tabbar/ai.png",
+        "selectedIconPath": "static/tabbar/ai-active.png"
+      },
+      {
+        "pagePath": "pages/points/index",
+        "text": "明细",
+        "iconPath": "static/tabbar/points.png",
+        "selectedIconPath": "static/tabbar/points-active.png"
+      },
+      {
+        "pagePath": "pages/mall/index",
+        "text": "商城",
+        "iconPath": "static/tabbar/mall.png",
+        "selectedIconPath": "static/tabbar/mall-active.png"
+      }
     ]
   }
 }

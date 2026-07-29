@@ -95,149 +95,59 @@ async function openMessage(item) {
         <view class="tab" :class="{ active: filter === 'unread' }" @tap="switchFilter('unread')">未读</view>
         <view class="tab" :class="{ active: filter === 'all' }" @tap="switchFilter('all')">全部</view>
       </view>
-      <view class="action" :class="{ disabled: unreadCount() === 0 }" @tap="markAllRead">
+      <view class="action-link" :class="{ disabled: unreadCount() === 0 }" @tap="markAllRead">
         全部已读
       </view>
     </view>
 
-    <view v-for="item in messages" :key="item.id" class="card tapCard" @tap="openMessage(item)">
-      <view class="head">
-        <view class="titleWrap">
-          <text v-if="!item.isRead" class="dot"></text>
-          <text class="title" :class="{ read: item.isRead }">{{ item.title }}</text>
+    <view v-for="item in messages" :key="item.id" class="card tap-card msg-card" @tap="openMessage(item)">
+      <view class="row between msg-head">
+        <view class="row title-wrap">
+          <text v-if="!item.isRead" class="unread-dot"></text>
+          <text class="msg-title" :class="{ read: item.isRead }">{{ item.title }}</text>
         </view>
         <text class="badge" :class="statusClass(item.status)">{{ item.statusText }}</text>
       </view>
-      <text class="summary">{{ item.summary }}</text>
-      <text class="muted time">
+      <text class="msg-summary">{{ item.summary }}</text>
+      <text class="muted msg-time">
         {{ formatTime(item.createdAt) }}{{ item.readAt ? ` · 已读 ${formatTime(item.readAt)}` : '' }}
       </text>
     </view>
-    <view v-if="!loading && messages.length === 0" class="card">
+
+    <view v-if="!loading && messages.length === 0" class="card card-empty">
       <text class="muted">{{ filter === 'unread' ? '暂无未读通知' : '暂无通知' }}</text>
     </view>
   </view>
 </template>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18rpx;
-}
-
-.tabs {
-  display: flex;
-  gap: 12rpx;
-  background: #f3f4f6;
-  padding: 8rpx;
-  border-radius: 999rpx;
-}
-
-.tab {
-  min-width: 120rpx;
-  height: 60rpx;
-  line-height: 60rpx;
-  text-align: center;
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  color: #6b7280;
-}
-
-.active {
-  background: #fff;
-  color: #111827;
-  box-shadow: 0 8rpx 22rpx rgba(31, 41, 55, 0.06);
-}
-
-.action {
-  height: 60rpx;
-  line-height: 60rpx;
-  padding: 0 18rpx;
-  border-radius: 999rpx;
-  background: #eef2ff;
-  color: #1d4ed8;
-  font-size: 24rpx;
-}
-
-.disabled {
-  opacity: 0.45;
-}
-
-.tapCard:active {
-  opacity: 0.9;
-  transform: scale(0.99);
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.titleWrap {
-  display: flex;
-  align-items: center;
+.title-wrap {
   gap: 12rpx;
   min-width: 0;
+  flex: 1;
 }
 
-.title {
+.msg-title {
   font-size: 30rpx;
   font-weight: 600;
+  color: #1c1c1e;
 }
 
-.read {
-  color: #6b7280;
+.msg-title.read {
+  color: #8e8e93;
+  font-weight: 500;
 }
 
-.dot {
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 999rpx;
-  background: #1677ff;
-  flex-shrink: 0;
-}
-
-.summary {
+.msg-summary {
   display: block;
-  margin-top: 16rpx;
-  font-size: 26rpx;
-  line-height: 1.6;
-  color: #374151;
+  margin-top: 14rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #3a3a3c;
 }
 
-.time {
+.msg-time {
   display: block;
-  margin-top: 16rpx;
-}
-
-.badge {
-  flex-shrink: 0;
-  padding: 6rpx 14rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-}
-
-.pending {
-  background: #eff6ff;
-  color: #2563eb;
-}
-
-.processing {
-  background: #f5f3ff;
-  color: #7c3aed;
-}
-
-.sent {
-  background: #ecfdf5;
-  color: #059669;
-}
-
-.failed {
-  background: #fef2f2;
-  color: #dc2626;
+  margin-top: 14rpx;
 }
 </style>

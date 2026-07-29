@@ -27,23 +27,37 @@ function formatOrderStatus(value) {
 
 <template>
   <view class="page">
-    <view class="card" v-for="o in orders" :key="o.id">
+    <view class="card order-card" v-for="o in orders" :key="o.id">
       <view class="row between">
-        <text style="font-weight: 500">兑换：{{ o.giftName }}</text>
-        <text style="font-weight: 600; color: #00a870">
-          -{{ o.pointsSpent }}
-        </text>
+        <text class="order-gift">兑换 · {{ o.giftName }}</text>
+        <text class="order-points neg">-{{ o.pointsSpent }}</text>
       </view>
-      <view class="row between" style="margin-top: 12rpx">
+      <view class="row between order-footer">
         <text class="muted">订单状态</text>
-        <text class="muted">{{ formatOrderStatus(o.status) }}</text>
+        <text class="status-pill">{{ formatOrderStatus(o.status) }}</text>
       </view>
     </view>
-    <view class="card" v-if="orders.length === 0">
+    <view class="card card-empty" v-if="orders.length === 0">
       <text class="muted">暂无订单</text>
     </view>
   </view>
 </template>
 
-<style>
+<style scoped>
+.order-gift {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.order-points {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.order-footer {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(91, 155, 213, 0.08);
+}
 </style>

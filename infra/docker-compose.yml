@@ -33,6 +33,10 @@ services:
     env_file:
       - ../.env.example
       - ../.env
+    environment:
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: mysql,redis,localhost,127.0.0.1
     volumes:
       - ../:/workspace
     ports:

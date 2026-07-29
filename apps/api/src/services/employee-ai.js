@@ -330,7 +330,8 @@ async function askEmployeeQuestion(store, employeeId, question) {
       return {
         answer: answerEmployeeQuestion(context, question),
         employee,
-        source: "rules"
+        source: "rules",
+        notice: "DeepSeek 暂不可用，已使用本地规则回答。若需真实 AI，请用本机运行 API 或配置代理。"
       };
     }
   }

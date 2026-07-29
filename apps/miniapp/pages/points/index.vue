@@ -82,9 +82,10 @@ function appeal(record) {
 </script>
 
 <template>
-  <view class="page">
-    <view class="card filter-card">
-      <view class="filter-row picker-row">
+  <view class="page page-tab">
+    <view class="card filter-panel">
+      <text class="section-label">筛选</text>
+      <view class="filter-row" style="margin-top: 12rpx">
         <view class="picker-wrap">
           <picker mode="selector" :range="monthOptions" range-key="label" :value="filters.monthIndex" @change="onMonthChange">
             <view class="picker-field">
@@ -104,95 +105,69 @@ function appeal(record) {
       </view>
     </view>
 
-    <view class="card" v-for="month in Object.keys(groups)" :key="month">
-      <view class="row between" style="margin-bottom: 20rpx">
-        <text class="muted">{{ month }}</text>
-      </view>
+    <view class="card month-group" v-for="month in Object.keys(groups)" :key="month">
+      <text class="month-title">{{ month }}</text>
       <view v-for="record in groups[month]" :key="record.id" class="row between record-row">
-        <view>
-          <text style="font-weight: 500">{{ record.remark }}</text>
-          <text class="muted" style="margin-top: 8rpx; display: block">
-            {{ formatTime(record.createdAt) }}
-          </text>
+        <view class="record-main">
+          <text class="record-remark">{{ record.remark }}</text>
+          <text class="muted record-time">{{ formatTime(record.createdAt) }}</text>
         </view>
-        <view style="text-align: right">
-          <text :style="{ color: record.pointsDelta > 0 ? '#00a870' : '#e54b4f', fontWeight: 600 }">
+        <view class="record-side">
+          <text class="record-delta" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
             {{ record.pointsDelta > 0 ? '+' : '' }}{{ record.pointsDelta }}
           </text>
-          <text class="muted appeal-link" @tap="appeal(record)">申诉</text>
+          <text class="appeal-link" @tap="appeal(record)">申诉</text>
         </view>
       </view>
     </view>
-    <view v-if="loading" class="card">
+
+    <view v-if="loading" class="card card-empty">
       <text class="muted">加载中...</text>
     </view>
-    <view v-if="!loading && Object.keys(groups).length === 0" class="card">
+    <view v-if="!loading && Object.keys(groups).length === 0" class="card card-empty">
       <text class="muted">暂无符合条件的积分记录</text>
     </view>
   </view>
 </template>
 
 <style scoped>
-.filter-card {
+.filter-panel {
   padding-bottom: 24rpx;
 }
 
-.filter-row {
-  display: flex;
-  align-items: stretch;
-  gap: 16rpx;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.picker-wrap {
-  flex: 1;
-  min-width: 0;
-}
-
-.picker-wrap picker {
+.month-title {
   display: block;
-  width: 100%;
-}
-
-.picker-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 72rpx;
-  padding: 0 20rpx;
-  box-sizing: border-box;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12rpx;
   font-size: 26rpx;
+  font-weight: 600;
+  color: #3a7ca5;
+  margin-bottom: 8rpx;
 }
 
-.picker-label {
+.record-main {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #1f2937;
+  padding-right: 24rpx;
 }
 
-.arrow {
-  margin-left: 12rpx;
-  color: #9ca3af;
-  font-size: 20rpx;
+.record-remark {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1c1c1e;
+  line-height: 1.5;
+}
+
+.record-time {
+  display: block;
+  margin-top: 8rpx;
+}
+
+.record-side {
+  text-align: right;
   flex-shrink: 0;
 }
 
-.record-row {
-  padding: 18rpx 0;
-  border-top: 1px solid #f2f2f2;
-}
-
-.appeal-link {
-  font-size: 24rpx;
-  display: block;
-  margin-top: 6rpx;
+.record-delta {
+  font-size: 32rpx;
+  font-weight: 700;
 }
 </style>

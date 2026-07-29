@@ -36,30 +36,27 @@ async function submit() {
 <template>
   <view class="page">
     <view class="card">
-      <view class="row between">
-        <text class="muted">原记录备注</text>
-      </view>
-      <text style="margin-top: 12rpx; display: block">{{ originalRemark }}</text>
+      <text class="section-label">原记录备注</text>
+      <text class="remark-text">{{ originalRemark }}</text>
     </view>
     <view class="card">
-      <view class="row between">
-        <text class="muted">申诉原因</text>
-      </view>
-      <textarea class="textarea" placeholder="请输入申诉原因..." v-model="reason"></textarea>
+      <text class="section-label">申诉原因</text>
+      <textarea class="textarea" placeholder="请详细描述申诉原因..." v-model="reason"></textarea>
     </view>
-    <view class="button" @tap="submit">提交</view>
+    <view class="button" @tap="submit">提交申诉</view>
   </view>
 </template>
 
 <style scoped>
-.textarea {
-  width: 100%;
-  min-height: 160rpx;
-  margin-top: 12rpx;
-  padding: 12rpx 16rpx;
-  box-sizing: border-box;
-  background: #f8fafc;
-  border-radius: 8rpx;
+.remark-text {
   display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #3a3a3c;
+  padding: 20rpx 24rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1rpx solid rgba(91, 155, 213, 0.1);
 }
 </style>
