@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } from '../../api'
+import AiFloatBall from '../../components/AiFloatBall.vue'
 
 const home = ref({
   pointsBalance: 0,
@@ -215,6 +216,7 @@ async function refreshHallBadge() {
         <view class="small-button ghost" @tap="relogin">保存并登录</view>
       </view>
     </view>
+    <AiFloatBall />
   </view>
 </template>
 
