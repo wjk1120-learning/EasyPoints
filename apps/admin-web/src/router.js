@@ -11,13 +11,13 @@ import Logs from "./views/Logs.vue";
 export default createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", component: Dashboard },
-    { path: "/employee-points", component: EmployeePoints },
-    { path: "/points", component: Points },
-    { path: "/reports", component: Reports },
-    { path: "/appeals", component: Appeals },
-    { path: "/mall", component: Mall },
-    { path: "/orders", component: Orders },
-    { path: "/logs", component: Logs }
+    { path: "/", component: Dashboard, meta: { title: "工作台" } },
+    { path: "/employee-points", component: EmployeePoints, meta: { title: "员工积分" } },
+    { path: "/points", component: Points, meta: { title: "积分录入" } },
+    { path: "/reports", component: Reports, meta: { title: "明细报表" } },
+    { path: "/appeals", component: Appeals, meta: { title: "申诉审核" } },
+    { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
+    { path: "/orders", component: Orders, meta: { title: "订单核销" } },
+    { path: "/logs", component: Logs, meta: { title: "操作日志" } }
   ]
 });

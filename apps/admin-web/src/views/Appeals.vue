@@ -118,66 +118,75 @@ watch(
 </script>
 
 <template>
-  <h1 class="page-title">申诉审核</h1>
-  <el-card class="panel">
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
-      <el-select v-model="query.status" clearable placeholder="状态" style="width: 240px">
-        <el-option value="pending_department_review" label="待初审" />
-        <el-option value="department_approved" label="初审通过" />
-        <el-option value="hr_approved" label="人事通过" />
-        <el-option value="rejected" label="驳回" />
-      </el-select>
-      <el-select v-model="query.employeeId" clearable placeholder="员工" style="width: 240px">
-        <el-option v-for="item in employees" :key="item.id" :label="item.name" :value="String(item.id)" />
-      </el-select>
-      <el-select v-model="meta.pageSize" placeholder="每页" style="width: 120px">
-        <el-option :value="20" label="20 / 页" />
-        <el-option :value="50" label="50 / 页" />
-        <el-option :value="100" label="100 / 页" />
-      </el-select>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-bar" />
+      <h3 class="panel-title">申诉管理</h3>
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
-      <el-table-column label="员工" width="160">
-        <template #default="{ row }">{{ formatEmployee(row) }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="120">
-        <template #default="{ row }">
-          <el-tag v-if="formatStatus(row.status)" :type="formatStatus(row.status) === '待处理' ? 'warning' : 'success'">
-            {{ formatStatus(row.status) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="reason" label="申诉原因" />
-      <el-table-column label="事件" width="280">
-        <template #default="{ row }">{{ formatEvent(row) }}</template>
-      </el-table-column>
-      <el-table-column prop="updatedAt" label="更新时间" width="200">
-        <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="220">
-        <template #default="{ row }">
-          <el-button size="small" @click="openProcess(row)">处理</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="panel-body">
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <el-select v-model="query.status" clearable placeholder="状态" class="filter-item">
+          <el-option value="pending_department_review" label="待初审" />
+          <el-option value="department_approved" label="初审通过" />
+          <el-option value="hr_approved" label="人事通过" />
+          <el-option value="rejected" label="驳回" />
+        </el-select>
+        <el-select v-model="query.employeeId" clearable placeholder="员工" class="filter-item">
+          <el-option v-for="item in employees" :key="item.id" :label="item.name" :value="String(item.id)" />
+        </el-select>
+        <el-select v-model="meta.pageSize" placeholder="每页" class="filter-item filter-item--sm">
+          <el-option :value="20" label="20 / 页" />
+          <el-option :value="50" label="50 / 页" />
+          <el-option :value="100" label="100 / 页" />
+        </el-select>
+      </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 12px">
-      <el-pagination
-        background
-        layout="total, prev, pager, next, jumper"
-        :total="meta.total"
-        :page-size="meta.pageSize"
-        :current-page="meta.page"
-        @current-change="
-          (p) => {
-            meta.page = p;
-            load();
-          }
-        "
-      />
+      <!-- 表格 -->
+      <el-table :data="rows" border v-loading="loading">
+        <el-table-column label="员工" width="160">
+          <template #default="{ row }">{{ formatEmployee(row) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="formatStatus(row.status)" :type="formatStatus(row.status) === '待处理' ? 'warning' : 'success'">
+              {{ formatStatus(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="reason" label="申诉原因" />
+        <el-table-column label="事件" width="280">
+          <template #default="{ row }">{{ formatEvent(row) }}</template>
+        </el-table-column>
+        <el-table-column prop="updatedAt" label="更新时间" width="200">
+          <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="220">
+          <template #default="{ row }">
+            <el-button size="small" @click="openProcess(row)">处理</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-bar">
+        <el-pagination
+          background
+          layout="total, prev, pager, next, jumper"
+          :total="meta.total"
+          :page-size="meta.pageSize"
+          :current-page="meta.page"
+          @current-change="
+            (p) => {
+              meta.page = p;
+              load();
+            }
+          "
+        />
+      </div>
     </div>
-  </el-card>
+  </div>
 
   <el-dialog v-model="dialogVisible" title="处理申诉" width="520px" @close="closeDialog">
     <el-form label-width="90px">
@@ -198,3 +207,79 @@ watch(
     </template>
   </el-dialog>
 </template>
+
+<style scoped lang="scss">
+// ==============================
+// 面板基座
+// ==============================
+.panel {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8eaee;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ==============================
+// 面板头部
+// ==============================
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e8eaee;
+}
+
+.panel-bar {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: #0056c1;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #181a23;
+}
+
+// ==============================
+// 面板内容
+// ==============================
+.panel-body {
+  padding: 20px;
+}
+
+// ==============================
+// 筛选栏
+// ==============================
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-item {
+  width: 240px;
+}
+
+.filter-item--sm {
+  width: 120px;
+}
+
+// ==============================
+// 分页
+// ==============================
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+</style>

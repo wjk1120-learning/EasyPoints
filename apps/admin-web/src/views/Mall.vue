@@ -149,45 +149,50 @@ onMounted(load);
 </script>
 
 <template>
-  <h1 class="page-title">商城礼品</h1>
-  <el-card class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px">
-      <div style="color: var(--el-text-color-secondary)">支持新增/编辑/上下架/上传封面图</div>
-      <el-button type="primary" @click="openCreate">新增礼品</el-button>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-bar" />
+      <h3 class="panel-title">礼品管理</h3>
+      <div class="panel-head-extra">
+        <span class="panel-hint">支持新增 / 编辑 / 上下架 / 上传封面图</span>
+        <el-button color="#0056c1" @click="openCreate">新增礼品</el-button>
+      </div>
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
-      <el-table-column label="封面" width="110">
-        <template #default="{ row }">
-          <el-image
-            v-if="row.coverImageUrl"
-            :src="`${API_BASE}${row.coverImageUrl}`"
-            style="width: 80px; height: 80px; border-radius: 6px"
-            fit="cover"
-          />
-          <el-tag v-else type="info">无</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="礼品" min-width="220" />
-      <el-table-column prop="pointsCost" label="所需积分" width="120" />
-      <el-table-column prop="stock" label="库存" width="100" />
-      <el-table-column prop="limitPerUser" label="限购" width="100">
-        <template #default="{ row }">{{ row.limitPerUser == null ? "不限" : `${row.limitPerUser} / 人` }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="120">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 'active' ? 'success' : 'warning'">{{ formatStatus(row.status) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="260">
-        <template #default="{ row }">
-          <el-button size="small" @click="openEdit(row)">编辑</el-button>
-          <el-button v-if="row.status !== 'active'" size="small" type="success" @click="publish(row)">上架</el-button>
-          <el-button v-else size="small" type="warning" @click="unpublish(row)">下架</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-card>
+    <div class="panel-body">
+      <el-table :data="rows" border v-loading="loading">
+        <el-table-column label="封面" width="110">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.coverImageUrl"
+              :src="`${API_BASE}${row.coverImageUrl}`"
+              style="width: 80px; height: 80px; border-radius: 6px"
+              fit="cover"
+            />
+            <el-tag v-else type="info">无</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="礼品" min-width="220" />
+        <el-table-column prop="pointsCost" label="所需积分" width="120" />
+        <el-table-column prop="stock" label="库存" width="100" />
+        <el-table-column prop="limitPerUser" label="限购" width="100">
+          <template #default="{ row }">{{ row.limitPerUser == null ? "不限" : `${row.limitPerUser} / 人` }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'active' ? 'success' : 'warning'">{{ formatStatus(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260">
+          <template #default="{ row }">
+            <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="row.status !== 'active'" size="small" type="success" @click="publish(row)">上架</el-button>
+            <el-button v-else size="small" type="warning" @click="unpublish(row)">下架</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </div>
 
   <el-dialog v-model="dialogVisible" :title="editId ? '编辑礼品' : '新增礼品'" width="520px">
     <el-form label-width="90px">
@@ -244,3 +249,63 @@ onMounted(load);
     </template>
   </el-dialog>
 </template>
+
+<style scoped lang="scss">
+// ==============================
+// 面板基座
+// ==============================
+.panel {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8eaee;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ==============================
+// 面板头部
+// ==============================
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e8eaee;
+}
+
+.panel-head-extra {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-bar {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: #0056c1;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #181a23;
+}
+
+.panel-hint {
+  font-size: 13px;
+  color: #a8abb2;
+}
+
+// ==============================
+// 面板内容
+// ==============================
+.panel-body {
+  padding: 20px;
+}
+</style>

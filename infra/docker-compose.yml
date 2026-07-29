@@ -26,7 +26,10 @@ services:
   api:
     image: node:24-alpine
     working_dir: /workspace/apps/api
-    command: sh -c "npm install --omit=dev --workspaces=false --package-lock=false && node src/server.js"
+    command: node src/server.js
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
     env_file:
       - ../.env.example
       - ../.env

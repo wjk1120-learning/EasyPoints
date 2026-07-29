@@ -20,7 +20,13 @@ function formatTime(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
+  const Y = date.getFullYear();
+  const M = String(date.getMonth() + 1).padStart(2, "0");
+  const D = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 }
 
 function employeeLabel(employeeId) {
@@ -243,125 +249,254 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1 class="page-title">操作日志</h1>
-  <el-card class="panel">
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
-      <el-select v-model="meta.pageSize" placeholder="每页" style="width: 120px">
-        <el-option :value="20" label="20 / 页" />
-        <el-option :value="50" label="50 / 页" />
-        <el-option :value="100" label="100 / 页" />
-      </el-select>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-bar" />
+      <h3 class="panel-title">操作日志</h3>
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
-      <el-table-column prop="traceId" label="trace_id" width="290" show-overflow-tooltip />
-      <el-table-column prop="actionText" label="动作" width="140" />
-      <el-table-column prop="actorText" label="操作人" width="180" show-overflow-tooltip />
-      <el-table-column prop="createdAt" label="时间" width="190">
-        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column prop="businessSummary" label="业务摘要" min-width="420" show-overflow-tooltip />
-      <el-table-column prop="resultText" label="操作结果" width="100">
-        <template #default="{ row }">
-          <el-tag type="success">{{ row.resultText }}</el-tag>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="panel-body">
+      <div class="filter-bar">
+        <el-select v-model="meta.pageSize" placeholder="每页" class="filter-item filter-item--sm">
+          <el-option :value="20" label="20 / 页" />
+          <el-option :value="50" label="50 / 页" />
+          <el-option :value="100" label="100 / 页" />
+        </el-select>
+      </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 12px">
-      <el-pagination
-        background
-        layout="total, prev, pager, next, jumper"
-        :total="meta.total"
-        :page-size="meta.pageSize"
-        :current-page="meta.page"
-        @current-change="
-          (p) => {
-            meta.page = p;
-            load();
-          }
-        "
-      />
+      <el-table :data="rows" border v-loading="loading">
+        <el-table-column prop="traceId" label="trace_id" width="290" show-overflow-tooltip />
+        <el-table-column prop="actionText" label="动作" width="140" />
+        <el-table-column prop="actorText" label="操作人" width="180" show-overflow-tooltip />
+        <el-table-column prop="createdAt" label="时间" width="190">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column prop="businessSummary" label="业务摘要" min-width="420" show-overflow-tooltip />
+        <el-table-column prop="resultText" label="操作结果" width="100">
+          <template #default="{ row }">
+            <el-tag type="success">{{ row.resultText }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-bar">
+        <el-pagination
+          background
+          layout="total, prev, pager, next, jumper"
+          :total="meta.total"
+          :page-size="meta.pageSize"
+          :current-page="meta.page"
+          @current-change="
+            (p) => {
+              meta.page = p;
+              load();
+            }
+          "
+        />
+      </div>
     </div>
-  </el-card>
+  </div>
 
-  <h1 class="page-title" style="margin-top: 18px">消息 Outbox</h1>
-  <el-card class="panel">
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
-      <el-select v-model="outboxQuery.status" clearable placeholder="状态" style="width: 200px">
-        <el-option value="pending" label="待处理" />
-        <el-option value="processing" label="处理中" />
-        <el-option value="mock_sent" label="测试发送" />
-        <el-option value="failed" label="发送失败" />
-      </el-select>
-      <el-select v-model="outboxQuery.type" clearable placeholder="类型（type）" style="width: 240px">
-        <el-option v-for="item in outboxTypes" :key="item" :label="item" :value="item" />
-      </el-select>
-      <el-select v-model="outboxQuery.employeeId" clearable placeholder="员工" style="width: 240px">
-        <el-option v-for="item in employees" :key="item.id" :label="item.name" :value="String(item.id)" />
-      </el-select>
-      <el-select v-model="outboxMeta.pageSize" placeholder="每页" style="width: 120px">
-        <el-option :value="20" label="20 / 页" />
-        <el-option :value="50" label="50 / 页" />
-        <el-option :value="100" label="100 / 页" />
-      </el-select>
-      <el-tag>timeout={{ outboxConfig.processingTimeoutSec }}s</el-tag>
-      <el-tag>maxRetries={{ outboxConfig.maxRetries }}</el-tag>
-      <el-tag>batch={{ outboxConfig.batchSize }}</el-tag>
-      <el-button @click="viewPending">仅看待处理</el-button>
-      <el-button type="danger" plain @click="viewFailed">仅看发送失败</el-button>
-      <el-button type="danger" @click="retryAllFailed">重试全部失败</el-button>
-      <el-button type="primary" @click="dispatchNow">立即派发</el-button>
+  <div class="panel" style="margin-top: 20px">
+    <div class="panel-head">
+      <span class="panel-bar panel-bar--alt" />
+      <h3 class="panel-title">消息 Outbox</h3>
     </div>
 
-    <el-table :data="outboxRows" border v-loading="outboxLoading">
-      <el-table-column label="trace_id" width="290" show-overflow-tooltip>
-        <template #default="{ row }">{{ outboxTraceId(row) }}</template>
-      </el-table-column>
-      <el-table-column prop="type" label="类型" width="160">
-        <template #default="{ row }">{{ formatOutboxType(row.type) }}</template>
-      </el-table-column>
-      <el-table-column prop="employeeId" label="员工" width="180" show-overflow-tooltip>
-        <template #default="{ row }">{{ employeeLabel(row.employeeId) }}</template>
-      </el-table-column>
-      <el-table-column prop="updatedAt" label="时间" width="190">
-        <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
-      </el-table-column>
-      <el-table-column prop="businessSummary" label="业务摘要" min-width="420" show-overflow-tooltip>
-        <template #default="{ row }">{{ outboxBusinessSummary(row) }}</template>
-      </el-table-column>
-      <el-table-column prop="status" label="操作结果" width="120">
-        <template #default="{ row }">
-          <el-tag :type="formatOutboxResult(row.status).tagType">{{ formatOutboxResult(row.status).text }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="retryCount" label="重试" width="90" />
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button size="small" @click="viewOutboxPayload(row)">载荷</el-button>
-          <el-button size="small" @click="retryMessage(row)">重试</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="panel-body">
+      <div class="filter-bar">
+        <el-select v-model="outboxQuery.status" clearable placeholder="状态" class="filter-item filter-item--md">
+          <el-option value="pending" label="待处理" />
+          <el-option value="processing" label="处理中" />
+          <el-option value="mock_sent" label="测试发送" />
+          <el-option value="failed" label="发送失败" />
+        </el-select>
+        <el-select v-model="outboxQuery.type" clearable placeholder="类型（type）" class="filter-item">
+          <el-option v-for="item in outboxTypes" :key="item" :label="item" :value="item" />
+        </el-select>
+        <el-select v-model="outboxQuery.employeeId" clearable placeholder="员工" class="filter-item">
+          <el-option v-for="item in employees" :key="item.id" :label="item.name" :value="String(item.id)" />
+        </el-select>
+        <el-select v-model="outboxMeta.pageSize" placeholder="每页" class="filter-item filter-item--sm">
+          <el-option :value="20" label="20 / 页" />
+          <el-option :value="50" label="50 / 页" />
+          <el-option :value="100" label="100 / 页" />
+        </el-select>
+      </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 12px">
-      <el-pagination
-        background
-        layout="total, prev, pager, next, jumper"
-        :total="outboxMeta.total"
-        :page-size="outboxMeta.pageSize"
-        :current-page="outboxMeta.page"
-        @current-change="
-          (p) => {
-            outboxMeta.page = p;
-            loadOutbox();
-          }
-        "
-      />
+      <div class="filter-toolbar">
+        <div class="filter-toolbar__left">
+          <span class="filter-toolbar__label">配置：</span>
+          <el-tag size="small">timeout={{ outboxConfig.processingTimeoutSec }}s</el-tag>
+          <el-tag size="small">maxRetries={{ outboxConfig.maxRetries }}</el-tag>
+          <el-tag size="small">batch={{ outboxConfig.batchSize }}</el-tag>
+        </div>
+        <div class="filter-toolbar__right">
+          <el-button size="small" @click="viewPending">仅看待处理</el-button>
+          <el-button size="small" type="danger" plain @click="viewFailed">仅看发送失败</el-button>
+          <el-button size="small" type="danger" @click="retryAllFailed">重试全部失败</el-button>
+          <el-button size="small" type="primary" @click="dispatchNow">立即派发</el-button>
+        </div>
+      </div>
+
+      <el-table :data="outboxRows" border v-loading="outboxLoading">
+        <el-table-column label="trace_id" width="290" show-overflow-tooltip>
+          <template #default="{ row }">{{ outboxTraceId(row) }}</template>
+        </el-table-column>
+        <el-table-column prop="type" label="类型" width="160">
+          <template #default="{ row }">{{ formatOutboxType(row.type) }}</template>
+        </el-table-column>
+        <el-table-column prop="employeeId" label="员工" width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ employeeLabel(row.employeeId) }}</template>
+        </el-table-column>
+        <el-table-column prop="updatedAt" label="时间" width="190">
+          <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
+        </el-table-column>
+        <el-table-column prop="businessSummary" label="业务摘要" min-width="420" show-overflow-tooltip>
+          <template #default="{ row }">{{ outboxBusinessSummary(row) }}</template>
+        </el-table-column>
+        <el-table-column prop="status" label="操作结果" width="120">
+          <template #default="{ row }">
+            <el-tag :type="formatOutboxResult(row.status).tagType">{{ formatOutboxResult(row.status).text }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="retryCount" label="重试" width="90" />
+        <el-table-column label="操作" width="200">
+          <template #default="{ row }">
+            <el-button size="small" @click="viewOutboxPayload(row)">载荷</el-button>
+            <el-button size="small" @click="retryMessage(row)">重试</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-bar">
+        <el-pagination
+          background
+          layout="total, prev, pager, next, jumper"
+          :total="outboxMeta.total"
+          :page-size="outboxMeta.pageSize"
+          :current-page="outboxMeta.page"
+          @current-change="
+            (p) => {
+              outboxMeta.page = p;
+              loadOutbox();
+            }
+          "
+        />
+      </div>
     </div>
-  </el-card>
+  </div>
 
   <el-dialog v-model="outboxPayloadDialog.visible" :title="outboxPayloadDialog.title" width="700px">
     <el-input v-model="outboxPayloadDialog.payloadText" type="textarea" :rows="16" readonly />
   </el-dialog>
 </template>
+
+<style scoped lang="scss">
+.panel {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8eaee;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e8eaee;
+}
+
+.panel-bar {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: #0056c1;
+}
+
+.panel-bar--alt {
+  background: #4d6077;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #181a23;
+}
+
+.panel-body {
+  padding: 20px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-item {
+  width: 240px;
+}
+
+.filter-item--md {
+  width: 200px;
+}
+
+.filter-item--sm {
+  width: 120px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+
+.filter-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-toolbar__label {
+  font-size: 13px;
+  color: #909399;
+  white-space: nowrap;
+}
+
+.filter-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-card__meta {
+  font-size: 12px;
+  color: #909399;
+  letter-spacing: 0.3px;
+}
+
+.filter-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+</style>
