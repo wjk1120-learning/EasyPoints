@@ -106,7 +106,6 @@ async function openMessage(item) {
           <text v-if="!item.isRead" class="unread-dot"></text>
           <text class="msg-title" :class="{ read: item.isRead }">{{ item.title }}</text>
         </view>
-        <text class="badge" :class="statusClass(item.status)">{{ item.statusText }}</text>
       </view>
       <text class="msg-summary">{{ item.summary }}</text>
       <text class="muted msg-time">
