@@ -24,6 +24,12 @@
       }
     },
     {
+      "path": "pages/leaderboard/index",
+      "style": {
+        "navigationBarTitleText": "排行榜"
+      }
+    },
+    {
       "path": "pages/ai/index",
       "style": {
         "navigationBarTitleText": "AI 助手"
@@ -77,6 +83,12 @@
         "text": "大厅",
         "iconPath": "static/tabbar/hall.png",
         "selectedIconPath": "static/tabbar/hall-active.png"
+      },
+      {
+        "pagePath": "pages/leaderboard/index",
+        "text": "排行",
+        "iconPath": "static/tabbar/leaderboard.png",
+        "selectedIconPath": "static/tabbar/leaderboard-active.png"
       },
       {
         "pagePath": "pages/points/index",
