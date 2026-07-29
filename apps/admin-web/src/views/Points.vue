@@ -7,9 +7,20 @@ import { api } from "../api";
 const employees = ref([]);
 const single = reactive({ employeeId: null, pointsDelta: 10, type: "reward", remark: "" });
 const batch = reactive({
-  month: "2026-06",
+  month: new Date().toISOString().slice(0, 7),
   batchRemark: "",
   items: []
+});
+
+const monthOptions = computed(() => {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    options.push({ value, label: `${date.getFullYear()}年${date.getMonth() + 1}月` });
+  }
+  return options;
 });
 
 const employeeNameMap = computed(() => {
@@ -111,7 +122,9 @@ async function submitBatch() {
         <div class="batch-bar">
           <el-form :model="batch" label-width="0" label-position="top" size="default" class="batch-form">
             <el-form-item label="月份">
-              <el-input v-model="batch.month" placeholder="YYYY-MM" />
+              <el-select v-model="batch.month" placeholder="选择月份" style="width: 100%">
+                <el-option v-for="item in monthOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
             </el-form-item>
             <el-form-item label="统一备注">
               <el-input v-model="batch.batchRemark" type="textarea" :rows="1" placeholder="应用于所有未填写单人备注的记录" />
