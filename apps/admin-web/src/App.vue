@@ -295,6 +295,26 @@ watch(
     }
   }
 
+  :deep(.el-menu-item) .el-badge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  :deep(.el-menu-item) .el-badge__content {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    transform: none !important;
+    margin-left: auto;
+    font-size: 11px;
+    height: 18px;
+    line-height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+  }
+
 }
 
 // 右侧容器随 shell 固定，不溢出
