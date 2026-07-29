@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getApiBase, request } from '../../api'
+import AiFloatBall from '../../components/AiFloatBall.vue'
 
 const gifts = ref([])
 const apiBase = getApiBase()
@@ -70,6 +71,7 @@ async function redeem(gift) {
     <view v-if="gifts.length === 0" class="card card-empty">
       <text class="muted">暂无礼品</text>
     </view>
+    <AiFloatBall />
   </view>
 </template>
 

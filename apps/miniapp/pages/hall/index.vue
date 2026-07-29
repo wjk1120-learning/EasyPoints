@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { onShow, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 import { requestPaged } from '../../api'
+import AiFloatBall from '../../components/AiFloatBall.vue'
 
 const rows = ref([])
 const loading = ref(false)
@@ -186,6 +187,7 @@ function formatTime(value) {
     <view v-if="!loading && total != null && rows.length >= total && total > 0" class="card card-empty">
       <text class="muted">已加载全部</text>
     </view>
+    <AiFloatBall />
   </view>
 </template>
 

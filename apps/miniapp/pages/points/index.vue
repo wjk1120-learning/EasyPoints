@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
+import AiFloatBall from '../../components/AiFloatBall.vue'
 
 const groups = ref({})
 const loading = ref(false)
@@ -127,6 +128,7 @@ function appeal(record) {
     <view v-if="!loading && Object.keys(groups).length === 0" class="card card-empty">
       <text class="muted">暂无符合条件的积分记录</text>
     </view>
+    <AiFloatBall />
   </view>
 </template>
 

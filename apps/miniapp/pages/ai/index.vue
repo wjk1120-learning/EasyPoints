@@ -111,7 +111,7 @@ function useQuickQuestion(text) {
 </script>
 
 <template>
-  <view class="page ai-page page-tab">
+  <view class="page ai-page">
     <view class="hero card card-hero">
       <view class="hero-top">
         <view class="hero-avatars">
