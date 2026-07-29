@@ -29,7 +29,7 @@ function nameInitial(name) {
 </script>
 
 <template>
-  <view class="page page-tab lb-page">
+  <view class="page page-tab">
     <view class="lb-header">
       <text class="lb-title">排行榜</text>
       <text class="lb-desc">按当前积分降序排列</text>
@@ -70,20 +70,23 @@ function nameInitial(name) {
 </template>
 
 <style scoped>
-.lb-page {
-  padding-top: 24rpx;
-}
-
-/* ---- header ---- */
+/* ---- header card (hero style) ---- */
 .lb-header {
-  padding: 32rpx 16rpx 24rpx;
+  padding: 32rpx;
+  margin-bottom: 20rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(145deg, rgba(168, 230, 207, 0.42), rgba(168, 216, 234, 0.48));
+  border: 1rpx solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 12rpx 40rpx rgba(107, 203, 154, 0.12),
+    0 1rpx 0 rgba(255, 255, 255, 0.8) inset;
 }
 
 .lb-title {
   display: block;
   font-size: 40rpx;
   font-weight: 700;
-  color: #020617;
+  color: #3a7ca5;
   letter-spacing: -0.5rpx;
   line-height: 1.15;
 }
@@ -92,7 +95,7 @@ function nameInitial(name) {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #64748B;
+  color: #8e8e93;
 }
 
 /* ---- empty ---- */
@@ -105,33 +108,33 @@ function nameInitial(name) {
 .lb-list {
   display: flex;
   flex-direction: column;
-  border-top: 2rpx solid #E2E8F0;
+  gap: 16rpx;
 }
 
 .lb-row {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  padding: 24rpx 8rpx;
-  background: #FFFFFF;
-  border-bottom: 2rpx solid #E2E8F0;
-  position: relative;
-  transition: background 200ms ease;
+  padding: 24rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1rpx solid rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 8rpx 32rpx rgba(91, 155, 213, 0.07),
+    0 1rpx 0 rgba(255, 255, 255, 0.95) inset;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition: all 0.2s ease;
 }
 
 .lb-row:active {
-  background: #F1F5F9;
+  opacity: 0.92;
+  transform: scale(0.992);
 }
 
 .lb-row.is-podium {
-  padding: 24rpx;
-}
-
-/* #1 gets accent left border */
-.lb-row:first-child {
-  border-left: 6rpx solid #0369A1;
-  padding-left: 18rpx;
-  margin-left: -2rpx;
+  background: linear-gradient(145deg, rgba(168, 230, 207, 0.35), rgba(168, 216, 234, 0.38));
+  border: 1rpx solid rgba(255, 255, 255, 0.75);
 }
 
 /* ---- rank number ---- */
@@ -141,14 +144,14 @@ function nameInitial(name) {
   text-align: center;
   font-size: 24rpx;
   font-weight: 500;
-  color: #94A3B8;
+  color: #aeaeb2;
   font-variant-numeric: tabular-nums;
 }
 
 .lb-rank.is-first {
   font-size: 26rpx;
   font-weight: 700;
-  color: #020617;
+  color: #3a7ca5;
 }
 
 /* ---- avatar ---- */
@@ -160,21 +163,21 @@ function nameInitial(name) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #E2E8F0;
+  background: rgba(142, 142, 147, 0.12);
 }
 
 .lb-avatar.is-podium-avatar {
-  background: #0F172A;
+  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
 }
 
 .lb-initial {
   font-size: 24rpx;
   font-weight: 600;
-  color: #64748B;
+  color: #8e8e93;
 }
 
 .is-podium-avatar .lb-initial {
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 /* ---- body ---- */
@@ -189,13 +192,13 @@ function nameInitial(name) {
 .lb-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #020617;
+  color: #1c1c1e;
   line-height: 1.3;
 }
 
 .lb-dept {
   font-size: 22rpx;
-  color: #94A3B8;
+  color: #8e8e93;
 }
 
 /* ---- score ---- */
@@ -210,12 +213,12 @@ function nameInitial(name) {
 .lb-points {
   font-size: 30rpx;
   font-weight: 700;
-  color: #020617;
+  color: #1c1c1e;
   font-variant-numeric: tabular-nums;
 }
 
 .lb-unit {
   font-size: 22rpx;
-  color: #94A3B8;
+  color: #aeaeb2;
 }
 </style>
