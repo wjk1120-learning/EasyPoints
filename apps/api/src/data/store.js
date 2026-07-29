@@ -347,7 +347,11 @@ function createMemoryStore() {
     },
     getMessage: async (id) => state.messageOutbox.find((item) => item.id === toNumberId(id)) || null,
     listMessagesPaged: async (options = {}) => {
-      let items = state.messageOutbox.slice().sort((a, b) => b.id - a.id);
+      let items = state.messageOutbox.slice().sort((a, b) => {
+        if (!a.readAt && b.readAt) return -1;
+        if (a.readAt && !b.readAt) return 1;
+        return b.id - a.id;
+      });
       if (options.status) items = items.filter((row) => row.status === options.status);
       if (options.type) items = items.filter((row) => row.type === options.type);
       if (options.unreadOnly) items = items.filter((row) => !row.readAt);
@@ -1195,7 +1199,7 @@ function createMysqlStore() {
         const [countRows] = await executor.query(`SELECT COUNT(1) AS cnt ${join} ${whereSql}`, params);
         const total = Number(countRows[0]?.cnt || 0);
         const [rows] = await executor.query(
-          `SELECT m.* ${join} ${whereSql} ORDER BY m.id DESC LIMIT ? OFFSET ?`,
+          `SELECT m.* ${join} ${whereSql} ORDER BY m.read_at IS NULL DESC, m.id DESC LIMIT ? OFFSET ?`,
           [...params, limit, offset]
         );
         return { rows: rows.map(mapMessage), total, page, pageSize: limit };
