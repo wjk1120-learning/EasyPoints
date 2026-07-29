@@ -13,11 +13,11 @@ export default createRouter({
   routes: [
     { path: "/", component: Dashboard, meta: { title: "工作台" } },
     { path: "/employee-points", component: EmployeePoints, meta: { title: "员工积分" } },
-    { path: "/points", component: Points, meta: { title: "积分管理" } },
-    { path: "/reports", component: Reports, meta: { title: "报表管理" } },
-    { path: "/appeals", component: Appeals, meta: { title: "申诉管理" } },
-    { path: "/mall", component: Mall, meta: { title: "商城管理" } },
-    { path: "/orders", component: Orders, meta: { title: "订单管理" } },
-    { path: "/logs", component: Logs, meta: { title: "日志管理" } }
+    { path: "/points", component: Points, meta: { title: "积分录入" } },
+    { path: "/reports", component: Reports, meta: { title: "明细报表" } },
+    { path: "/appeals", component: Appeals, meta: { title: "申诉审核" } },
+    { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
+    { path: "/orders", component: Orders, meta: { title: "订单核销" } },
+    { path: "/logs", component: Logs, meta: { title: "操作日志" } }
   ]
 });

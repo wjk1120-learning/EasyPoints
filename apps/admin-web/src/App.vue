@@ -241,6 +241,11 @@ watch(
 </template>
 
 <style scoped lang="scss">
+.shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .sidebar {
   position: relative;
   height: 100vh;
@@ -290,6 +295,16 @@ watch(
     }
   }
 
+}
+
+// 右侧容器随 shell 固定，不溢出
+.shell > :deep(.el-container) {
+  overflow: hidden;
+}
+
+// 主内容区独立滚动
+.shell :deep(.el-main) {
+  overflow-y: auto;
 }
 
 .topbar-right {
