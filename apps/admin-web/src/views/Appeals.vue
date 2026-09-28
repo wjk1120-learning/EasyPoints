@@ -215,7 +215,7 @@ watch(
 .panel {
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -229,8 +229,8 @@ watch(
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-bar {
@@ -238,14 +238,14 @@ watch(
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 // ==============================

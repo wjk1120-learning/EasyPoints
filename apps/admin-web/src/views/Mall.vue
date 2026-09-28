@@ -155,7 +155,7 @@ onMounted(load);
       <h3 class="panel-title">礼品管理</h3>
       <div class="panel-head-extra">
         <span class="panel-hint">支持新增 / 编辑 / 上下架 / 上传封面图</span>
-        <el-button color="#0056c1" @click="openCreate">新增礼品</el-button>
+        <el-button color="var(--color-primary)" @click="openCreate">新增礼品</el-button>
       </div>
     </div>
 
@@ -257,7 +257,7 @@ onMounted(load);
 .panel {
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -271,8 +271,8 @@ onMounted(load);
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-head-extra {
@@ -287,19 +287,19 @@ onMounted(load);
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 .panel-hint {
   font-size: 13px;
-  color: #a8abb2;
+  color: var(--color-text-placeholder);
 }
 
 // ==============================

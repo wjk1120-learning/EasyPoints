@@ -172,7 +172,7 @@ async function downloadXlsx() {
   flex-direction: column;
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   overflow: hidden;
 }
 
@@ -184,8 +184,8 @@ async function downloadXlsx() {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -194,14 +194,14 @@ async function downloadXlsx() {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 .panel-head-extra {
@@ -212,18 +212,18 @@ async function downloadXlsx() {
 .btn-export {
   border-radius: 6px;
   font-weight: 500;
-  background-color: #0056c1;
-  border-color: #0056c1;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   transition: all 0.2s;
 
   &:hover {
-    background-color: #003d9b;
-    border-color: #003d9b;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   &:active {
-    background-color: #002b7a;
-    border-color: #002b7a;
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
   }
 }
 
@@ -237,7 +237,7 @@ async function downloadXlsx() {
   flex-wrap: wrap;
   flex-shrink: 0;
   padding: 16px 20px;
-  border-bottom: 1px solid #e8eaee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter-item {
@@ -268,11 +268,11 @@ async function downloadXlsx() {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d0d5dd;
+    background: var(--color-border);
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #a8abb2;
+    background: var(--color-text-placeholder);
   }
 }
 
@@ -283,8 +283,8 @@ async function downloadXlsx() {
   width: 100%;
 
   :deep(.el-table__header th) {
-    background: #f4f7fc;
-    color: #414654;
+    background: var(--color-bg-muted);
+    color: var(--color-text-regular);
     font-weight: 600;
     font-size: 13px;
   }
@@ -293,7 +293,7 @@ async function downloadXlsx() {
     transition: background 0.15s;
 
     &:hover > td {
-      background: #f8faff;
+      background: var(--el-color-primary-light-9);
     }
   }
 }
@@ -307,7 +307,7 @@ async function downloadXlsx() {
   justify-content: flex-end;
   align-items: center;
   padding: 12px 20px;
-  border-top: 1px solid #e8eaee;
-  background: #fafbfc;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-page);
 }
 </style>

@@ -169,8 +169,8 @@ watch(
   <el-container v-else class="shell">
     <el-aside width="232px" class="sidebar">
       <div class="brand">
-        <strong style="color: #fdfbff;">易积分</strong>
-        <span style="color: #9498a6;">企业微信积分管理</span>
+        <strong style="color: var(--color-text-primary);">易积分</strong>
+        <span style="color: var(--color-text-secondary);">企业微信积分管理</span>
       </div>
       <el-menu router :default-active="activeMenu">
         <el-menu-item index="/">
@@ -221,7 +221,7 @@ watch(
     <el-container>
       <el-header class="topbar">
         <div>
-          <strong style="color: #0056c1; font-size: 20px;">{{ route.meta.title || "易积分后台管理系统" }}</strong>
+          <strong style="color: var(--color-primary); font-size: 20px;">{{ route.meta.title || "易积分后台管理系统" }}</strong>
         </div>
         <div class="topbar-right">
           <div class="userInfo">
@@ -252,34 +252,34 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: #2d2f38;
+  background-color: var(--color-bg-card);
 
   :deep(.el-menu) {
     flex: 1;
     overflow-y: auto;
-    background: #2d2f38;
-    border-bottom: 1px solid #41434b;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-menu-item) {
     padding-left: 10px !important;
     margin: 5px 20px;
-    color: #dfe2ed !important; /* 默认文字 */
+    color: var(--color-text-regular) !important; /* 默认文字 */
     border-radius: 10px;
   }
 
   :deep(.el-menu-item:hover) {
-    color: #fff !important; /* hover文字色 */
-    background-color: #0056c1 !important; /* hover背景 */
+    color: var(--color-primary) !important; /* hover文字色 */
+    background-color: var(--el-color-primary-light-9) !important; /* hover背景 */
   }
 
   :deep(.el-menu-item.is-active) {
-    color: #fff !important; /* 选中文字 */
-    background-color: #0056c1 !important; /* 选中背景 */
+    color: var(--color-primary) !important; /* 选中文字 */
+    background-color: var(--el-color-primary-light-9) !important; /* 选中背景 */
   }
 
   .brand {
-    border-bottom: 1px solid #41434b;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .sidebar-footer {
@@ -287,11 +287,11 @@ watch(
     align-items: center;
     padding: 16px 30px;
     cursor: pointer;
-    color: #dfe2ed;
+    color: var(--color-text-regular);
     transition: background-color 0.2s, color 0.2s;
 
     &:hover {
-      color: #FF4444;
+      color: var(--color-points-deduct);
     }
   }
 
@@ -350,14 +350,14 @@ watch(
 
       .role {
         font-size: 14px;
-        color: #434654;
+        color: var(--color-text-secondary);
       }
     }
 
     .user-avatar {
       width: 46px;
       height: 46px;
-      border: 2px solid #c1c6d6;
+      border: 2px solid var(--color-border);
       border-radius: 12px;
     }
   }
@@ -366,10 +366,10 @@ watch(
 /* 全局分页组件背景色统一 */
 :deep(.el-pagination.is-background) {
   .el-pager li.is-active {
-    background-color: #0056c1;
+    background-color: var(--color-primary);
   }
   .el-pager li:not(.is-active):hover {
-    color: #0056c1;
+    color: var(--color-primary);
   }
 }
 

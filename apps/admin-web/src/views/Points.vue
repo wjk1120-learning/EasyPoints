@@ -183,7 +183,7 @@ async function submitBatch() {
 .panel {
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -207,8 +207,8 @@ async function submitBatch() {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-bar {
@@ -219,18 +219,18 @@ async function submitBatch() {
 }
 
 .panel-bar--primary {
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-bar--alt {
-  background: #4d6077;
+  background: var(--color-text-secondary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 // ==============================
@@ -258,7 +258,7 @@ async function submitBatch() {
 :deep(.el-form-item__label) {
   font-size: 13px;
   font-weight: 500;
-  color: #414654;
+  color: var(--color-text-regular);
   padding-bottom: 4px;
   line-height: 1.4;
 }
@@ -268,7 +268,7 @@ async function submitBatch() {
 // ==============================
 .type-segmented {
   width: 100%;
-  --el-segmented-item-selected-bg-color: #d8e2ff;
+  --el-segmented-item-selected-bg-color: var(--el-color-primary-light-8);
 
   :deep(.el-segmented__group) {
     border-radius: 8px;
@@ -283,12 +283,12 @@ async function submitBatch() {
     transition: all 0.2s ease;
 
     &:hover:not(.is-selected) {
-      background: #f4f7fc;
+      background: var(--color-bg-muted);
     }
 
     &.is-selected {
-      border-color: #0056c1;
-      color: #181a23;
+      border-color: var(--color-primary);
+      color: var(--color-text-primary);
       font-weight: 600;
     }
   }
@@ -306,11 +306,11 @@ async function submitBatch() {
   }
 
   &.reward .el-icon {
-    color: #059669;
+    color: var(--color-points-add);
   }
 
   &.penalty .el-icon {
-    color: #dc2626;
+    color: var(--color-points-deduct);
   }
 }
 
@@ -319,18 +319,18 @@ async function submitBatch() {
   width: 100%;
   border-radius: 6px;
   font-weight: 500;
-  background-color: #0056c1;
-  border-color: #0056c1;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   transition: all 0.2s;
 
   &:hover {
-    background-color: #003d9b;
-    border-color: #003d9b;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   &:active {
-    background-color: #002b7a;
-    border-color: #002b7a;
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
   }
 }
 
@@ -342,7 +342,7 @@ async function submitBatch() {
 .batch-bar {
   flex-shrink: 0;
   padding: 16px 20px;
-  border-bottom: 1px solid #e8eaee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .batch-form {
@@ -371,11 +371,11 @@ async function submitBatch() {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d0d5dd;
+    background: var(--color-border);
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #a8abb2;
+    background: var(--color-text-placeholder);
   }
 }
 
@@ -386,28 +386,28 @@ async function submitBatch() {
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  border-top: 1px solid #e8eaee;
-  background: #fafbfc;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-page);
 }
 
 .batch-info {
   font-size: 13px;
-  color: #a8abb2;
+  color: var(--color-text-placeholder);
 
   strong {
-    color: #414654;
+    color: var(--color-text-regular);
     font-weight: 600;
   }
 
   em {
-    color: #414654;
+    color: var(--color-text-regular);
     font-style: normal;
   }
 }
 
 .batch-info-divider {
   margin: 0 8px;
-  color: #e8eaee;
+  color: var(--color-border);
 }
 
 // 右侧按钮不撑满

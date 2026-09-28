@@ -396,7 +396,7 @@ onMounted(async () => {
 .panel {
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -407,8 +407,8 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-bar {
@@ -416,18 +416,18 @@ onMounted(async () => {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-bar--alt {
-  background: #4d6077;
+  background: var(--color-text-secondary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 .panel-body {
@@ -466,7 +466,7 @@ onMounted(async () => {
   justify-content: space-between;
   margin-bottom: 16px;
   padding: 8px 12px;
-  background: #f5f7fa;
+  background: var(--color-bg-muted);
   border-radius: 6px;
 }
 
@@ -478,7 +478,7 @@ onMounted(async () => {
 
 .filter-toolbar__label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -490,7 +490,7 @@ onMounted(async () => {
 
 .filter-card__meta {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-secondary);
   letter-spacing: 0.3px;
 }
 

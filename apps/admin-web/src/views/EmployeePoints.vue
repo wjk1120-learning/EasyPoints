@@ -343,7 +343,7 @@ onMounted(async () => {
   flex-direction: column;
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   overflow: hidden;
 }
 
@@ -355,8 +355,8 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -365,14 +365,14 @@ onMounted(async () => {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 // ==============================
@@ -385,7 +385,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   flex-shrink: 0;
   padding: 16px 20px;
-  border-bottom: 1px solid #e8eaee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter-item {
@@ -412,11 +412,11 @@ onMounted(async () => {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d0d5dd;
+    background: var(--color-border);
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #a8abb2;
+    background: var(--color-text-placeholder);
   }
 }
 
@@ -427,8 +427,8 @@ onMounted(async () => {
   width: 100%;
 
   :deep(.el-table__header th) {
-    background: #f4f7fc;
-    color: #414654;
+    background: var(--color-bg-muted);
+    color: var(--color-text-regular);
     font-weight: 600;
     font-size: 13px;
   }
@@ -437,7 +437,7 @@ onMounted(async () => {
     transition: background 0.15s;
 
     &:hover > td {
-      background: #f8faff;
+      background: var(--el-color-primary-light-9);
     }
   }
 }
@@ -449,11 +449,11 @@ onMounted(async () => {
 }
 
 .balance-positive {
-  color: #0056c1;
+  color: var(--color-primary);
 }
 
 .balance-zero {
-  color: #ba1a1a;
+  color: var(--color-points-deduct);
 }
 
 // 状态徽标
@@ -467,13 +467,13 @@ onMounted(async () => {
 }
 
 .status-active {
-  background-color: #effdf4;
-  color: #52c41a;
+  background-color: var(--el-color-success-light-9);
+  color: var(--el-color-success);
 }
 
 .status-inactive {
-  background-color: #f2f4f6;
-  color: #999;
+  background-color: var(--el-color-info-light-9);
+  color: var(--color-status-neutral);
 }
 
 .status-dot {
@@ -483,11 +483,11 @@ onMounted(async () => {
   flex-shrink: 0;
 
   .status-active & {
-    background-color: #52c41a;
+    background-color: var(--el-color-success);
   }
 
   .status-inactive & {
-    background-color: #d9d9d9;
+    background-color: var(--color-text-placeholder);
   }
 }
 
@@ -495,24 +495,24 @@ onMounted(async () => {
 .btn-action {
   border-radius: 6px;
   font-weight: 500;
-  color: #0056c1;
-  border-color: #0056c1;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 
   &:hover {
-    color: #003d9b;
-    border-color: #003d9b;
-    background: #f0f4ff;
+    color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    background: var(--el-color-primary-light-9);
   }
 }
 
 .btn-action-secondary {
-  color: #414654;
-  border-color: #d0d5dd;
+  color: var(--color-text-regular);
+  border-color: var(--color-border);
 
   &:hover {
-    color: #181a23;
-    border-color: #a8abb2;
-    background: #f4f7fc;
+    color: var(--color-text-primary);
+    border-color: var(--color-text-placeholder);
+    background: var(--color-bg-muted);
   }
 }
 
@@ -525,8 +525,8 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   padding: 12px 20px;
-  border-top: 1px solid #e8eaee;
-  background: #fafbfc;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-page);
 }
 
 // ==============================
@@ -536,7 +536,7 @@ onMounted(async () => {
   :deep(.el-dialog__header) {
     padding: 16px 24px;
     margin: 0;
-    border-bottom: 1px solid #e8eaee;
+    border-bottom: 1px solid var(--color-border);
     font-weight: 600;
     font-size: 16px;
   }
@@ -547,7 +547,7 @@ onMounted(async () => {
 
   :deep(.el-dialog__footer) {
     padding: 12px 24px;
-    border-top: 1px solid #e8eaee;
+    border-top: 1px solid var(--color-border);
     margin: 0;
   }
 
@@ -558,7 +558,7 @@ onMounted(async () => {
   :deep(.el-form-item__label) {
     font-size: 13px;
     font-weight: 500;
-    color: #414654;
+    color: var(--color-text-regular);
     padding-bottom: 4px;
     line-height: 1.4;
   }
@@ -576,18 +576,18 @@ onMounted(async () => {
 .btn-primary {
   border-radius: 6px;
   font-weight: 500;
-  background-color: #0056c1;
-  border-color: #0056c1;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   transition: all 0.2s;
 
   &:hover {
-    background-color: #003d9b;
-    border-color: #003d9b;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   &:active {
-    background-color: #002b7a;
-    border-color: #002b7a;
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
   }
 }
 
@@ -598,7 +598,7 @@ onMounted(async () => {
   :deep(.el-drawer__header) {
     padding: 16px 24px;
     margin: 0;
-    border-bottom: 1px solid #e8eaee;
+    border-bottom: 1px solid var(--color-border);
   }
 
   :deep(.el-drawer__body) {
@@ -617,13 +617,13 @@ onMounted(async () => {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .drawer-title {
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 .drawer-body {
@@ -639,14 +639,14 @@ onMounted(async () => {
   width: 100%;
 
   :deep(.el-table__header th) {
-    background: #f4f7fc;
-    color: #414654;
+    background: var(--color-bg-muted);
+    color: var(--color-text-regular);
     font-weight: 600;
     font-size: 13px;
   }
 
   :deep(.el-table__row:hover > td) {
-    background: #f8faff;
+    background: var(--el-color-primary-light-9);
   }
 }
 

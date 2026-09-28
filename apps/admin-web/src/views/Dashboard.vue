@@ -39,39 +39,39 @@ onMounted(() => {
 <template>
   <div class="dashboard">
   <div class="metric-grid">
-    <div class="metric" style="background-color: #0056c1;">
-      <div class="icon" style="background-color: #3377cd;">
+    <div class="metric" style="background-color: var(--color-primary);">
+      <div class="icon" style="background-color: var(--color-primary-hover);">
         <el-icon color="#fff" size="26"><User /></el-icon>
       </div>
       <div class="content">
-        <span class="title" style="color: #ccddf2;">在职员工</span>
+        <span class="title" style="color: var(--el-color-primary-light-8);">在职员工</span>
         <strong class="member">{{ employeesCount }}</strong>
       </div>
     </div>
-    <div class="metric" style="background-color: #4d6077;">
-      <div class="icon" style="background-color: #707f92;">
+    <div class="metric" style="background-color: var(--color-text-regular);">
+      <div class="icon" style="background-color: var(--el-color-info);">
         <el-icon color="#fff" size="26"><ShoppingBag /></el-icon>
       </div>
       <div class="content">
-        <span class="title" style="color: #dbdfe3;">可兑换礼品</span>
+        <span class="title" style="color: var(--el-color-info-light-7);">可兑换礼品</span>
         <strong class="member">{{ giftsCount }}</strong>
       </div>
     </div>
-    <div class="metric" style="background-color: #9e3d00;">
-      <div class="icon" style="background-color: #b16333;">
+    <div class="metric" style="background-color: var(--color-status-pending);">
+      <div class="icon" style="background-color: var(--el-color-warning-dark-2);">
         <el-icon color="#fff" size="26"><View /></el-icon>
       </div>
       <div class="content">
-        <span class="title" style="color: #ebd8cc;">待审核申诉</span>
+        <span class="title" style="color: var(--el-color-warning-light-8);">待审核申诉</span>
         <strong class="member">{{ pendingAppealsCount }}</strong>
       </div>
     </div>
-    <div class="metric" style="background-color: #2d2f38;">
-      <div class="icon" style="background-color: #57585f;">
+    <div class="metric" style="background-color: var(--color-text-primary);">
+      <div class="icon" style="background-color: var(--color-text-regular);">
         <el-icon color="#fff" size="26"><Document /></el-icon>
       </div>
       <div class="content">
-        <span class="title" style="color: #d5d5d7;">待处理订单</span>
+        <span class="title" style="color: var(--el-color-info-light-7);">待处理订单</span>
         <strong class="member">{{ pendingOrdersCount }}</strong>
       </div>
     </div>
@@ -79,35 +79,35 @@ onMounted(() => {
   <div class="main">
     <el-card class="business-rules-des">
       <div class="rule-title">
-        <el-icon color="#0056c1" size="24" style="transform: translateY(2px)"><Reading /></el-icon>
+        <el-icon color="var(--color-primary)" size="24" style="transform: translateY(2px)"><Reading /></el-icon>
         <h3>关键业务规则说明</h3>
       </div>
       <div class="rules">
         <div class="rule-info">
           <div class="rule-number">01</div>
           <div>
-            <div style="color: #181a23;">单笔奖惩</div>
+            <div style="color: var(--color-text-primary);">单笔奖惩</div>
             <p class="rule-desc">所有单笔奖惩录入操作均需完整填写备注信息，备注内容为必填项，不可留空提交；若操作时未填写备注或备注内容为空，系统后端将直接拦截该请求并拒绝提交，本条奖惩记录无法保存生效。</p>
           </div>
         </div>
         <div class="rule-info">
           <div class="rule-number">02</div>
           <div>
-            <div style="color: #181a23;">月度录分</div>
+            <div style="color: var(--color-text-primary);">月度录分</div>
             <p class="rule-desc">月度批量录分功能支持设置统一备注，填写后可一键批量应用至所有待录入的员工记录，提高批量操作效率；若同时为某位员工单独填写了专属备注，则单人备注优先级更高，系统会以单人备注为准覆盖统一备注内容。</p>
           </div>
         </div>
         <div class="rule-info">
           <div class="rule-number">03</div>
           <div>
-            <div style="color: #181a23;">流水纠错</div>
+            <div style="color: var(--color-text-primary);">流水纠错</div>
             <p class="rule-desc">积分流水记录一旦生成保存，系统不支持直接修改或删除原始流水数据，确保原始记录完整留存；所有纠错操作均通过新增一笔冲正流水的方式进行处理，原始流水与冲正流水同时保留，完整记录修正轨迹。</p>
           </div>
         </div>
         <div class="rule-info">
           <div class="rule-number">04</div>
           <div>
-            <div style="color: #181a23;">员工可见</div>
+            <div style="color: var(--color-text-primary);">员工可见</div>
             <p class="rule-desc">员工端可查看本人每一条积分变动明细，每条积分变动记录都会完整展示四项核心信息：操作管理员、变动发生时间、积分变动类型，以及该条记录的完整备注内容，确保积分变动全程透明可查。</p>
           </div>
         </div>
@@ -183,7 +183,7 @@ onMounted(() => {
       justify-content: flex-start;
       vertical-align: middle;
       height: 40px;
-      border-bottom: 2px solid #c1c6d6;
+      border-bottom: 2px solid var(--color-border);
       gap: 10px;
 
       h3 {
@@ -209,12 +209,12 @@ onMounted(() => {
           width: 50px;
           height: 30px;
           font-size: 14px;
-          background-color: #ebedf9;
-          color: #0056c1;
+          background-color: var(--el-color-primary-light-9);
+          color: var(--color-primary);
         }
 
         .rule-desc {
-          color: #414654;
+          color: var(--color-text-regular);
           font-size: 14px;
         }
       }
