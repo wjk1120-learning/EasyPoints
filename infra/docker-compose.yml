@@ -1,5 +1,16 @@
 services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   mysql:
+    profiles: ["full"]
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: root-change-me
@@ -17,35 +28,42 @@ services:
       - ./mysql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     ports:
       - "3307:3306"
-
-  redis:
-    image: redis:7.4-alpine
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot-change-me"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   api:
+    profiles: ["full"]
     image: node:24-alpine
     working_dir: /workspace/apps/api
-    command: node src/server.js
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
+    command: sh -c "npm install --omit=dev --workspaces=false --package-lock=false && node src/server.js"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
-      - ../.env.example
       - ../.env
     environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      REDIS_URL: redis://redis:6379/0
       HTTP_PROXY: ${HTTP_PROXY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}
-      NO_PROXY: mysql,redis,localhost,127.0.0.1
+      NO_PROXY: mysql,redis,localhost,127.0.0.1,host.docker.internal
     volumes:
       - ../:/workspace
+      - api-node-modules:/workspace/apps/api/node_modules
     ports:
       - "3000:3000"
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   nginx:
+    profiles: ["full"]
     image: nginx:1.27-alpine
     ports:
       - "8088:80"
@@ -57,3 +75,4 @@ services:
 
 volumes:
   mysql-data:
+  api-node-modules:

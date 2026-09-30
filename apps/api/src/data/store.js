@@ -1,5 +1,4 @@
 const seed = require("./seed");
-const mysql = require("mysql2/promise");
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -619,6 +618,12 @@ function mapMessage(row) {
 }
 
 function createMysqlStore() {
+  let mysql;
+  try {
+    mysql = require("mysql2/promise");
+  } catch (error) {
+    throw new Error("缺少 mysql2 依赖，无法连接 MySQL。请在 apps/api 执行 npm install，或设置 FORCE_MEMORY_STORE=1");
+  }
   console.log("[mysql] pool config:", process.env.MYSQL_HOST, process.env.MYSQL_PORT, process.env.MYSQL_USER, process.env.MYSQL_DATABASE);
   const pool = mysql.createPool({
     host: process.env.MYSQL_HOST,

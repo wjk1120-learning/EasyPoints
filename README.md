@@ -25,3 +25,5 @@ node apps/api/src/server.js
 ```
 
 完整依赖安装后可按各子项目 `package.json` 继续运行管理端和小程序端。
+
+开发与协作规范见 [`docs/standards.md`](docs/standards.md)。

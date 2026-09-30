@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+const jwt = require("./jwt");
 const { toNumberId } = require("./data/store");
 
 function sendJson(res, statusCode, data) {

@@ -9,8 +9,7 @@ const { canManageEmployee } = require("./services/permissions");
 const { scryptSync, timingSafeEqual, randomUUID, randomBytes } = require("node:crypto");
 const fs = require("node:fs");
 const pathModule = require("node:path");
-const jwt = require("jsonwebtoken");
-const XLSX = require("xlsx");
+const jwt = require("./jwt");
 
 function groupByMonth(records) {
   return records.reduce((result, record) => {
@@ -598,6 +597,12 @@ function createApp(store = createStore()) {
           来源ID: record.sourceId,
           冲正原流水ID: record.reversalOfId || ""
         }));
+        let XLSX;
+        try {
+          XLSX = require("xlsx");
+        } catch {
+          return sendJson(res, 503, { message: "缺少 xlsx 依赖，暂时无法导出 Excel" });
+        }
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(workbook, worksheet, "积分流水");

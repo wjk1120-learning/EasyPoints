@@ -107,6 +107,7 @@ uni-app 员工端。
 - `api.md`：接口摘要。
 - `deployment.md`：部署说明。
 - `admin-guide.md`：管理员操作说明。
+- `standards.md`：项目规范（架构、业务底线、接口与协作约定）。
 
 ## 5. 常用命令
 
