@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Refresh, Search } from "@element-plus/icons-vue";
+import { Connection, Refresh, Search } from "@element-plus/icons-vue";
 import { employees as fetchEmployees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
 import { adjustment } from "../api/points/points";
 import { reportsPaged } from "../api/report/report";
 import type { PointRecord } from "../api/report/types";
+import { syncContacts } from "../api/wecom/wecom";
+import { createSubmitLock } from "../utils/submit-lock";
 
 const employees = ref<Employee[]>([]);
 const loading = ref(false);
+const syncing = ref(false);
+const syncLock = createSubmitLock();
 const keyword = ref("");
 const selectedEmployeeId = ref<number | null>(null);
 const selectedDepartmentId = ref<number | string>("");
@@ -106,6 +110,23 @@ function resetFilters() {
   keyword.value = "";
   selectedDepartmentId.value = "";
   loadEmployees();
+}
+
+/** 企微通讯录一键同步：后端拉取部门/成员落库（新员工入库、离职禁用），完成后刷新列表 */
+async function handleSync() {
+  if (!syncLock.acquire()) return;
+  syncing.value = true;
+  try {
+    const result = await syncContacts();
+    const count = Array.isArray(result) ? result.length : 0;
+    ElMessage.success(`同步完成，本次同步 ${count} 名员工`);
+    await loadEmployees();
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "同步失败，请稍后重试");
+  } finally {
+    syncing.value = false;
+    syncLock.release();
+  }
 }
 
 async function loadEmployees() {
@@ -215,6 +236,7 @@ onMounted(async () => {
           <el-option v-for="item in departmentOptions" :key="item.departmentId" :label="item.name" :value="item.departmentId" />
         </el-select>
         <el-button :icon="Refresh" :loading="loading" @click="resetFilters">重置</el-button>
+        <el-button type="primary" plain :icon="Connection" :loading="syncing" @click="handleSync">同步企微通讯录</el-button>
       </div>
 
       <!-- 表格 -->
