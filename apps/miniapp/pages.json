@@ -52,11 +52,11 @@
     },
     {
       "path": "pages/votes/index",
-      "style": { "navigationBarTitleText": "我的投票" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "我的投票" }
     },
     {
       "path": "pages/vote/index",
-      "style": { "navigationBarTitleText": "投票详情" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "投票详情" }
     },
     {
       "path": "pages/apply/index",

@@ -23,12 +23,12 @@ const actualPoints = computed(() => {
 })
 
 const shortcuts = [
-  { label: '积分商城', icon: '🛍️', tile: 'blue', action: () => uni.switchTab({ url: '/pages/mall/index' }) },
   { label: '任务大厅', icon: '📋', tile: 'green', action: () => uni.switchTab({ url: '/pages/tasks/index' }) },
   { label: '积分排名', icon: '🏆', tile: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
   { label: '积分申请', icon: '📝', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
   { label: '规则中心', icon: '📖', tile: 'blue', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
-  { label: '通知中心', icon: '🔔', tile: 'red', badge: true, action: () => uni.navigateTo({ url: '/pages/messages/index' }) }
+  { label: '通知中心', icon: '🔔', tile: 'red', badge: true, action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
+  { label: '我的投票', icon: '🗳️', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
 ]
 
 onShow(async () => {
@@ -171,11 +171,6 @@ function friendlyTime(value) {
   <view class="page page-tab page-nav">
     <NavBar title="员工积分" :back="false" right="通知" @right="uni.navigateTo({ url: '/pages/messages/index' })" />
 
-    <view class="refresh-line">
-      <text class="refresh-icon">⟳</text>
-      <text>实时自动刷新 · 下拉可刷新</text>
-    </view>
-
     <view class="hero card-hero">
       <view class="hero-top">
         <view class="hero-who">
@@ -250,19 +245,6 @@ function friendlyTime(value) {
 </template>
 
 <style scoped>
-.refresh-line {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  margin: -8rpx 4rpx 16rpx;
-  font-size: 22rpx;
-  color: #9aa1ab;
-}
-
-.refresh-icon {
-  font-size: 24rpx;
-}
-
 .hero {
   padding: 36rpx 32rpx;
   border-radius: 24rpx;
