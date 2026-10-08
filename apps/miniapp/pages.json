@@ -3,73 +3,86 @@
     "autoscan": true
   },
   "globalStyle": {
-    "navigationBarBackgroundColor": "#E8F4FC",
+    "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTitleText": "易积分",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#E8F4FC",
+    "backgroundColor": "#F5F6F8",
     "backgroundTextStyle": "dark"
   },
   "pages": [
     {
       "path": "pages/home/index",
-      "style": {
-        "navigationBarTitleText": "易积分"
-      }
-    },
-    {
-      "path": "pages/hall/index",
-      "style": {
-        "navigationBarTitleText": "大厅",
-        "enablePullDownRefresh": true
-      }
-    },
-    {
-      "path": "pages/leaderboard/index",
-      "style": {
-        "navigationBarTitleText": "排行榜"
-      }
-    },
-    {
-      "path": "pages/ai/index",
-      "style": {
-        "navigationBarTitleText": "AI 助手"
-      }
-    },
-    {
-      "path": "pages/points/index",
-      "style": {
-        "navigationBarTitleText": "积分明细"
-      }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "员工积分", "enablePullDownRefresh": true }
     },
     {
       "path": "pages/mall/index",
-      "style": {
-        "navigationBarTitleText": "积分商城"
-      }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "积分商城" }
+    },
+    {
+      "path": "pages/tasks/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "任务大厅", "enablePullDownRefresh": true }
+    },
+    {
+      "path": "pages/points/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "积分明细" }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/hall/index",
+      "style": { "navigationBarTitleText": "积分大厅", "enablePullDownRefresh": true }
+    },
+    {
+      "path": "pages/leaderboard/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "积分排名" }
+    },
+    {
+      "path": "pages/ai/index",
+      "style": { "navigationBarTitleText": "AI 助手" }
     },
     {
       "path": "pages/messages/index",
-      "style": {
-        "navigationBarTitleText": "通知列表"
-      }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "通知中心" }
+    },
+    {
+      "path": "pages/message/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "消息详情" }
+    },
+    {
+      "path": "pages/votes/index",
+      "style": { "navigationBarTitleText": "我的投票" }
+    },
+    {
+      "path": "pages/vote/index",
+      "style": { "navigationBarTitleText": "投票详情" }
+    },
+    {
+      "path": "pages/apply/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "积分申请" }
+    },
+    {
+      "path": "pages/rules/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "规则中心" }
+    },
+    {
+      "path": "pages/appeals/index",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "申诉记录" }
     },
     {
       "path": "pages/orders/index",
-      "style": {
-        "navigationBarTitleText": "我的订单"
-      }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "兑换记录" }
     },
     {
       "path": "pages/appeal/index",
-      "style": {
-        "navigationBarTitleText": "积分申诉"
-      }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "发起申诉" }
     }
   ],
   "tabBar": {
-    "color": "#8E8E93",
-    "selectedColor": "#5B9BD5",
-    "backgroundColor": "#F9FCFE",
+    "color": "#9CA3AF",
+    "selectedColor": "#2F6BFF",
+    "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
       {
@@ -79,16 +92,16 @@
         "selectedIconPath": "static/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/hall/index",
-        "text": "大厅",
-        "iconPath": "static/tabbar/hall.png",
-        "selectedIconPath": "static/tabbar/hall-active.png"
+        "pagePath": "pages/mall/index",
+        "text": "商城",
+        "iconPath": "static/tabbar/mall.png",
+        "selectedIconPath": "static/tabbar/mall-active.png"
       },
       {
-        "pagePath": "pages/leaderboard/index",
-        "text": "排行",
-        "iconPath": "static/tabbar/leaderboard.png",
-        "selectedIconPath": "static/tabbar/leaderboard-active.png"
+        "pagePath": "pages/tasks/index",
+        "text": "任务",
+        "iconPath": "static/tabbar/tasks.png",
+        "selectedIconPath": "static/tabbar/tasks-active.png"
       },
       {
         "pagePath": "pages/points/index",
@@ -97,10 +110,10 @@
         "selectedIconPath": "static/tabbar/points-active.png"
       },
       {
-        "pagePath": "pages/mall/index",
-        "text": "商城",
-        "iconPath": "static/tabbar/mall.png",
-        "selectedIconPath": "static/tabbar/mall-active.png"
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
       }
     ]
   }

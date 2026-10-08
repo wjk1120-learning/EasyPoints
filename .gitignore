@@ -6,3 +6,6 @@ dist/
 coverage/
 unpackage/
 .hbuilderx/
+
+# 本地协作规范，不上传 GitHub
+docs/rule.md

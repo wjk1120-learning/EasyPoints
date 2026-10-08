@@ -214,3 +214,8 @@ export async function askAi(question) {
     data: { question }
   });
 }
+
+export function isMissingApi(error) {
+  const msg = String(error?.message || "");
+  return /接口不存在|404|未实现|501/.test(msg);
+}

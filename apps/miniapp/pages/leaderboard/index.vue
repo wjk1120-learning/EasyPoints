@@ -1,20 +1,42 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
+import NavBar from '../../components/NavBar.vue'
 
 const list = ref([])
 const loading = ref(false)
+const rankBy = ref('actual')
+const sameBoard = ref(true)
+const updatedAt = ref('')
 
-onShow(async () => {
-  await loadLeaderboard()
+const PASTELS = [
+  { bg: '#eaf3ff', fg: '#2f6bff' },
+  { bg: '#e9f7ef', fg: '#16a34a' },
+  { bg: '#fff6e5', fg: '#d97706' },
+  { bg: '#f1edff', fg: '#7c5cbf' },
+  { bg: '#fdeeee', fg: '#f04438' }
+]
+
+const medalColors = { 1: '#ffb020', 2: '#a8b4c4', 3: '#d9925f' }
+
+const myEntry = computed(() => {
+  const employeeId = String(uni.getStorageSync('employeeId') || '')
+  if (!employeeId) return null
+  return list.value.find((item) => String(item.id) === employeeId) || null
 })
+
+onShow(loadLeaderboard)
 
 async function loadLeaderboard() {
   loading.value = true
   try {
-    list.value = await request('/miniapp/leaderboard')
+    const data = await request(`/miniapp/leaderboard?rankBy=${rankBy.value}`)
+    list.value = Array.isArray(data) ? data : []
+    sameBoard.value = !list.value.some((item) => item.actualPoints != null && item.availablePoints != null)
+    const now = new Date()
+    updatedAt.value = `${`${now.getHours()}`.padStart(2, '0')}:${`${now.getMinutes()}`.padStart(2, '0')}`
   } catch (error) {
     uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
   } finally {
@@ -22,46 +44,77 @@ async function loadLeaderboard() {
   }
 }
 
+function switchRank(next) {
+  if (rankBy.value === next) return
+  rankBy.value = next
+  loadLeaderboard()
+}
+
+function scoreOf(item) {
+  if (rankBy.value === 'actual' && item.actualPoints != null) return item.actualPoints
+  if (item.availablePoints != null) return item.availablePoints
+  return item.pointsBalance
+}
+
 function nameInitial(name) {
   const text = String(name || '').trim()
   return text ? text.slice(0, 1) : '?'
 }
+
+function pastel(index) {
+  return PASTELS[index % PASTELS.length]
+}
+
+function formatPoints(value) {
+  const num = Number(value || 0)
+  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 </script>
 
 <template>
-  <view class="page page-tab">
-    <view class="lb-header">
-      <text class="lb-title">排行榜</text>
-      <text class="lb-desc">按当前积分降序排列</text>
+  <view class="page page-nav">
+    <NavBar title="积分排名" right="排行规则" @right="uni.navigateTo({ url: '/pages/rules/index' })" />
+
+    <view class="segmented">
+      <text class="tab" :class="{ active: rankBy === 'actual' }" @tap="switchRank('actual')">实际积分排名</text>
+      <text class="tab" :class="{ active: rankBy === 'available' }" @tap="switchRank('available')">实时积分排名</text>
     </view>
 
-    <view v-if="loading" class="lb-empty">
-      <text class="muted">加载中…</text>
+    <text class="update-line">⟳ 数据更新于 {{ updatedAt || '--:--' }} 自动刷新</text>
+    <text v-if="sameBoard" class="same-board-note">双榜字段待后端提供，两个页签暂展示同一份可用积分。</text>
+
+    <view v-if="myEntry" class="card my-rank">
+      <text class="my-rank-label">📍 我的排名 · 置顶</text>
+      <view class="row my-rank-row">
+        <text class="my-rank-num">{{ myEntry.rank }}</text>
+        <view class="my-avatar" :style="{ background: pastel(myEntry.rank).bg, color: pastel(myEntry.rank).fg }">
+          {{ nameInitial(myEntry.name) }}
+        </view>
+        <view class="my-info">
+          <text class="my-name">{{ myEntry.name }}（我）</text>
+          <text class="my-dept">{{ myEntry.departmentName || '-' }}</text>
+        </view>
+        <text class="my-points">{{ formatPoints(scoreOf(myEntry)) }}</text>
+      </view>
     </view>
 
-    <view v-else-if="list.length === 0" class="lb-empty">
-      <text class="muted">暂无数据</text>
-    </view>
-
-    <view v-else class="lb-list">
-      <view
-        v-for="item in list"
-        :key="item.id"
-        class="lb-row"
-        :class="{ 'is-podium': item.rank <= 3 }"
-      >
-        <text class="lb-rank" :class="item.rank === 1 ? 'is-first' : ''">{{ item.rank }}</text>
-        <view class="lb-avatar" :class="item.rank <= 3 ? 'is-podium-avatar' : ''">
-          <text class="lb-initial">{{ nameInitial(item.name) }}</text>
+    <view class="card board">
+      <view class="board-title">全员榜单</view>
+      <view v-if="loading" class="board-empty"><text class="muted">加载中…</text></view>
+      <view v-else-if="list.length === 0" class="board-empty"><text class="muted">暂无数据</text></view>
+      <view v-for="(item, index) in list" :key="item.id" class="board-row">
+        <view class="rank-badge">
+          <view v-if="item.rank <= 3" class="medal" :style="{ background: medalColors[item.rank] }">{{ item.rank }}</view>
+          <text v-else class="rank-num">{{ item.rank }}</text>
         </view>
-        <view class="lb-body">
-          <text class="lb-name">{{ item.name }}</text>
-          <text class="lb-dept">{{ item.departmentName || '-' }}</text>
+        <view class="board-avatar" :style="{ background: pastel(index).bg, color: pastel(index).fg }">
+          {{ nameInitial(item.name) }}
         </view>
-        <view class="lb-score">
-          <text class="lb-points">{{ item.pointsBalance }}</text>
-          <text class="lb-unit">分</text>
+        <view class="board-main">
+          <text class="board-name">{{ item.name }}</text>
+          <text class="board-dept">{{ item.departmentName || '-' }}</text>
         </view>
+        <text class="board-points">{{ formatPoints(scoreOf(item)) }}</text>
       </view>
     </view>
 
@@ -70,118 +123,61 @@ function nameInitial(name) {
 </template>
 
 <style scoped>
-/* ---- header card (hero style) ---- */
-.lb-header {
-  padding: 32rpx;
-  margin-bottom: 20rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(145deg, rgba(168, 230, 207, 0.42), rgba(168, 216, 234, 0.48));
-  border: 1rpx solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 12rpx 40rpx rgba(107, 203, 154, 0.12),
-    0 1rpx 0 rgba(255, 255, 255, 0.8) inset;
-}
-
-.lb-title {
+.update-line {
   display: block;
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #3a7ca5;
-  letter-spacing: -0.5rpx;
-  line-height: 1.15;
+  text-align: center;
+  margin: 16rpx 0 4rpx;
+  font-size: 22rpx;
+  color: #9aa1ab;
 }
 
-.lb-desc {
+.same-board-note {
   display: block;
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #8e8e93;
-}
-
-/* ---- empty ---- */
-.lb-empty {
-  padding: 80rpx 0;
   text-align: center;
+  margin-bottom: 8rpx;
+  font-size: 20rpx;
+  color: #b4bac3;
 }
 
-/* ---- list ---- */
-.lb-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+.my-rank {
+  background: #edf3ff;
+  box-shadow: none;
+  padding: 24rpx 28rpx;
 }
 
-.lb-row {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-  padding: 24rpx;
-  border-radius: 28rpx;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1rpx solid rgba(255, 255, 255, 0.88);
-  box-shadow:
-    0 8rpx 32rpx rgba(91, 155, 213, 0.07),
-    0 1rpx 0 rgba(255, 255, 255, 0.95) inset;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition: all 0.2s ease;
+.my-rank-label {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #2f6bff;
 }
 
-.lb-row:active {
-  opacity: 0.92;
-  transform: scale(0.992);
+.my-rank-row {
+  gap: 20rpx;
+  margin-top: 18rpx;
 }
 
-.lb-row.is-podium {
-  background: linear-gradient(145deg, rgba(168, 230, 207, 0.35), rgba(168, 216, 234, 0.38));
-  border: 1rpx solid rgba(255, 255, 255, 0.75);
-}
-
-/* ---- rank number ---- */
-.lb-rank {
-  width: 40rpx;
-  flex-shrink: 0;
-  text-align: center;
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #aeaeb2;
+.my-rank-num {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #2f6bff;
   font-variant-numeric: tabular-nums;
+  min-width: 56rpx;
+  text-align: center;
 }
 
-.lb-rank.is-first {
-  font-size: 26rpx;
-  font-weight: 700;
-  color: #3a7ca5;
-}
-
-/* ---- avatar ---- */
-.lb-avatar {
-  width: 64rpx;
-  height: 64rpx;
-  flex-shrink: 0;
+.my-avatar {
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(142, 142, 147, 0.12);
-}
-
-.lb-avatar.is-podium-avatar {
-  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
-}
-
-.lb-initial {
-  font-size: 24rpx;
+  font-size: 28rpx;
   font-weight: 600;
-  color: #8e8e93;
+  flex-shrink: 0;
 }
 
-.is-podium-avatar .lb-initial {
-  color: #ffffff;
-}
-
-/* ---- body ---- */
-.lb-body {
+.my-info {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -189,36 +185,112 @@ function nameInitial(name) {
   gap: 4rpx;
 }
 
-.lb-name {
+.my-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1c1c1e;
-  line-height: 1.3;
+  color: #1a2233;
 }
 
-.lb-dept {
+.my-dept {
   font-size: 22rpx;
-  color: #8e8e93;
+  color: #8a97b8;
 }
 
-/* ---- score ---- */
-.lb-score {
+.my-points {
   flex-shrink: 0;
-  text-align: right;
-  display: flex;
-  align-items: baseline;
-  gap: 4rpx;
-}
-
-.lb-points {
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #1c1c1e;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #1a2233;
   font-variant-numeric: tabular-nums;
 }
 
-.lb-unit {
+.board-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1a2233;
+  margin-bottom: 8rpx;
+}
+
+.board-empty {
+  padding: 48rpx 0;
+  text-align: center;
+}
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #f5f6f8;
+}
+
+.board-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 4rpx;
+}
+
+.rank-badge {
+  width: 48rpx;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.medal {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  color: #ffffff;
   font-size: 22rpx;
-  color: #aeaeb2;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-num {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #9aa1ab;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.board-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.board-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a2233;
+}
+
+.board-dept {
+  font-size: 22rpx;
+  color: #9aa1ab;
+}
+
+.board-points {
+  flex-shrink: 0;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1a2233;
+  font-variant-numeric: tabular-nums;
 }
 </style>

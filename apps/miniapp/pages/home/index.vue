@@ -1,15 +1,12 @@
 <script setup>
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
+import NavBar from '../../components/NavBar.vue'
 
-const home = ref({
-  pointsBalance: 0,
-  monthDelta: 0,
-  unreadMessages: 0,
-  employee: {}
-})
+const home = ref({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
+const recent = ref([])
 const showSettings = ref(false)
 const apiBase = ref('')
 const wecomUserId = ref('')
@@ -19,35 +16,38 @@ const debugEnabled = ref(false)
 let debugTapCount = 0
 let debugTapTimer = null
 
+const availablePoints = computed(() => Number(home.value.pointsBalance || 0))
+const actualPoints = computed(() => {
+  const value = home.value.actualPoints ?? home.value.honorPoints
+  return value == null || value === '' ? null : Number(value)
+})
+
+const shortcuts = [
+  { label: '积分商城', icon: '🛍️', tile: 'blue', action: () => uni.switchTab({ url: '/pages/mall/index' }) },
+  { label: '任务大厅', icon: '📋', tile: 'green', action: () => uni.switchTab({ url: '/pages/tasks/index' }) },
+  { label: '积分排名', icon: '🏆', tile: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
+  { label: '积分申请', icon: '📝', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
+  { label: '规则中心', icon: '📖', tile: 'blue', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
+  { label: '通知中心', icon: '🔔', tile: 'red', badge: true, action: () => uni.navigateTo({ url: '/pages/messages/index' }) }
+]
+
 onShow(async () => {
-  const storedApiBase = uni.getStorageSync("apiBase");
-  if (storedApiBase === false || storedApiBase === true || String(storedApiBase || "").trim() === "false") {
-    uni.removeStorageSync("apiBase");
+  const storedApiBase = uni.getStorageSync('apiBase')
+  if (storedApiBase === false || storedApiBase === true || String(storedApiBase || '').trim() === 'false') {
+    uni.removeStorageSync('apiBase')
   }
-  apiBase.value = getApiBase();
-  wecomUserId.value = uni.getStorageSync("wecomUserId") || "zhangsan";
+  apiBase.value = getApiBase()
+  wecomUserId.value = uni.getStorageSync('wecomUserId') || 'zhangsan'
   authError.value = uni.getStorageSync('employeeAuthError') || ''
   debugEnabled.value = uni.getStorageSync('enableDebug') === '1'
-  if (debugEnabled.value) {
-    showSettings.value = true
-  }
+  if (debugEnabled.value) showSettings.value = true
   try {
     if (!uni.getStorageSync('employeeToken')) {
-      try {
-        await loginEmployee({ wecomUserId: wecomUserId.value })
-      } catch (loginError) {
-        const cached = getCachedData('/miniapp/home')
-        if (cached && isNetworkError(loginError)) {
-          applyHomeData(cached, true)
-          await refreshHallBadge()
-          return
-        }
-        throw loginError
-      }
+      await loginEmployee({ wecomUserId: wecomUserId.value })
     }
     const data = await request('/miniapp/home')
     applyHomeData(data, Boolean(data?.__offline))
-    await refreshHallBadge()
+    await loadRecent()
   } catch (error) {
     const cached = getCachedData('/miniapp/home')
     if (cached && isNetworkError(error)) {
@@ -55,60 +55,74 @@ onShow(async () => {
       return
     }
     offlineMode.value = false
-    const reason = uni.getStorageSync('employeeAuthError') || ''
-    if (reason === 'network_error' && uni.getStorageSync('employeeToken')) {
-      authError.value = '网络不可用，请检查 API 地址与网络连接'
-    } else {
-      authError.value = error?.message || reason || '加载失败'
-    }
-    uni.showToast({ title: authError.value || '加载失败', icon: 'none' })
+    authError.value = error?.message || '加载失败'
+    uni.showToast({ title: authError.value, icon: 'none' })
+  }
+})
+
+onPullDownRefresh(async () => {
+  try {
+    const data = await request('/miniapp/home')
+    applyHomeData(data, Boolean(data?.__offline))
+    await loadRecent()
+  } catch {} finally {
+    uni.stopPullDownRefresh()
   }
 })
 
 function applyHomeData(data, offline) {
-  home.value = stripOfflineFlag(data)
+  const next = { ...(data || {}) }
+  delete next.__offline
+  home.value = next
   offlineMode.value = offline
-  if (offline) {
-    authError.value = ''
-  } else {
-    uni.removeStorageSync('employeeAuthError')
-    authError.value = ''
+  if (!offline) uni.removeStorageSync('employeeAuthError')
+}
+
+async function loadRecent() {
+  try {
+    const groups = await request('/miniapp/points/records')
+    const rows = []
+    Object.keys(groups || {}).forEach((month) => {
+      ;(groups[month] || []).forEach((record) => rows.push(record))
+    })
+    rows.sort((a, b) => String(b.occurredAt || b.createdAt || '').localeCompare(String(a.occurredAt || a.createdAt || '')))
+    recent.value = rows.slice(0, 3)
+  } catch {
+    recent.value = []
   }
 }
 
-function stripOfflineFlag(data) {
-  if (!data || typeof data !== 'object') return data
-  const next = { ...data }
-  delete next.__offline
-  return next
+function recordIcon(record) {
+  const text = `${record.type || ''} ${record.sourceType || ''}`
+  if (/exchange|order|mall/.test(text)) return { emoji: '🛍️', tile: 'red' }
+  if (/penalty|deduct/.test(text)) return { emoji: '⚠️', tile: 'red' }
+  if (/reward|manual|bonus/.test(text)) return { emoji: '🎁', tile: 'green' }
+  return Number(record.pointsDelta) > 0 ? { emoji: '📈', tile: 'green' } : { emoji: '📉', tile: 'red' }
 }
 
 function saveSettings() {
-  const nextApiBase = normalizeApiBaseInput(apiBase.value);
-  apiBase.value = nextApiBase || getApiBase();
-  if (nextApiBase) {
-    uni.setStorageSync("apiBase", nextApiBase);
-  } else {
-    uni.removeStorageSync("apiBase");
-  }
-  uni.setStorageSync("wecomUserId", String(wecomUserId.value || "").trim() || "zhangsan");
-  uni.showToast({ title: "设置已保存" });
+  const nextApiBase = normalizeApiBaseInput(apiBase.value)
+  apiBase.value = nextApiBase || getApiBase()
+  if (nextApiBase) uni.setStorageSync('apiBase', nextApiBase)
+  else uni.removeStorageSync('apiBase')
+  uni.setStorageSync('wecomUserId', String(wecomUserId.value || '').trim() || 'zhangsan')
+  uni.showToast({ title: '设置已保存' })
 }
 
 function normalizeApiBaseInput(value) {
-  const raw = String(value || "").trim();
-  if (!raw || raw === "false" || raw === "true") return "";
-  return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+  const raw = String(value || '').trim()
+  if (!raw || raw === 'false' || raw === 'true') return ''
+  return raw.endsWith('/') ? raw.slice(0, -1) : raw
 }
 
 async function relogin() {
-  saveSettings();
+  saveSettings()
   try {
-    await loginEmployee({ wecomUserId: wecomUserId.value });
-    uni.removeStorageSync('employeeAuthError')
+    await loginEmployee({ wecomUserId: wecomUserId.value })
     authError.value = ''
-    uni.showToast({ title: '登录成功' })
     home.value = await request('/miniapp/home')
+    await loadRecent()
+    uni.showToast({ title: '登录成功' })
   } catch (error) {
     uni.showToast({ title: error?.message || '登录失败', icon: 'none' })
   }
@@ -121,9 +135,7 @@ function toggleSettings() {
   }
   debugTapCount += 1
   if (debugTapTimer) clearTimeout(debugTapTimer)
-  debugTapTimer = setTimeout(() => {
-    debugTapCount = 0
-  }, 1200)
+  debugTapTimer = setTimeout(() => { debugTapCount = 0 }, 1200)
   if (debugTapCount >= 7) {
     uni.setStorageSync('enableDebug', '1')
     debugEnabled.value = true
@@ -133,87 +145,104 @@ function toggleSettings() {
   }
 }
 
-function openMessages() {
-  uni.navigateTo({ url: '/pages/messages/index' })
+function formatPoints(value) {
+  const num = Number(value || 0)
+  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-function formatBadge(count) {
-  const n = Number(count || 0)
-  if (!Number.isFinite(n) || n <= 0) return ''
-  if (n > 99) return '99+'
-  return String(Math.floor(n))
-}
-
-async function refreshHallBadge() {
-  const since = uni.getStorageSync('hallSeenAt') || ''
-  if (!since) {
-    try { uni.removeTabBarBadge({ index: 1 }) } catch {}
-    return
-  }
-  try {
-    const result = await request(`/miniapp/hall/unread-count?since=${encodeURIComponent(since)}`)
-    const count = Number(result?.count || 0)
-    if (count > 0) {
-      uni.setTabBarBadge({ index: 1, text: formatBadge(count) })
-    } else {
-      uni.removeTabBarBadge({ index: 1 })
-    }
-  } catch {
-  }
+function friendlyTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 16)
+  const now = new Date()
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000)
+  const hh = `${date.getHours()}`.padStart(2, '0')
+  const mm = `${date.getMinutes()}`.padStart(2, '0')
+  if (diffDays === 0) return `今天 ${hh}:${mm}`
+  if (diffDays === 1) return `昨天 ${hh}:${mm}`
+  const m = `${date.getMonth() + 1}`.padStart(2, '0')
+  const d = `${date.getDate()}`.padStart(2, '0')
+  return `${m}-${d} ${hh}:${mm}`
 }
 </script>
 
 <template>
-  <view class="page page-tab">
-    <view class="card card-hero hero">
-      <text class="section-label">欢迎回来</text>
-      <text class="hero-name">{{ home.employee.name || '员工' }}</text>
-      <text class="balance">{{ home.pointsBalance }}</text>
-      <text class="muted">当前可用积分</text>
+  <view class="page page-tab page-nav">
+    <NavBar title="员工积分" :back="false" right="通知" @right="uni.navigateTo({ url: '/pages/messages/index' })" />
+
+    <view class="refresh-line">
+      <text class="refresh-icon">⟳</text>
+      <text>实时自动刷新 · 下拉可刷新</text>
     </view>
 
-    <view v-if="offlineMode" class="card offline-banner">
-      <text class="offline-title">离线模式</text>
-      <text class="muted">已展示上次成功加载的数据，恢复网络后将自动更新</text>
+    <view class="hero card-hero">
+      <view class="hero-top">
+        <view class="hero-who">
+          <text class="hero-name">{{ home.employee?.name || '员工' }}</text>
+          <text class="hero-dept">{{ home.employee?.departmentName || '未分配部门' }}</text>
+        </view>
+        <text class="hero-badge">在职</text>
+      </view>
+      <view class="hero-scores">
+        <view class="hero-score">
+          <text class="hero-label">实时积分</text>
+          <text class="hero-num">{{ formatPoints(availablePoints) }}</text>
+        </view>
+        <view class="hero-score">
+          <text class="hero-label">实际积分</text>
+          <text class="hero-num">{{ actualPoints == null ? '—' : formatPoints(actualPoints) }}</text>
+        </view>
+      </view>
+      <text v-if="actualPoints == null" class="hero-note">实际积分字段待后端提供，当前展示「—」</text>
     </view>
 
-    <view v-if="authError && !offlineMode" class="card card-warning warning">
-      <text class="warning-title">登录状态异常</text>
+    <view v-if="offlineMode" class="card"><text class="muted">离线模式，展示上次成功数据</text></view>
+    <view v-if="authError && !offlineMode" class="card">
       <text class="muted">{{ authError }}</text>
-      <view class="small-button" style="margin-top: 20rpx" @tap="relogin">重新登录</view>
+      <view class="button" style="margin-top: 16rpx" @tap="relogin">重新登录</view>
     </view>
 
-    <view class="grid-2">
-      <view class="card stat-card">
-        <text class="muted">本月变动</text>
-        <text class="stat-num" :class="home.monthDelta >= 0 ? 'pos' : 'neg'">
-          {{ home.monthDelta >= 0 ? '+' : '' }}{{ home.monthDelta }}
+    <view class="card">
+      <view class="block-title">快捷入口</view>
+      <view class="shortcut-grid">
+        <view v-for="item in shortcuts" :key="item.label" class="shortcut" @tap="item.action()">
+          <view class="shortcut-icon-wrap">
+            <view class="icon-tile shortcut-icon" :class="item.tile">{{ item.icon }}</view>
+            <text v-if="item.badge && home.unreadMessages > 0" class="shortcut-badge">{{ home.unreadMessages > 99 ? '99+' : home.unreadMessages }}</text>
+          </view>
+          <text class="shortcut-label">{{ item.label }}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row between block-title-row">
+        <text class="block-title">最近积分变动</text>
+        <text class="link" @tap="uni.switchTab({ url: '/pages/points/index' })">查看全部</text>
+      </view>
+      <view v-if="recent.length === 0" class="recent-empty"><text class="muted">暂无积分流水</text></view>
+      <view v-for="record in recent" :key="record.id" class="record-row recent-row">
+        <view class="icon-tile recent-icon" :class="recordIcon(record).tile">{{ recordIcon(record).emoji }}</view>
+        <view class="recent-main">
+          <text class="recent-title">{{ record.remark }}</text>
+          <text class="muted">{{ friendlyTime(record.occurredAt || record.createdAt) }}</text>
+        </view>
+        <text class="recent-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
+          {{ record.pointsDelta > 0 ? '+' : '' }}{{ formatPoints(record.pointsDelta) }}
         </text>
       </view>
-      <view class="card stat-card clickable" @tap="openMessages">
-        <text class="muted">通知提醒</text>
-        <text class="stat-num">{{ home.unreadMessages }}</text>
-        <view v-if="home.unreadMessages > 0" class="corner-badge">{{ formatBadge(home.unreadMessages) }}</view>
-      </view>
     </view>
 
-    <view class="button" @tap="uni.switchTab({ url: '/pages/points/index' })">查看积分明细</view>
-    <view class="button ghost" style="margin-top: 16rpx" @tap="uni.navigateTo({ url: '/pages/orders/index' })">我的订单</view>
-
-    <view class="settings-toggle muted" @tap="toggleSettings">
-      {{ showSettings ? '收起设置' : '展开设置' }}
-    </view>
-
-    <view v-if="showSettings" class="card settings-card">
+    <view class="settings-toggle muted" @tap="toggleSettings">{{ showSettings ? '收起设置' : '展开设置' }}</view>
+    <view v-if="showSettings" class="card">
       <text class="muted">API_BASE</text>
-      <input v-model="apiBase" class="input" placeholder="真机调试请填电脑局域网IP，例如：http://192.168.x.x:3000" />
-      <view class="small-button ghost" style="margin-top: 16rpx" @tap="apiBase = getApiBase()">使用默认 API 地址</view>
-      <text class="muted" style="margin-top: 20rpx; display: block">wecomUserId</text>
-      <input v-model="wecomUserId" class="input" placeholder="例如：zhangsan 或 lisi" />
-      <text class="muted" style="margin-top: 12rpx; display: block">切换账号：改成 lisi 后点「保存并登录」</text>
-      <view class="settings-actions">
-        <view class="small-button" @tap="saveSettings">保存</view>
-        <view class="small-button ghost" @tap="relogin">保存并登录</view>
+      <input v-model="apiBase" class="input" placeholder="http://192.168.x.x:3000" />
+      <text class="muted">wecomUserId</text>
+      <input v-model="wecomUserId" class="input" placeholder="zhangsan" />
+      <view class="row" style="gap: 16rpx; margin-top: 16rpx">
+        <view class="button" style="flex: 1" @tap="saveSettings">保存</view>
+        <view class="button ghost" style="flex: 1" @tap="relogin">保存并登录</view>
       </view>
     </view>
     <AiFloatBall />
@@ -221,73 +250,191 @@ async function refreshHallBadge() {
 </template>
 
 <style scoped>
-.hero {
+.refresh-line {
   display: flex;
-  flex-direction: column;
-  gap: 6rpx;
+  align-items: center;
+  gap: 8rpx;
+  margin: -8rpx 4rpx 16rpx;
+  font-size: 22rpx;
+  color: #9aa1ab;
+}
+
+.refresh-icon {
+  font-size: 24rpx;
+}
+
+.hero {
+  padding: 36rpx 32rpx;
+  border-radius: 24rpx;
+}
+
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.hero-who {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero-name {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #3a7ca5;
-}
-
-.balance {
-  font-size: 80rpx;
-  font-weight: 700;
-  letter-spacing: -2rpx;
-  color: #3a7ca5;
-  margin: 4rpx 0;
-}
-
-.stat-card {
-  position: relative;
-  padding: 28rpx;
-}
-
-.stat-num {
   display: block;
-  margin-top: 12rpx;
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: 700;
-  color: #1c1c1e;
 }
 
-.clickable:active {
-  opacity: 0.92;
-  transform: scale(0.985);
-}
-
-.warning-title {
+.hero-dept {
   display: block;
-  font-weight: 600;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  opacity: 0.82;
+}
+
+.hero-badge {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  padding: 6rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hero-scores {
+  display: flex;
+  gap: 96rpx;
+  margin-top: 36rpx;
+}
+
+.hero-score {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-label {
+  font-size: 22rpx;
+  opacity: 0.78;
+}
+
+.hero-num {
+  margin-top: 8rpx;
+  font-size: 48rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-note {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 20rpx;
+  opacity: 0.75;
+}
+
+.block-title {
   font-size: 30rpx;
-  color: #b45309;
+  font-weight: 700;
+  color: #1a2233;
+}
+
+.block-title-row {
   margin-bottom: 8rpx;
 }
 
-.offline-banner {
-  background: rgba(232, 244, 252, 0.85);
-  border: 1rpx solid rgba(91, 155, 213, 0.25);
+.shortcut-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
 }
 
-.offline-title {
-  display: block;
+.shortcut {
+  width: 33.33%;
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.shortcut:active {
+  opacity: 0.7;
+}
+
+.shortcut-icon-wrap {
+  position: relative;
+}
+
+.shortcut-icon {
+  width: 88rpx;
+  height: 88rpx;
+  font-size: 40rpx;
+}
+
+.shortcut-badge {
+  position: absolute;
+  top: -10rpx;
+  right: -14rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: #f04438;
+  color: #fff;
+  font-size: 18rpx;
   font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.shortcut-label {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #4e5561;
+}
+
+.recent-empty {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.recent-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  font-size: 32rpx;
+}
+
+.recent-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.recent-title {
   font-size: 28rpx;
-  color: #3a7ca5;
-  margin-bottom: 8rpx;
+  font-weight: 600;
+  color: #1a2233;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-amount {
+  flex-shrink: 0;
+  font-size: 32rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .settings-toggle {
   text-align: center;
-  padding: 20rpx 0 8rpx;
-}
-
-.settings-actions {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 24rpx;
+  padding: 16rpx 0;
 }
 </style>
