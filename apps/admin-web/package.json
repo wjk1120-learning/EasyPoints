@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4173"
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "@vitejs/plugin-vue": "^5.2.1",
+    "axios": "^1.20.0",
     "element-plus": "^2.9.1",
     "vite": "^5.4.14",
     "vue": "^3.5.13",
@@ -20,6 +22,8 @@
     "@rollup/rollup-win32-x64-msvc": "^4.61.1"
   },
   "devDependencies": {
-    "sass-embedded": "^1.100.0"
+    "sass-embedded": "^1.100.0",
+    "typescript": "~5.9",
+    "vue-tsc": "^3.3.12"
   }
 }

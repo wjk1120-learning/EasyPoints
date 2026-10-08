@@ -1,15 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, reactive, ref, watch } from "vue";
-import { api, authFetch } from "../api";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
+import { exportPointRecordsXlsx, reportsPaged } from "../api/report/report";
+import type { PointRecord } from "../api/report/types";
+import { saveBlob } from "../utils/request";
 
-const rows = ref([]);
+const rows = ref<PointRecord[]>([]);
 const downloading = ref(false);
 const loading = ref(false);
-const employees = ref([]);
+const employees = ref<Employee[]>([]);
 const meta = reactive({ total: 0, page: 1, pageSize: 50 });
 const query = reactive({ employeeId: "", month: "" });
 
-function formatTime(value) {
+function formatTime(value: string | number | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -22,7 +26,7 @@ function formatTime(value) {
   return `${y}-${m}-${d} ${h}:${min}:${s}`;
 }
 
-function formatType(value) {
+function formatType(value: unknown) {
   const type = String(value || "");
   if (type === "reward") return "加分";
   if (type === "penalty") return "扣分";
@@ -36,7 +40,7 @@ function formatType(value) {
 async function load() {
   loading.value = true;
   try {
-    const result = await api.reportsPaged({
+    const result = await reportsPaged({
       page: meta.page,
       pageSize: meta.pageSize,
       employeeId: query.employeeId,
@@ -58,30 +62,15 @@ watch(
 );
 
 onMounted(async () => {
-  employees.value = await api.employees();
+  employees.value = await fetchEmployees();
   await load();
 });
 
 async function downloadXlsx() {
   downloading.value = true;
   try {
-    const base = import.meta.env.VITE_API_BASE || "http://localhost:3000";
-    const qs = new URLSearchParams();
-    if (query.employeeId) qs.set("employeeId", query.employeeId);
-    if (query.month) qs.set("month", query.month);
-    const response = await authFetch(
-      `${base}/admin/reports/point-records.xlsx${qs.toString() ? `?${qs}` : ""}`
-    );
-    if (!response.ok) throw new Error("下载失败");
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `point-records-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    const blob = await exportPointRecordsXlsx({ employeeId: query.employeeId, month: query.month });
+    saveBlob(blob, `point-records-${new Date().toISOString().slice(0, 10)}.xlsx`);
   } finally {
     downloading.value = false;
   }
@@ -144,7 +133,7 @@ async function downloadXlsx() {
           :page-size="meta.pageSize"
           :current-page="meta.page"
           @current-change="
-            (p) => {
+            (p: number) => {
               meta.page = p;
               load();
             }

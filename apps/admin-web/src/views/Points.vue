@@ -1,19 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { CirclePlus, RemoveFilled } from "@element-plus/icons-vue";
-import { api } from "../api";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
+import { adjustment, monthlyBatch } from "../api/points/points";
 
-const employees = ref([]);
-const single = reactive({ employeeId: null, pointsDelta: 10, type: "reward", remark: "" });
+const employees = ref<Employee[]>([]);
+const single = reactive({
+  employeeId: null as number | null,
+  pointsDelta: 10,
+  type: "reward" as "reward" | "penalty",
+  remark: ""
+});
 const batch = reactive({
   month: new Date().toISOString().slice(0, 7),
   batchRemark: "",
-  items: []
+  items: [] as { employeeId: number; pointsDelta: number; remark: string }[]
 });
 
 const monthOptions = computed(() => {
-  const options = [];
+  const options: { value: string; label: string }[] = [];
   const now = new Date();
   for (let i = 0; i < 12; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -24,18 +31,18 @@ const monthOptions = computed(() => {
 });
 
 const employeeNameMap = computed(() => {
-  const map = new Map();
+  const map = new Map<string, string>();
   for (const item of employees.value) map.set(String(item.id), item.name);
   return map;
 });
 
-function formatEmployee(value) {
+function formatEmployee(value: number | string | null | undefined) {
   if (value == null) return "";
   return employeeNameMap.value.get(String(value)) || String(value);
 }
 
 onMounted(async () => {
-  employees.value = await api.employees();
+  employees.value = await fetchEmployees();
   if (employees.value.length && single.employeeId == null) single.employeeId = employees.value[0].id;
   batch.items = employees.value.map((item) => ({ employeeId: item.id, pointsDelta: 0, remark: "" }));
 });
@@ -43,13 +50,13 @@ onMounted(async () => {
 async function submitSingle() {
   const points = Number(single.pointsDelta);
   const normalizedPointsDelta = single.type === "penalty" ? -Math.abs(points) : Math.abs(points);
-  await api.adjustment({ ...single, pointsDelta: normalizedPointsDelta });
+  await adjustment({ ...single, employeeId: single.employeeId as number, pointsDelta: normalizedPointsDelta });
   ElMessage.success("单笔积分已提交，备注已写入流水");
   single.remark = "";
 }
 
 async function submitBatch() {
-  await api.monthlyBatch(batch);
+  await monthlyBatch(batch);
   ElMessage.success("月度批量录分已提交");
 }
 </script>

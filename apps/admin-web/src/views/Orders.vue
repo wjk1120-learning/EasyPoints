@@ -1,21 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { api } from "../api";
+import { ordersPaged, updateOrder } from "../api/order/order";
+import type { Order } from "../api/order/types";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
 
-const rows = ref([]);
+const rows = ref<Order[]>([]);
 const loading = ref(false);
 const meta = reactive({ total: 0, page: 1, pageSize: 50 });
-const employees = ref([]);
+const employees = ref<Employee[]>([]);
 const query = reactive({ status: "", employeeId: "" });
 
 const employeeNameMap = computed(() => {
-  const map = new Map();
+  const map = new Map<string, string>();
   for (const item of employees.value) map.set(String(item.id), item.name);
   return map;
 });
 
-function formatEmployee(value) {
+function formatEmployee(value: number | string | null | undefined) {
   if (value == null) return "";
   return employeeNameMap.value.get(String(value)) || String(value);
 }
@@ -23,7 +26,7 @@ function formatEmployee(value) {
 async function load() {
   loading.value = true;
   try {
-    const result = await api.ordersPaged({
+    const result = await ordersPaged({
       page: meta.page,
       pageSize: meta.pageSize,
       status: query.status,
@@ -36,7 +39,7 @@ async function load() {
   }
 }
 
-async function setStatus(row, status) {
+async function setStatus(row: Order, status: string) {
   let remark = "后台审核处理";
   if (status === "rejected" || status === "cancelled") {
     try {
@@ -45,7 +48,7 @@ async function setStatus(row, status) {
         cancelButtonText: "取消",
         inputType: "textarea",
         inputPlaceholder: "例如：库存不足、信息不完整、重复下单等",
-        inputValidator: (value) => {
+        inputValidator: (value: string) => {
           if (!String(value || "").trim()) return "备注不能为空";
           return true;
         }
@@ -56,20 +59,20 @@ async function setStatus(row, status) {
     }
   }
 
-  await api.updateOrder(row.id, { status, remark });
+  await updateOrder(row.id, { status, remark });
   ElMessage.success("订单状态已更新");
   meta.page = 1;
   await load();
 }
 
-function formatTime(value) {
+function formatTime(value: string | number | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString();
 }
 
-function formatStatus(value) {
+function formatStatus(value: unknown) {
   const status = String(value || "");
   if (status === "pending_review") return "待审核";
   if (status === "approved") return "审核通过";
@@ -81,7 +84,7 @@ function formatStatus(value) {
 }
 
 onMounted(async () => {
-  employees.value = await api.employees();
+  employees.value = await fetchEmployees();
   await load();
 });
 
@@ -149,7 +152,7 @@ watch(
           :page-size="meta.pageSize"
           :current-page="meta.page"
           @current-change="
-            (p) => {
+            (p: number) => {
               meta.page = p;
               load();
             }

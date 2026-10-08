@@ -1,26 +1,29 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { api } from "../api";
+import { appealsPaged, reviewAppeal } from "../api/appeal/appeal";
+import type { Appeal } from "../api/appeal/types";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
 
-const rows = ref([]);
+const rows = ref<Appeal[]>([]);
 const loading = ref(false);
 const meta = reactive({ total: 0, page: 1, pageSize: 50 });
-const employees = ref([]);
+const employees = ref<Employee[]>([]);
 const query = reactive({ status: "", employeeId: "" });
 
 const processing = ref(false);
 const dialogVisible = ref(false);
-const selectedRow = ref(null);
-const form = reactive({ decision: "department_approved", remark: "" });
+const selectedRow = ref<Appeal | null>(null);
+const form = reactive({ decision: "department_approved" as "department_approved" | "rejected", remark: "" });
 
 const employeeNameMap = computed(() => {
-  const map = new Map();
+  const map = new Map<string, string>();
   for (const item of employees.value) map.set(String(item.id), item.name);
   return map;
 });
 
-function formatEmployee(row) {
+function formatEmployee(row: Appeal) {
   if (row?.employeeName) return row.employeeName;
   if (row?.employeeId != null) return employeeNameMap.value.get(String(row.employeeId)) || String(row.employeeId);
   return "";
@@ -29,7 +32,7 @@ function formatEmployee(row) {
 async function load() {
   loading.value = true;
   try {
-    const result = await api.appealsPaged({
+    const result = await appealsPaged({
       page: meta.page,
       pageSize: meta.pageSize,
       status: query.status,
@@ -42,7 +45,7 @@ async function load() {
   }
 }
 
-function openProcess(row) {
+function openProcess(row: Appeal) {
   selectedRow.value = row;
   form.decision = "department_approved";
   form.remark = "";
@@ -65,9 +68,9 @@ async function submitProcess() {
   if (!selectedRow.value) return;
   processing.value = true;
   try {
-    await api.reviewAppeal(selectedRow.value.id, {
+    await reviewAppeal(selectedRow.value.id, {
       status: form.decision,
-      stage: form.decision === "hr_approved" ? "hr" : "department",
+      stage: "department",
       resultRemark: remark
     });
     ElMessage.success("已处理");
@@ -79,21 +82,21 @@ async function submitProcess() {
   }
 }
 
-function formatTime(value) {
+function formatTime(value: string | number | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString();
 }
 
-function formatStatus(value) {
+function formatStatus(value: unknown) {
   const status = String(value || "");
   if (status === "pending_department_review" || status === "pending_hr_review") return "待处理";
   if (!status) return "";
   return "已处理";
 }
 
-function formatEvent(row) {
+function formatEvent(row: Appeal) {
   const record = row?.pointRecord;
   if (!record) return row?.pointRecordId != null ? String(row.pointRecordId) : "";
   const delta = Number(record.pointsDelta || 0);
@@ -104,7 +107,7 @@ function formatEvent(row) {
 }
 
 onMounted(async () => {
-  employees.value = await api.employees();
+  employees.value = await fetchEmployees();
   await load();
 });
 
@@ -178,7 +181,7 @@ watch(
           :page-size="meta.pageSize"
           :current-page="meta.page"
           @current-change="
-            (p) => {
+            (p: number) => {
               meta.page = p;
               load();
             }

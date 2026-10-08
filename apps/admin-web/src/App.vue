@@ -1,32 +1,33 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, SwitchButton } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
-import { api } from "./api";
+import type { AdminInfo } from "./api/auth/types";
+import { badges as fetchBadges, login } from "./api/auth/auth";
 
 const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
-const admin = ref(loadAdmin());
+const admin = ref<AdminInfo | null>(loadAdmin());
 const avatarUrl = ref('/images/avatar.png')
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
 const badges = reactive({ appeals: 0, orders: 0 });
 const dashboardBadge = computed(() => Number(badges.appeals || 0) + Number(badges.orders || 0));
-let badgeTimer = null;
+let badgeTimer: ReturnType<typeof setInterval> | null = null;
 
-function loadAdmin() {
+function loadAdmin(): AdminInfo | null {
   try {
     const raw = localStorage.getItem("admin");
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as AdminInfo) : null;
   } catch {
     return null;
   }
 }
 
-function formatRole(role) {
+function formatRole(role?: string) {
   const value = String(role || "");
   if (value === "super_admin") return "超级管理员";
   if (value === "hr_admin") return "人事管理员";
@@ -34,7 +35,7 @@ function formatRole(role) {
   return value || "管理员";
 }
 
-function parseJwtPayload(value) {
+function parseJwtPayload(value: string): { exp?: number } | null {
   try {
     const parts = String(value || "").split(".");
     if (parts.length !== 3) return null;
@@ -45,7 +46,7 @@ function parseJwtPayload(value) {
   }
 }
 
-function isJwtExpired(value) {
+function isJwtExpired(value: string) {
   const payload = parseJwtPayload(value);
   if (!payload?.exp) return false;
   return Date.now() >= Number(payload.exp) * 1000;
@@ -54,7 +55,7 @@ function isJwtExpired(value) {
 async function submitLogin() {
   loading.value = true;
   try {
-    const result = await api.login(form);
+    const result = await login(form);
     localStorage.setItem("token", result.token);
     localStorage.setItem("adminId", String(result.admin.id));
     localStorage.setItem("admin", JSON.stringify(result.admin));
@@ -62,7 +63,7 @@ async function submitLogin() {
     admin.value = result.admin;
     ElMessage.success("登录成功");
   } catch (error) {
-    ElMessage.error(error?.message || "登录失败");
+    ElMessage.error((error as Error)?.message || "登录失败");
   } finally {
     loading.value = false;
   }
@@ -76,19 +77,20 @@ function logout() {
   admin.value = null;
 }
 
-function handleLogoutEvent(event) {
+function handleLogoutEvent(event: Event) {
   token.value = localStorage.getItem("token") || "";
   admin.value = loadAdmin();
+  const detail = (event as CustomEvent<{ reason?: string }>).detail;
   if (!token.value) {
-    if (event?.detail?.reason === "expired") ElMessage.warning("登录已过期，请重新登录");
-    else if (event?.detail?.reason === "unauthorized") ElMessage.warning("登录已失效，请重新登录");
+    if (detail?.reason === "expired") ElMessage.warning("登录已过期，请重新登录");
+    else if (detail?.reason === "unauthorized") ElMessage.warning("登录已失效，请重新登录");
   }
 }
 
 async function refreshBadges() {
   if (!token.value) return;
   try {
-    const result = await api.badges();
+    const result = await fetchBadges();
     badges.appeals = Number(result.appealsUnread || 0);
     badges.orders = Number(result.ordersUnread || 0);
   } catch {
@@ -226,8 +228,8 @@ watch(
         <div class="topbar-right">
           <div class="userInfo">
             <div class="user-des">
-              <div class="username">{{ admin.name }}</div>
-              <div class="role">{{ formatRole(admin.role) }}</div>
+              <div class="username">{{ admin?.name }}</div>
+              <div class="role">{{ formatRole(admin?.role) }}</div>
             </div>
             <el-avatar class="user-avatar" shape="square" :size="40" :src="avatarUrl" />
           </div>

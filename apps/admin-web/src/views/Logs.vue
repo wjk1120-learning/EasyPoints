@@ -1,22 +1,33 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { api } from "../api";
+import { logsPaged } from "../api/log/log";
+import type { OperationLog } from "../api/log/types";
+import {
+  dispatchOutbox,
+  outboxMeta as fetchOutboxMeta,
+  outboxPaged,
+  retryOutbox,
+  retryOutboxFailed
+} from "../api/outbox/outbox";
+import type { OutboxMessage, OutboxMeta } from "../api/outbox/types";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
 
-const rows = ref([]);
+const rows = ref<OperationLog[]>([]);
 const loading = ref(false);
 const meta = reactive({ total: 0, page: 1, pageSize: 50 });
 
-const outboxRows = ref([]);
+const outboxRows = ref<OutboxMessage[]>([]);
 const outboxLoading = ref(false);
 const outboxMeta = reactive({ total: 0, page: 1, pageSize: 50 });
 const outboxQuery = reactive({ status: "", type: "", employeeId: "" });
-const employees = ref([]);
-const outboxTypes = ref([]);
-const outboxConfig = ref({ processingTimeoutSec: 60, maxRetries: 3, batchSize: 50 });
+const employees = ref<Employee[]>([]);
+const outboxTypes = ref<string[]>([]);
+const outboxConfig = ref<OutboxMeta["config"]>({ processingTimeoutSec: 60, maxRetries: 3, batchSize: 50 });
 const outboxPayloadDialog = reactive({ visible: false, title: "", payloadText: "" });
 
-function formatTime(value) {
+function formatTime(value: string | number | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -29,7 +40,7 @@ function formatTime(value) {
   return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 }
 
-function employeeLabel(employeeId) {
+function employeeLabel(employeeId: number | string) {
   const id = Number(employeeId);
   if (!Number.isFinite(id)) return String(employeeId || "");
   const found = employees.value.find((item) => Number(item.id) === id);
@@ -37,7 +48,7 @@ function employeeLabel(employeeId) {
   return `员工 (${id})`;
 }
 
-function formatOutboxType(value) {
+function formatOutboxType(value: unknown) {
   const type = String(value || "");
   if (type === "point_changed") return "积分变动通知";
   if (type === "order_status") return "订单状态更新";
@@ -45,7 +56,7 @@ function formatOutboxType(value) {
   return type || "未知类型";
 }
 
-function formatOutboxStatusText(value) {
+function formatOutboxStatusText(value: unknown) {
   const status = String(value || "");
   if (status === "pending") return "待处理";
   if (status === "processing") return "处理中";
@@ -54,16 +65,20 @@ function formatOutboxStatusText(value) {
   return status || "未知状态";
 }
 
-function formatOutboxResult(value) {
+function formatOutboxResult(value: unknown) {
   const status = String(value || "");
-  if (status === "failed") return { text: "失败", tagType: "danger" };
-  if (status === "mock_sent") return { text: "成功", tagType: "success" };
-  if (status === "processing") return { text: "处理中", tagType: "warning" };
-  return { text: "待处理", tagType: "info" };
+  if (status === "failed") return { text: "失败", tagType: "danger" as const };
+  if (status === "mock_sent") return { text: "成功", tagType: "success" as const };
+  if (status === "processing") return { text: "处理中", tagType: "warning" as const };
+  return { text: "待处理", tagType: "info" as const };
 }
 
-function outboxTraceId(row) {
-  const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+function outboxPayload(row: OutboxMessage): Record<string, unknown> {
+  return row?.payload && typeof row.payload === "object" ? row.payload : {};
+}
+
+function outboxTraceId(row: OutboxMessage) {
+  const payload = outboxPayload(row);
   if (payload.traceId) return String(payload.traceId);
   const created = String(row.createdAt || row.updatedAt || "").slice(0, 10).replace(/-/g, "");
   const datePart = created || "00000000";
@@ -72,8 +87,8 @@ function outboxTraceId(row) {
   return `trace-${datePart}-outbox-${row.id}`;
 }
 
-function outboxBusinessSummary(row) {
-  const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+function outboxBusinessSummary(row: OutboxMessage) {
+  const payload = outboxPayload(row);
   const type = String(row?.type || "");
   if (type === "point_changed") {
     const delta = Number(payload.pointsDelta || 0);
@@ -83,7 +98,7 @@ function outboxBusinessSummary(row) {
     return `${deltaText} 分${balanceText}${remarkText}`;
   }
   if (type === "order_status") {
-    const parts = [];
+    const parts: string[] = [];
     if (payload.giftName) parts.push(`礼品：${payload.giftName}`);
     else if (payload.orderId != null) parts.push(`订单：#${payload.orderId}`);
     if (payload.pointsCost != null && payload.pointsCost !== "") parts.push(`积分：${payload.pointsCost}`);
@@ -92,7 +107,7 @@ function outboxBusinessSummary(row) {
     return parts.join("；") || "订单状态更新";
   }
   if (type === "appeal_result") {
-    const parts = [];
+    const parts: string[] = [];
     if (payload.reason) parts.push(`申诉原因：${payload.reason}`);
     if (payload.status) parts.push(`处理结果：${String(payload.status)}`);
     if (payload.resultRemark) parts.push(`处理备注：${payload.resultRemark}`);
@@ -103,14 +118,14 @@ function outboxBusinessSummary(row) {
   return "";
 }
 
-function viewOutboxPayload(row) {
-  const payload = row?.payload && typeof row.payload === "object" ? row.payload : row?.payload;
+function viewOutboxPayload(row: OutboxMessage) {
+  const payload = outboxPayload(row);
   outboxPayloadDialog.title = `载荷 ID=${row.id} type=${row.type} status=${row.status}`;
   outboxPayloadDialog.payloadText = payload ? JSON.stringify(payload, null, 2) : "";
   outboxPayloadDialog.visible = true;
 }
 
-function formatOutboxStatus(value) {
+function formatOutboxStatus(value: unknown) {
   if (value === "pending") return "待处理";
   if (value === "processing") return "处理中";
   if (value === "mock_sent") return "测试发送";
@@ -121,7 +136,7 @@ function formatOutboxStatus(value) {
 async function load() {
   loading.value = true;
   try {
-    const result = await api.logsPaged({
+    const result = await logsPaged({
       page: meta.page,
       pageSize: meta.pageSize
     });
@@ -135,7 +150,7 @@ async function load() {
 async function loadOutbox() {
   outboxLoading.value = true;
   try {
-    const result = await api.outboxPaged({
+    const result = await outboxPaged({
       page: outboxMeta.page,
       pageSize: outboxMeta.pageSize,
       status: outboxQuery.status,
@@ -150,12 +165,12 @@ async function loadOutbox() {
 }
 
 async function loadOutboxMeta() {
-  const result = await api.outboxMeta();
+  const result = await fetchOutboxMeta();
   outboxTypes.value = Array.isArray(result.types) ? result.types : [];
   outboxConfig.value = result.config || outboxConfig.value;
 }
 
-async function retryMessage(row) {
+async function retryMessage(row: OutboxMessage) {
   try {
     await ElMessageBox.confirm(`重试该消息？\nID=${row.id}\ntype=${row.type}\nstatus=${row.status}`, "确认操作", {
       type: "warning",
@@ -165,7 +180,7 @@ async function retryMessage(row) {
   } catch {
     return;
   }
-  await api.retryOutbox(row.id);
+  await retryOutbox(row.id);
   ElMessage.success("已重置为待派发");
   await loadOutbox();
 }
@@ -180,7 +195,7 @@ async function dispatchNow() {
   } catch {
     return;
   }
-  const result = await api.dispatchOutbox();
+  const result = await dispatchOutbox();
   ElMessage.success(`已派发：${result.sent}，失败：${result.failed}`);
   await loadOutbox();
 }
@@ -191,7 +206,7 @@ async function retryFailedCurrentPage() {
     ElMessage.warning("当前页没有发送失败的消息");
     return;
   }
-  for (const row of targets) await api.retryOutbox(row.id);
+  for (const row of targets) await retryOutbox(row.id);
   ElMessage.success(`已重置失败消息：${targets.length}`);
   await loadOutbox();
 }
@@ -204,7 +219,7 @@ async function retryAllFailed() {
       cancelButtonText: "仅当前页",
       distinguishCancelAndClose: true
     });
-    const result = await api.retryOutboxFailed({
+    const result = await retryOutboxFailed({
       type: outboxQuery.type || undefined,
       employeeId: outboxQuery.employeeId || undefined
     });
@@ -241,7 +256,7 @@ watch(
 );
 
 onMounted(async () => {
-  employees.value = await api.employees();
+  employees.value = await fetchEmployees();
   await loadOutboxMeta();
   await load();
   await loadOutbox();
@@ -287,7 +302,7 @@ onMounted(async () => {
           :page-size="meta.pageSize"
           :current-page="meta.page"
           @current-change="
-            (p) => {
+            (p: number) => {
               meta.page = p;
               load();
             }
@@ -377,7 +392,7 @@ onMounted(async () => {
           :page-size="outboxMeta.pageSize"
           :current-page="outboxMeta.page"
           @current-change="
-            (p) => {
+            (p: number) => {
               outboxMeta.page = p;
               loadOutbox();
             }

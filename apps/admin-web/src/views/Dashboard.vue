@@ -1,7 +1,10 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { User, ShoppingBag, View, Document, Reading } from "@element-plus/icons-vue";
-import { api } from "../api";
+import { appeals as fetchAppeals } from "../api/appeal/appeal";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import { mallGifts } from "../api/mall/mall";
+import { orders as fetchOrders } from "../api/order/order";
 
 const employeesCount = ref(0);
 const giftsCount = ref(0);
@@ -15,10 +18,10 @@ function getPendingAppealStatuses() {
 async function loadDashboard() {
   try {
     const [employees, appeals, orders, gifts] = await Promise.all([
-      api.employees(),
-      api.appeals(),
-      api.orders(),
-      api.mallGifts()
+      fetchEmployees(),
+      fetchAppeals(),
+      fetchOrders(),
+      mallGifts()
     ]);
 
     employeesCount.value = employees.length;

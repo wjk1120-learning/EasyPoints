@@ -1,24 +1,32 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { api, authFetch } from "../api";
+import type { UploadRequestOptions } from "element-plus";
+import { API_BASE } from "../utils/request";
+import {
+  createGift,
+  mallGifts,
+  publishGift,
+  unpublishGift,
+  updateGift,
+  uploadGiftCover
+} from "../api/mall/mall";
+import type { Gift } from "../api/mall/types";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
-
-const rows = ref([]);
+const rows = ref<Gift[]>([]);
 const loading = ref(false);
 
 const dialogVisible = ref(false);
 const saving = ref(false);
-const editId = ref(null);
+const editId = ref<number | null>(null);
 const coverImageUrl = ref("");
 
 const form = reactive({
   name: "",
   pointsCost: 0,
   stock: 0,
-  limitPerUser: null,
-  status: "inactive"
+  limitPerUser: null as number | null,
+  status: "inactive" as "active" | "inactive"
 });
 
 function resetForm() {
@@ -36,18 +44,18 @@ function openCreate() {
   dialogVisible.value = true;
 }
 
-function openEdit(row) {
+function openEdit(row: Gift) {
   editId.value = row.id;
   form.name = row.name || "";
   form.pointsCost = Number(row.pointsCost || 0);
   form.stock = Number(row.stock || 0);
   form.limitPerUser = row.limitPerUser == null ? null : Number(row.limitPerUser);
-  form.status = String(row.status || "inactive");
+  form.status = (String(row.status || "inactive") === "active" ? "active" : "inactive");
   coverImageUrl.value = row.coverImageUrl || "";
   dialogVisible.value = true;
 }
 
-function formatStatus(value) {
+function formatStatus(value: unknown) {
   if (value === "active") return "上架";
   if (value === "inactive") return "下架";
   return String(value || "");
@@ -56,7 +64,7 @@ function formatStatus(value) {
 async function load() {
   loading.value = true;
   try {
-    rows.value = await api.mallGifts();
+    rows.value = await mallGifts();
   } finally {
     loading.value = false;
   }
@@ -71,7 +79,7 @@ async function save() {
   saving.value = true;
   try {
     if (editId.value) {
-      const updated = await api.updateGift(editId.value, {
+      const updated = await updateGift(editId.value, {
         name,
         pointsCost: form.pointsCost,
         stock: form.stock,
@@ -81,7 +89,7 @@ async function save() {
       coverImageUrl.value = updated.coverImageUrl || coverImageUrl.value;
       ElMessage.success("已保存");
     } else {
-      const created = await api.createGift({
+      const created = await createGift({
         name,
         pointsCost: form.pointsCost,
         stock: form.stock,
@@ -98,50 +106,48 @@ async function save() {
   }
 }
 
-async function publish(row) {
+async function publish(row: Gift) {
   try {
     await ElMessageBox.confirm(`确认上架「${row.name}」？`, "确认操作", { type: "warning" });
   } catch {
     return;
   }
-  await api.publishGift(row.id);
+  await publishGift(row.id);
   ElMessage.success("已上架");
   await load();
 }
 
-async function unpublish(row) {
+async function unpublish(row: Gift) {
   try {
     await ElMessageBox.confirm(`确认下架「${row.name}」？`, "确认操作", { type: "warning" });
   } catch {
     return;
   }
-  await api.unpublishGift(row.id);
+  await unpublishGift(row.id);
   ElMessage.success("已下架");
   await load();
 }
 
-async function uploadCover(options) {
+type UploadHookError = Parameters<UploadRequestOptions["onError"]>[0];
+
+function toUploadError(message: string): UploadHookError {
+  return new Error(message) as unknown as UploadHookError;
+}
+
+async function uploadCover(options: UploadRequestOptions) {
   if (!editId.value) {
-    options.onError?.(new Error("请先保存礼品信息，再上传封面"));
+    options.onError?.(toUploadError("请先保存礼品信息，再上传封面"));
     return;
   }
-  const data = new FormData();
-  data.append("file", options.file);
   try {
-    const response = await authFetch(`${API_BASE}/admin/mall/gifts/${editId.value}/cover`, {
-      method: "POST",
-      body: data
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.message || "上传失败");
-    const updated = result.data || result;
+    const updated = await uploadGiftCover(editId.value, options.file);
     coverImageUrl.value = updated.coverImageUrl || "";
-    options.onSuccess?.(updated, options.file);
+    options.onSuccess?.(updated);
     ElMessage.success("封面已更新");
     await load();
   } catch (error) {
-    options.onError?.(error);
-    ElMessage.error(error?.message || "上传失败");
+    options.onError?.(toUploadError((error as Error)?.message || "上传失败"));
+    ElMessage.error((error as Error)?.message || "上传失败");
   }
 }
 

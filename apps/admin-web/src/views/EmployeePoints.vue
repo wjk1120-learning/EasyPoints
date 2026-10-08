@@ -1,22 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Refresh, Search } from "@element-plus/icons-vue";
-import { api } from "../api";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
+import { adjustment } from "../api/points/points";
+import { reportsPaged } from "../api/report/report";
+import type { PointRecord } from "../api/report/types";
 
-const employees = ref([]);
+const employees = ref<Employee[]>([]);
 const loading = ref(false);
 const keyword = ref("");
-const selectedEmployeeId = ref(null);
-const selectedDepartmentId = ref("");
+const selectedEmployeeId = ref<number | null>(null);
+const selectedDepartmentId = ref<number | string>("");
 const meta = reactive({ page: 1, pageSize: 10 });
 
 const adjustDialog = reactive({
   visible: false,
   submitting: false,
-  employeeId: null,
+  employeeId: null as number | null,
   employeeName: "",
-  type: "reward",
+  type: "reward" as "reward" | "penalty",
   pointsDelta: 10,
   remark: ""
 });
@@ -24,9 +28,9 @@ const adjustDialog = reactive({
 const drawer = reactive({
   visible: false,
   loading: false,
-  employeeId: null,
+  employeeId: null as number | null,
   employeeName: "",
-  rows: [],
+  rows: [] as PointRecord[],
   meta: { total: 0, page: 1, pageSize: 20 }
 });
 
@@ -63,7 +67,7 @@ watch([keyword, selectedDepartmentId], () => {
 });
 
 const departmentOptions = computed(() => {
-  const seen = new Map();
+  const seen = new Map<number, { departmentId: number; name: string }>();
   for (const emp of employees.value) {
     const id = emp.departmentId;
     if (id != null && !seen.has(id)) {
@@ -73,14 +77,14 @@ const departmentOptions = computed(() => {
   return [...seen.values()].sort((a, b) => Number(a.departmentId || 0) - Number(b.departmentId || 0));
 });
 
-function formatStatus(value) {
+function formatStatus(value: unknown) {
   const status = String(value || "");
   if (status === "active") return "在职";
   if (status === "inactive") return "停用";
   return status || "";
 }
 
-function formatType(value) {
+function formatType(value: unknown) {
   const type = String(value || "");
   if (type === "reward") return "加分";
   if (type === "penalty") return "扣分";
@@ -91,7 +95,7 @@ function formatType(value) {
   return type || "";
 }
 
-function formatTime(value) {
+function formatTime(value: string | number | undefined) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -107,14 +111,14 @@ function resetFilters() {
 async function loadEmployees() {
   loading.value = true;
   try {
-    employees.value = await api.employees();
+    employees.value = await fetchEmployees();
     if (employees.value.length && selectedEmployeeId.value == null) selectedEmployeeId.value = employees.value[0].id;
   } finally {
     loading.value = false;
   }
 }
 
-function openAdjust(employee) {
+function openAdjust(employee: Employee) {
   adjustDialog.employeeId = employee.id;
   adjustDialog.employeeName = employee.name;
   adjustDialog.type = "reward";
@@ -138,8 +142,8 @@ async function submitAdjust() {
   try {
     const normalizedPointsDelta =
       adjustDialog.type === "penalty" ? -Math.abs(points) : Math.abs(points);
-    await api.adjustment({
-      employeeId: adjustDialog.employeeId,
+    await adjustment({
+      employeeId: adjustDialog.employeeId as number,
       type: adjustDialog.type,
       pointsDelta: normalizedPointsDelta,
       remark
@@ -149,13 +153,13 @@ async function submitAdjust() {
     await loadEmployees();
     if (drawer.visible && drawer.employeeId === adjustDialog.employeeId) await loadRecords({ reset: true });
   } catch (error) {
-    ElMessage.error(error?.message || "提交失败");
+    ElMessage.error((error as Error)?.message || "提交失败");
   } finally {
     adjustDialog.submitting = false;
   }
 }
 
-function openDrawer(employee) {
+function openDrawer(employee: Employee) {
   drawer.employeeId = employee.id;
   drawer.employeeName = employee.name;
   drawer.meta.page = 1;
@@ -164,7 +168,7 @@ function openDrawer(employee) {
   loadRecords({ reset: true });
 }
 
-async function loadRecords({ reset } = {}) {
+async function loadRecords({ reset }: { reset?: boolean } = {}) {
   if (!drawer.employeeId) return;
   drawer.loading = true;
   try {
@@ -172,7 +176,7 @@ async function loadRecords({ reset } = {}) {
       drawer.rows = [];
       drawer.meta.page = 1;
     }
-    const result = await api.reportsPaged({
+    const result = await reportsPaged({
       page: drawer.meta.page,
       pageSize: drawer.meta.pageSize,
       employeeId: drawer.employeeId
@@ -221,7 +225,7 @@ onMounted(async () => {
           row-key="id"
           highlight-current-row
           class="emp-table"
-          @current-change="(row) => (selectedEmployeeId = row?.id ?? null)"
+          @current-change="(row: { id?: number } | null) => (selectedEmployeeId = row?.id ?? null)"
         >
           <el-table-column prop="id" label="员工ID" min-width="100" />
           <el-table-column label="姓名" min-width="120" prop="name" />
@@ -260,7 +264,7 @@ onMounted(async () => {
           :total="total"
           :page-size="meta.pageSize"
           :current-page="meta.page"
-          @current-change="(p) => { meta.page = p; }"
+          @current-change="(p: number) => { meta.page = p; }"
         />
       </div>
     </div>
@@ -319,7 +323,7 @@ onMounted(async () => {
           :total="drawer.meta.total"
           :page-size="drawer.meta.pageSize"
           :current-page="drawer.meta.page"
-          @current-change="(p) => { drawer.meta.page = p; loadRecords(); }"
+          @current-change="(p: number) => { drawer.meta.page = p; loadRecords(); }"
         />
       </div>
     </div>
