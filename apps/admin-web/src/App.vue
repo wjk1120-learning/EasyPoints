@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, SwitchButton } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import type { AdminInfo } from "./api/auth/types";
 import { badges as fetchBadges, login } from "./api/auth/auth";
@@ -189,25 +189,23 @@ watch(
           <el-icon><EditPen /></el-icon>
           <span>积分录入</span>
         </el-menu-item>
-        <el-menu-item index="/reports">
-          <el-icon><DataLine /></el-icon>
-          <span>明细报表</span>
-        </el-menu-item>
-        <el-menu-item index="/appeals">
+        <el-menu-item index="/review-center">
           <el-icon><Check /></el-icon>
-          <el-badge :value="badges.appeals" :hidden="!badges.appeals" :max="99">
-            <span>申诉审核</span>
+          <el-badge :value="dashboardBadge" :hidden="!dashboardBadge" :max="99">
+            <span>审核中心</span>
           </el-badge>
+        </el-menu-item>
+        <el-menu-item index="/tasks">
+          <el-icon><Management /></el-icon>
+          <span>任务管理</span>
         </el-menu-item>
         <el-menu-item index="/mall">
           <el-icon><Present /></el-icon>
           <span>商城礼品</span>
         </el-menu-item>
-        <el-menu-item index="/orders">
-          <el-icon><Ticket /></el-icon>
-          <el-badge :value="badges.orders" :hidden="!badges.orders" :max="99">
-            <span>订单核销</span>
-          </el-badge>
+        <el-menu-item index="/reports">
+          <el-icon><DataLine /></el-icon>
+          <span>明细报表</span>
         </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>

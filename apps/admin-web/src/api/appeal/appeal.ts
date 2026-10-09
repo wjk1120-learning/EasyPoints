@@ -16,7 +16,7 @@ export function appealsPaged(params: AppealQuery): Promise<Paged<Appeal>> {
   return get<Paged<Appeal>>(AppealApi.List, { ...params })
 }
 
-/** 审核申诉：处理意见必填，结果推送员工通知 */
+/** 审核申诉：处理备注必填，结果推送员工通知 */
 export function reviewAppeal(id: number | string, payload: AppealReviewPayload): Promise<unknown> {
   return post<unknown>(AppealApi.Review(id), payload)
 }

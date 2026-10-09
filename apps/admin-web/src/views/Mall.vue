@@ -12,9 +12,16 @@ import {
   uploadGiftCover
 } from "../api/mall/mall";
 import type { Gift } from "../api/mall/types";
+import { orders as fetchOrders } from "../api/order/order";
+import type { Order } from "../api/order/types";
+import { ORDER_STATUS_MAP, statusMeta } from "../utils/status";
+import { formatTimeText } from "../utils/format";
 
 const rows = ref<Gift[]>([]);
 const loading = ref(false);
+
+/** 礼品维度兑换记录抽屉（PRD 5.4：查看所有礼品兑换记录及审核状态） */
+const recordsDrawer = reactive({ visible: false, loading: false, gift: null as Gift | null, rows: [] as Order[] });
 
 const dialogVisible = ref(false);
 const saving = ref(false);
@@ -67,6 +74,19 @@ async function load() {
     rows.value = await mallGifts();
   } finally {
     loading.value = false;
+  }
+}
+
+/** 查看该礼品的全部兑换记录及审核状态（兑换接口暂无 giftId 筛选，前端过滤，量级小） */
+async function openRecords(row: Gift) {
+  recordsDrawer.gift = row;
+  recordsDrawer.visible = true;
+  recordsDrawer.loading = true;
+  try {
+    const all = await fetchOrders();
+    recordsDrawer.rows = all.filter((item) => String(item.giftId ?? "") === String(row.id) || item.giftName === row.name);
+  } finally {
+    recordsDrawer.loading = false;
   }
 }
 
@@ -181,6 +201,9 @@ onMounted(load);
         <el-table-column prop="name" label="礼品" min-width="220" />
         <el-table-column prop="pointsCost" label="所需积分" width="120" />
         <el-table-column prop="stock" label="库存" width="100" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">{{ row.createdAt ? formatTimeText(row.createdAt) : "—" }}</template>
+        </el-table-column>
         <el-table-column prop="limitPerUser" label="限购" width="100">
           <template #default="{ row }">{{ row.limitPerUser == null ? "不限" : `${row.limitPerUser} / 人` }}</template>
         </el-table-column>
@@ -189,16 +212,44 @@ onMounted(load);
             <el-tag :type="row.status === 'active' ? 'success' : 'warning'">{{ formatStatus(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260">
+        <el-table-column label="操作" width="330" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openEdit(row)">编辑</el-button>
             <el-button v-if="row.status !== 'active'" size="small" type="success" @click="publish(row)">上架</el-button>
             <el-button v-else size="small" type="warning" @click="unpublish(row)">下架</el-button>
+            <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" @click="openRecords(row)">兑换记录</el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
   </div>
+
+  <!-- 礼品维度兑换记录 -->
+  <el-drawer v-model="recordsDrawer.visible" size="55%" :title="`兑换记录 · ${recordsDrawer.gift?.name || ''}`">
+    <el-table :data="recordsDrawer.rows" border v-loading="recordsDrawer.loading">
+      <el-table-column label="员工" width="140">
+        <template #default="{ row }">{{ row.employeeName || `员工(${row.employeeId})` }}</template>
+      </el-table-column>
+      <el-table-column label="消耗积分" width="110">
+        <template #default="{ row }">
+          <span style="color: var(--color-points-deduct); font-weight: 600">-{{ row.pointsCost }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="120">
+        <template #default="{ row }">
+          <el-tag :type="statusMeta(ORDER_STATUS_MAP, row.status).tag" effect="plain">
+            {{ statusMeta(ORDER_STATUS_MAP, row.status).text }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="兑换时间" width="180">
+        <template #default="{ row }">{{ formatTimeText(row.createdAt || row.updatedAt) || "—" }}</template>
+      </el-table-column>
+      <el-table-column label="处理备注" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.remark || "—" }}</template>
+      </el-table-column>
+    </el-table>
+  </el-drawer>
 
   <el-dialog v-model="dialogVisible" :title="editId ? '编辑礼品' : '新增礼品'" width="520px">
     <el-form label-width="90px">

@@ -9,6 +9,7 @@ import { reportsPaged } from "../api/report/report";
 import type { PointRecord } from "../api/report/types";
 import { syncContacts } from "../api/wecom/wecom";
 import { createSubmitLock } from "../utils/submit-lock";
+import { formatTimeText } from "../utils/format";
 
 const employees = ref<Employee[]>([]);
 const loading = ref(false);
@@ -41,7 +42,7 @@ const drawer = reactive({
 const filtered = computed(() => {
   const key = String(keyword.value || "").trim().toLowerCase();
   let items = employees.value.slice();
-  items.sort((a, b) => Number(b.pointsBalance || 0) - Number(a.pointsBalance || 0));
+  items.sort((a, b) => Number(b.availablePoints ?? b.pointsBalance ?? 0) - Number(a.availablePoints ?? a.pointsBalance ?? 0));
   if (selectedDepartmentId.value) {
     items = items.filter((item) => String(item.departmentId) === String(selectedDepartmentId.value));
   }
@@ -97,13 +98,6 @@ function formatType(value: unknown) {
   if (type === "refund") return "退分";
   if (type === "reversal") return "冲正";
   return type || "";
-}
-
-function formatTime(value: string | number | undefined) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
 }
 
 function resetFilters() {
@@ -235,8 +229,8 @@ onMounted(async () => {
         <el-select v-model="selectedDepartmentId" clearable placeholder="全部部门" class="filter-item">
           <el-option v-for="item in departmentOptions" :key="item.departmentId" :label="item.name" :value="item.departmentId" />
         </el-select>
-        <el-button :icon="Refresh" :loading="loading" @click="resetFilters">重置</el-button>
         <el-button type="primary" plain :icon="Connection" :loading="syncing" @click="handleSync">同步企微通讯录</el-button>
+        <el-button :icon="Refresh" :loading="loading" @click="resetFilters">重置</el-button>
       </div>
 
       <!-- 表格 -->
@@ -254,11 +248,14 @@ onMounted(async () => {
           <el-table-column label="部门" min-width="100">
             <template #default="{ row }">{{ row.departmentName || `部门(${row.departmentId})` }}</template>
           </el-table-column>
-          <el-table-column prop="pointsBalance" label="当前积分" min-width="120">
+          <el-table-column label="可用积分" min-width="110" sortable>
             <template #default="{ row }">
-              <span :class="['balance-text', row.pointsBalance > 0 ? 'balance-positive' : 'balance-zero']">
-                {{ row.pointsBalance }}
-              </span>
+              <span class="balance-text balance-available">{{ row.availablePoints ?? row.pointsBalance }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="累计积分" min-width="110" sortable>
+            <template #default="{ row }">
+              <span class="balance-text balance-cumulative">{{ row.cumulativePoints ?? row.pointsBalance }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" min-width="100">
@@ -307,6 +304,15 @@ onMounted(async () => {
       <el-form-item label="备注原因" required>
         <el-input v-model="adjustDialog.remark" type="textarea" :rows="3" placeholder="例如：项目攻坚奖励、违规违纪处罚" />
       </el-form-item>
+      <el-alert
+        :title="adjustDialog.type === 'reward'
+          ? '加分规则：可用积分、累计积分同步增加'
+          : '扣分规则：可用积分、累计积分同步扣减（累计积分仅人工扣分可减少，兑换不扣）'"
+        type="info"
+        :closable="false"
+        show-icon
+        class="dual-points-tip"
+      />
     </el-form>
     <template #footer>
       <el-button @click="adjustDialog.visible = false">取消</el-button>
@@ -335,7 +341,7 @@ onMounted(async () => {
         <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip />
         <el-table-column prop="operatorName" label="操作人" width="140" />
         <el-table-column prop="occurredAt" label="时间" width="190">
-          <template #default="{ row }">{{ formatTime(row.occurredAt) }}</template>
+          <template #default="{ row }">{{ formatTimeText(row.occurredAt) }}</template>
         </el-table-column>
       </el-table>
       <div class="drawer-pagination">
@@ -474,12 +480,17 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.balance-positive {
+// 可用积分=可兑换余额（青绿），累计积分=终身荣誉（品牌蓝，只增不减）
+.balance-available {
+  color: var(--color-points-refund);
+}
+
+.balance-cumulative {
   color: var(--color-primary);
 }
 
-.balance-zero {
-  color: var(--color-points-deduct);
+.dual-points-tip {
+  margin-bottom: 4px;
 }
 
 // 状态徽标

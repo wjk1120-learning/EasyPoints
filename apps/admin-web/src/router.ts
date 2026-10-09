@@ -3,21 +3,25 @@ import type { RouteRecordRaw } from "vue-router";
 import Dashboard from "./views/Dashboard.vue";
 import EmployeePoints from "./views/EmployeePoints.vue";
 import Points from "./views/Points.vue";
-import Reports from "./views/Reports.vue";
-import Appeals from "./views/Appeals.vue";
+import ReviewCenter from "./views/ReviewCenter.vue";
+import TaskManage from "./views/TaskManage.vue";
 import Mall from "./views/Mall.vue";
-import Orders from "./views/Orders.vue";
+import Reports from "./views/Reports.vue";
 import Logs from "./views/Logs.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", component: Dashboard, meta: { title: "工作台" } },
   { path: "/employee-points", component: EmployeePoints, meta: { title: "员工积分" } },
   { path: "/points", component: Points, meta: { title: "积分录入" } },
-  { path: "/reports", component: Reports, meta: { title: "明细报表" } },
-  { path: "/appeals", component: Appeals, meta: { title: "申诉审核" } },
+  { path: "/review-center", component: ReviewCenter, meta: { title: "审核中心" } },
+  { path: "/tasks", component: TaskManage, meta: { title: "任务管理" } },
   { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
-  { path: "/orders", component: Orders, meta: { title: "订单核销" } },
-  { path: "/logs", component: Logs, meta: { title: "操作日志" } }
+  { path: "/reports", component: Reports, meta: { title: "明细报表" } },
+  { path: "/logs", component: Logs, meta: { title: "操作日志" } },
+  // 旧入口收敛：三类独立审核页并入审核中心对应 Tab（PRD 5.2）
+  { path: "/orders", redirect: "/review-center?tab=exchange" },
+  { path: "/appeals", redirect: "/review-center?tab=appeal" },
+  { path: "/applications", redirect: "/review-center?tab=application" }
 ];
 
 export default createRouter({

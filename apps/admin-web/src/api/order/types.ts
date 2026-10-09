@@ -3,6 +3,8 @@
 export interface Order {
   id: number
   employeeId: number
+  /** 员工姓名（契约要求后端返回；未返回时前端用员工列表兜底映射） */
+  employeeName?: string
   giftId?: number
   giftName: string
   pointsCost: number

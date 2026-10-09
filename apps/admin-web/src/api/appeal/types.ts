@@ -30,7 +30,7 @@ export interface AppealQuery {
   employeeId?: number | string
 }
 
-/** 审核申诉：处理意见必填，全程留痕 */
+/** 审核申诉：处理备注必填，全程留痕 */
 export interface AppealReviewPayload {
   status: "department_approved" | "hr_approved" | "rejected"
   stage: "department" | "hr"

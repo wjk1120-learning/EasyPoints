@@ -18,7 +18,7 @@ export const REVIEW_STATUS_MAP: Record<string, StatusMeta> = {
   rejected: { text: "已驳回", tag: "danger" },
 }
 
-/** 订单状态（现有后端枚举，含发货/核销流转） */
+/** 订单状态映射：UI 仅提供 通过/驳回 操作（PRD 5.2，审核通过即终点）；shipped/completed 仅为历史数据只读展示 */
 export const ORDER_STATUS_MAP: Record<string, StatusMeta> = {
   pending_review: { text: "待审核", tag: "warning" },
   approved: { text: "审核通过", tag: "success" },
@@ -28,12 +28,13 @@ export const ORDER_STATUS_MAP: Record<string, StatusMeta> = {
   cancelled: { text: "已取消", tag: "info" },
 }
 
-/** 申诉状态（现有后端两级审核枚举） */
+/** 申诉状态：PRD 三态闭环（待审核/审核通过/已驳回）。存量五值（部门/人事两级遗留）归一映射为同一展示 */
 export const APPEAL_STATUS_MAP: Record<string, StatusMeta> = {
-  pending_department_review: { text: "待初审", tag: "warning" },
-  pending_hr_review: { text: "待人事复核", tag: "warning" },
-  department_approved: { text: "初审通过", tag: "success" },
-  hr_approved: { text: "复核通过", tag: "success" },
+  pending_department_review: { text: "待审核", tag: "warning" },
+  pending_hr_review: { text: "待审核", tag: "warning" },
+  approved: { text: "审核通过", tag: "success" },
+  department_approved: { text: "审核通过", tag: "success" },
+  hr_approved: { text: "审核通过", tag: "success" },
   rejected: { text: "已驳回", tag: "danger" },
 }
 
@@ -41,6 +42,20 @@ export const APPEAL_STATUS_MAP: Record<string, StatusMeta> = {
 export const GIFT_STATUS_MAP: Record<string, StatusMeta> = {
   active: { text: "上架", tag: "success" },
   inactive: { text: "下架", tag: "info" },
+}
+
+/** 任务上下架状态 */
+export const TASK_STATUS_MAP: Record<string, StatusMeta> = {
+  published: { text: "上架中", tag: "success" },
+  unpublished: { text: "已下架", tag: "info" },
+}
+
+/** 员工任务记录状态（PRD 4.3：领取→进行中→提交→待审核→通过/驳回） */
+export const TASK_RECORD_STATUS_MAP: Record<string, StatusMeta> = {
+  in_progress: { text: "进行中", tag: "info" },
+  pending_review: { text: "待审核", tag: "warning" },
+  approved: { text: "已通过", tag: "success" },
+  rejected: { text: "已驳回", tag: "danger" },
 }
 
 /** 投票状态（P1 投票管理使用） */
