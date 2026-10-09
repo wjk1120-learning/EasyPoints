@@ -90,7 +90,7 @@ export function mockDeleteTask(id: number | string): Promise<unknown> {
   return Promise.resolve(null)
 }
 
-export function mockTaskRecordsPaged(params: TaskRecordQuery) {
+export function mockTaskRecordsPaged(params: TaskRecordQuery = {}) {
   // 排序契约：待审核置顶，同状态按提交时间倒序（见接口清单《通用约定》）
   const pendingPriority = (status: string) => (status === "pending_review" ? 0 : 1)
   let items = MOCK_TASK_RECORDS.slice()
@@ -105,7 +105,7 @@ export function mockTaskRecordsPaged(params: TaskRecordQuery) {
 export async function mockReviewTaskRecord(id: number | string, payload: TaskRecordReviewPayload): Promise<unknown> {
   const record = MOCK_TASK_RECORDS.find((item) => item.id === Number(id))
   if (!record) throw new Error("任务记录不存在")
-  if (record.status !== "pending_review") throw new Error("该成果已审核，不可重复处理")
+  if (record.status !== "pending_review") throw new Error("该成果不在待审核状态，不可审核")
   record.status = payload.status
   record.reviewRemark = payload.remark
   record.reviewedAt = new Date().toISOString()

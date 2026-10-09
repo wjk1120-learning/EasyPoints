@@ -58,7 +58,7 @@ let MOCK_APPLICATIONS: Application[] = [
   }
 ]
 
-export function mockApplicationsPaged(params: ApplicationQuery): Promise<{ data: Application[]; meta: { total: number; page: number; pageSize: number } }> {
+export function mockApplicationsPaged(params: ApplicationQuery = {}): Promise<{ data: Application[]; meta: { total: number; page: number; pageSize: number } }> {
   const page = Number(params.page || 1)
   const pageSize = Number(params.pageSize || 50)
   // 排序契约：待审核置顶，同状态按申请时间倒序（见接口清单《通用约定》）
