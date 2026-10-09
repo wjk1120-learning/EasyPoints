@@ -321,7 +321,7 @@ onMounted(async () => {
   </el-dialog>
 
   <!-- 积分流水抽屉 -->
-  <el-drawer v-model="drawer.visible" size="60%" class="records-drawer">
+  <el-drawer v-model="drawer.visible" size="50%" class="records-drawer">
     <template #header>
       <div class="drawer-head">
         <span class="drawer-bar" />
@@ -330,19 +330,19 @@ onMounted(async () => {
     </template>
     <div class="drawer-body">
       <el-table :data="drawer.rows" border v-loading="drawer.loading" class="drawer-table">
-        <el-table-column prop="pointsDelta" label="分值" width="120" />
-        <el-table-column label="类型" width="120">
+        <el-table-column prop="pointsDelta" label="分值" width="80" />
+        <el-table-column label="类型" width="80">
           <template #default="{ row }">
             <el-tag :type="row.type === 'reward' ? 'success' : row.type === 'penalty' ? 'danger' : 'info'" size="small" effect="plain">
               {{ formatType(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip />
         <el-table-column prop="operatorName" label="操作人" width="140" />
         <el-table-column prop="occurredAt" label="时间" width="190">
           <template #default="{ row }">{{ formatTimeText(row.occurredAt) }}</template>
         </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip />
       </el-table>
       <div class="drawer-pagination">
         <el-pagination

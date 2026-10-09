@@ -225,9 +225,9 @@ onMounted(load);
   </div>
 
   <!-- 礼品维度兑换记录 -->
-  <el-drawer v-model="recordsDrawer.visible" size="55%" :title="`兑换记录 · ${recordsDrawer.gift?.name || ''}`">
+  <el-drawer v-model="recordsDrawer.visible" size="40%" :title="`兑换记录 · ${recordsDrawer.gift?.name || ''}`">
     <el-table :data="recordsDrawer.rows" border v-loading="recordsDrawer.loading">
-      <el-table-column label="员工" width="140">
+      <el-table-column label="员工" width="120">
         <template #default="{ row }">{{ row.employeeName || `员工(${row.employeeId})` }}</template>
       </el-table-column>
       <el-table-column label="消耗积分" width="110">
@@ -235,14 +235,14 @@ onMounted(load);
           <span style="color: var(--color-points-deduct); font-weight: 600">-{{ row.pointsCost }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="120">
+      <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="statusMeta(ORDER_STATUS_MAP, row.status).tag" effect="plain">
             {{ statusMeta(ORDER_STATUS_MAP, row.status).text }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="兑换时间" width="180">
+      <el-table-column label="兑换时间" width="140">
         <template #default="{ row }">{{ formatTimeText(row.createdAt || row.updatedAt) || "—" }}</template>
       </el-table-column>
       <el-table-column label="处理备注" min-width="160" show-overflow-tooltip>

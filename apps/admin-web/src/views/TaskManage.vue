@@ -255,7 +255,7 @@ onMounted(load);
   </el-dialog>
 
   <!-- 任务进度抽屉（只读；审核动作在审核中心） -->
-  <el-drawer v-model="progressDrawer.visible" size="58%" :title="`领取记录 · ${progressDrawer.task?.name || ''}`">
+  <el-drawer v-model="progressDrawer.visible" size="50%" :title="`领取记录 · ${progressDrawer.task?.name || ''}`">
     <el-alert
       v-if="hasPendingProgress"
       title="该任务有成果待审核，请前往「审核中心 → 任务审核」处理"
@@ -265,10 +265,10 @@ onMounted(load);
       style="margin-bottom: 14px"
     />
     <el-table :data="progressDrawer.rows" border v-loading="progressDrawer.loading">
-      <el-table-column label="员工" width="140">
+      <el-table-column label="员工" width="120">
         <template #default="{ row }">{{ row.employeeName || `员工(${row.employeeId})` }}</template>
       </el-table-column>
-      <el-table-column label="状态" width="110">
+      <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="recordTag(row.status)" effect="plain">{{ recordText(row.status) }}</el-tag>
         </template>
@@ -276,7 +276,7 @@ onMounted(load);
       <el-table-column label="成果描述" min-width="200" show-overflow-tooltip>
         <template #default="{ row }">{{ row.submissionText || "—" }}</template>
       </el-table-column>
-      <el-table-column label="提交时间" width="180">
+      <el-table-column label="提交时间" width="140">
         <template #default="{ row }">{{ formatTimeText(row.submittedAt) || "—" }}</template>
       </el-table-column>
       <el-table-column label="审核意见" min-width="160" show-overflow-tooltip>
