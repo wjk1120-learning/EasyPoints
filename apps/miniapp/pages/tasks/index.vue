@@ -193,11 +193,7 @@ function describe(task) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar
-      :title="view === 'submit' ? '提交成果' : '任务大厅'"
-      :back="view === 'submit'"
-      @back="view = 'list'"
-    />
+    <NavBar :title="view === 'submit' ? '提交成果' : '任务大厅'" :back="view === 'submit'" @back="view = 'list'" />
 
     <template v-if="view === 'list'">
       <view class="segmented">

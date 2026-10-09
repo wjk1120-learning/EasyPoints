@@ -32,7 +32,9 @@ function onTap(tab) {
       :class="{ 'tab-item-active': tab.path === activePath }"
       @tap="onTap(tab)"
     >
-      <image class="tab-icon" :src="tab.path === activePath ? tab.activeIcon : tab.icon" mode="aspectFit" />
+      <view class="tab-icon-wrap">
+        <image class="tab-icon" :src="tab.path === activePath ? tab.activeIcon : tab.icon" mode="aspectFit" />
+      </view>
       <text class="tab-text">{{ tab.text }}</text>
     </view>
   </view>
@@ -47,9 +49,11 @@ function onTap(tab) {
   z-index: 10;
   display: flex;
   align-items: stretch;
-  background: #ffffff;
-  border-top: 1rpx solid #eef0f3;
-  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1rpx solid rgba(23, 26, 31, 0.05);
+  padding: 8rpx 0 calc(8rpx + env(safe-area-inset-bottom));
 }
 
 .tab-item {
@@ -58,22 +62,36 @@ function onTap(tab) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
-  padding: 12rpx 0 10rpx;
+  gap: 2rpx;
 }
 
 .tab-item:active {
-  opacity: 0.75;
+  opacity: 0.7;
+}
+
+.tab-icon-wrap {
+  width: 88rpx;
+  height: 56rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.tab-item-active .tab-icon-wrap {
+  background: #eef4ff;
 }
 
 .tab-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .tab-text {
   font-size: 20rpx;
-  color: #9ca3af;
+  color: #a6adb8;
+  transition: color 0.2s;
 }
 
 .tab-item-active .tab-text {

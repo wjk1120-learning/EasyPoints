@@ -8,9 +8,16 @@ import AppTabBar from '../../components/AppTabBar.vue'
 const gifts = ref([])
 const balance = ref(0)
 const dialog = ref(null)
+const filter = ref('all')
 const apiBase = getApiBase()
 
 const visibleGifts = computed(() => gifts.value.filter((gift) => gift.status !== 'inactive' && gift.status !== 'unpublished'))
+
+// 可兑换 = 有库存 且 当前积分够
+const displayGifts = computed(() => {
+  if (filter.value !== 'redeemable') return visibleGifts.value
+  return visibleGifts.value.filter((gift) => Number(gift.stock) > 0 && balance.value >= Number(gift.pointsCost || 0))
+})
 
 onShow(load)
 
@@ -69,14 +76,16 @@ function formatPoints(value) {
         <text class="mall-balance-label">可用积分</text>
         <text class="mall-balance-num">{{ formatPoints(balance) }}</text>
       </view>
-      <view class="mall-all" @tap="uni.navigateTo({ url: '/pages/orders/index' })">
-        <text class="mall-all-icon">▦</text>
-        <text>全部礼品</text>
-      </view>
+      <text class="mall-orders-link" @tap="uni.navigateTo({ url: '/pages/orders/index' })">兑换记录 ›</text>
+    </view>
+
+    <view class="chips">
+      <text class="chip" :class="{ 'chip-on': filter === 'all' }" @tap="filter = 'all'">全部礼品</text>
+      <text class="chip" :class="{ 'chip-on': filter === 'redeemable' }" @tap="filter = 'redeemable'">可兑换礼品</text>
     </view>
 
     <view class="gift-grid">
-      <view v-for="gift in visibleGifts" :key="gift.id" class="gift" :class="{ sold: isSoldOut(gift) }" @tap="openRedeem(gift)">
+      <view v-for="gift in displayGifts" :key="gift.id" class="gift" :class="{ sold: isSoldOut(gift) }" @tap="openRedeem(gift)">
         <view class="cover">
           <image v-if="gift.coverImageUrl" class="cover-img" :src="apiBase + gift.coverImageUrl" mode="aspectFill" />
           <view v-else class="cover-placeholder">🎁</view>
@@ -97,7 +106,9 @@ function formatPoints(value) {
           </view>
         </view>
       </view>
-      <view v-if="visibleGifts.length === 0" class="card card-empty gift-empty"><text class="muted">暂无上架礼品</text></view>
+      <view v-if="displayGifts.length === 0" class="card card-empty gift-empty">
+        <text class="muted">{{ filter === 'redeemable' ? '当前积分暂无可兑换的礼品' : '暂无上架礼品' }}</text>
+      </view>
     </view>
 
     <view v-if="dialog" class="mask" @tap="dialog = null">
@@ -169,30 +180,46 @@ function formatPoints(value) {
   font-variant-numeric: tabular-nums;
 }
 
-.mall-all {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 24rpx;
-  color: #6b7280;
+.mall-orders-link {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #2f6bff;
 }
 
-.mall-all:active {
+.mall-orders-link:active {
   opacity: 0.6;
 }
 
-.mall-all-icon {
-  font-size: 24rpx;
+.chips {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
 }
 
+.chip {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.chip-on {
+  background: #2f6bff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 不用 flex gap / calc：小程序渲染器对两者支持不完整，用百分比宽 + space-between 保证两端一致 */
 .gift-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 20rpx;
+  justify-content: space-between;
 }
 
 .gift {
-  width: calc(50% - 10rpx);
+  width: 48.6%;
+  margin-bottom: 20rpx;
   border-radius: 20rpx;
   background: #ffffff;
   overflow: hidden;

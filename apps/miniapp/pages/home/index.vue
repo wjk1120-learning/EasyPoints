@@ -189,7 +189,7 @@ function friendlyTime(value) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar title="员工积分" :back="false" />
+    <NavBar title="首页" :back="false" />
 
     <view class="hero card-hero">
       <view class="hero-top">
@@ -267,6 +267,8 @@ function friendlyTime(value) {
 
 <style scoped>
 .hero {
+  /* 与 .card 的 margin-bottom 对齐：信息卡→快捷入口、快捷入口→最近变动 间距一致 */
+  margin-bottom: 20rpx;
   padding: 36rpx 32rpx;
   border-radius: 24rpx;
 }

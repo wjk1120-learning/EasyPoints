@@ -26,9 +26,9 @@ page {
   box-sizing: border-box;
 }
 
-/* 自定义导航页在 .page 基础上加，绕开固定定位的 NavBar */
+/* 自定义导航页在 .page 基础上加，绕开固定定位的 NavBar（114rpx 栏高 + 16rpx 间距） */
 .page-nav {
-  padding-top: calc(var(--status-bar-height) + 104rpx);
+  padding-top: calc(var(--status-bar-height) + 130rpx);
 }
 
 .page-tab {

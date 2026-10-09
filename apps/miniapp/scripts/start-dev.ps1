@@ -1,14 +1,15 @@
-# EasyPoints 一键启动开发环境（Windows / PowerShell）。
-# 用法：
-#   powershell -ExecutionPolicy Bypass -File scripts\start-dev.ps1            # 启动 API + 小程序编译监听
-#   powershell -ExecutionPolicy Bypass -File scripts\start-dev.ps1 -AdminWeb  # 额外启动管理后台
+﻿# EasyPoints 一键启动开发环境（Windows / PowerShell）。
+# 用法（在仓库根目录执行）：
+#   powershell -ExecutionPolicy Bypass -File apps\miniapp\scripts\start-dev.ps1            # 启动 API + 小程序编译监听
+#   powershell -ExecutionPolicy Bypass -File apps\miniapp\scripts\start-dev.ps1 -AdminWeb  # 额外启动管理后台
 # 各进程开在独立窗口，关闭对应窗口即停止该服务。
 param(
     [switch]$AdminWeb
 )
 
 $ErrorActionPreference = "Stop"
-$root = Split-Path $PSScriptRoot -Parent
+# 脚本在 apps/miniapp/scripts/ 下，仓库根目录要上三级（scripts -> miniapp -> apps -> 根）
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 
 function Start-DevWindow {
     param([string]$Title, [string]$WorkDir, [string]$Command)
@@ -23,9 +24,13 @@ Write-Host "== EasyPoints 开发环境 ==" -ForegroundColor Cyan
 
 # 1. Redis（Compose 里已缓存的小镜像；连不上也不阻塞，API 会退回内存模式）
 Write-Host "[1/3] 启动 Redis..."
-docker compose -f "$root\infra\docker-compose.yml" up -d redis 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "      Redis 启动失败（无 Docker 或镜像未缓存），API 将使用内存 Store，不影响开发。" -ForegroundColor Yellow
+$dockerOk = $false
+try {
+    docker compose -f "$root\infra\docker-compose.yml" up -d redis 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { $dockerOk = $true }
+} catch {}
+if (-not $dockerOk) {
+    Write-Host "      Redis 未启动（Docker 未运行或镜像未缓存），API 将使用内存 Store，不影响开发。" -ForegroundColor Yellow
 }
 
 # 2. API（内存 Store，端口 3000）
