@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { askAi, request } from '../../api'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const AI_AVATAR = '/static/ai-avatar.png'
 const USER_AVATAR_KEY = 'chatUserAvatar'
@@ -194,6 +195,8 @@ function useQuickQuestion(text) {
       />
       <view class="send-btn" :class="{ disabled: sending }" @tap="sendQuestion">发送</view>
     </view>
+
+    <AppTabBar />
   </view>
 </template>
 

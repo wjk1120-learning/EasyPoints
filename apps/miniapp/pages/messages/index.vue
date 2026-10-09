@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const messages = ref([])
 const loading = ref(false)
@@ -133,11 +134,14 @@ function displayTitle(item) {
 
 <template>
   <view class="page page-nav">
-    <NavBar title="通知中心" :right="unreadCount > 0 ? '全部已读' : ''" :right-dot="unreadCount > 0" @right="markAllRead" />
+    <NavBar title="通知中心" />
 
     <view class="list-head">
       <text class="list-head-text">{{ unreadCount > 0 ? `${unreadCount} 条未读消息` : '消息已全部已读' }}</text>
-      <text class="list-head-filter" @tap="pickType">☰ {{ typeFilter === 'all' ? '全部类型' : typeFilter }}</text>
+      <view class="list-head-actions">
+        <text v-if="unreadCount > 0" class="list-head-read" @tap="markAllRead">全部已读</text>
+        <text class="list-head-filter" @tap="pickType">☰ {{ typeFilter === 'all' ? '全部类型' : typeFilter }}</text>
+      </view>
     </view>
 
     <view
@@ -163,6 +167,8 @@ function displayTitle(item) {
 
     <view v-if="!loading && visibleMessages.length === 0" class="card card-empty"><text class="muted">暂无通知</text></view>
     <view v-if="visibleMessages.length > 0" class="list-footer">消息按时间排序 · 上拉加载更多</view>
+
+    <AppTabBar />
   </view>
 </template>
 
@@ -177,6 +183,22 @@ function displayTitle(item) {
 .list-head-text {
   font-size: 24rpx;
   color: #9aa1ab;
+}
+
+.list-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.list-head-read {
+  font-size: 24rpx;
+  color: #2f6bff;
+  font-weight: 500;
+}
+
+.list-head-read:active {
+  opacity: 0.6;
 }
 
 .list-head-filter {

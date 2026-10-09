@@ -1,14 +1,19 @@
 <script setup>
+import { getCurrentInstance } from 'vue'
+
 defineProps({
   title: { type: String, default: '' },
-  right: { type: String, default: '' },
-  rightDot: { type: Boolean, default: false },
   back: { type: Boolean, default: true }
 });
 
-const emit = defineEmits(['right']);
+const emit = defineEmits(['back']);
+const instance = getCurrentInstance();
 
 function goBack() {
+  if (instance?.vnode?.props?.onBack) {
+    emit('back');
+    return;
+  }
   const pages = getCurrentPages();
   if (pages.length > 1) {
     uni.navigateBack();
@@ -21,18 +26,10 @@ function goBack() {
 <template>
   <view class="nav">
     <view class="nav-bar">
-      <view class="nav-side">
-        <view v-if="back" class="nav-back" @tap="goBack">
-          <view class="nav-chevron" />
-        </view>
+      <view v-if="back" class="nav-back" @tap="goBack">
+        <view class="nav-chevron" />
       </view>
       <text class="nav-title">{{ title }}</text>
-      <view class="nav-side nav-side-right">
-        <view v-if="right" class="nav-right" @tap="emit('right')">
-          <text class="nav-right-text">{{ right }}</text>
-          <view v-if="rightDot" class="nav-right-dot" />
-        </view>
-      </view>
     </view>
   </view>
 </template>
@@ -50,23 +47,10 @@ function goBack() {
 }
 
 .nav-bar {
-  position: relative;
   height: 88rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 24rpx;
-}
-
-.nav-side {
-  width: 120rpx;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.nav-side-right {
-  justify-content: flex-end;
 }
 
 .nav-back {
@@ -76,6 +60,7 @@ function goBack() {
   align-items: center;
   justify-content: center;
   margin-left: -12rpx;
+  margin-right: 8rpx;
 }
 
 .nav-chevron {
@@ -92,44 +77,14 @@ function goBack() {
 }
 
 .nav-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 50%;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 32rpx;
   font-weight: 700;
   color: #1a2233;
-  text-align: center;
-}
-
-.nav-right {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 56rpx;
-  padding: 0 4rpx;
-}
-
-.nav-right:active {
-  opacity: 0.6;
-}
-
-.nav-right-text {
-  color: #2f6bff;
-  font-size: 26rpx;
-  font-weight: 500;
-}
-
-.nav-right-dot {
-  position: absolute;
-  top: 4rpx;
-  right: -14rpx;
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 999rpx;
-  background: #f04438;
+  text-align: left;
 }
 </style>

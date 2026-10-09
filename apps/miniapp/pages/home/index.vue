@@ -4,9 +4,11 @@ import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const home = ref({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
 const recent = ref([])
+const pendingVotes = ref(0)
 const showSettings = ref(false)
 const apiBase = ref('')
 const wecomUserId = ref('')
@@ -27,8 +29,8 @@ const shortcuts = [
   { label: '积分排名', icon: '🏆', tile: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
   { label: '积分申请', icon: '📝', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
   { label: '规则中心', icon: '📖', tile: 'blue', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
-  { label: '通知中心', icon: '🔔', tile: 'red', badge: true, action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
-  { label: '我的投票', icon: '🗳️', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
+  { label: '通知中心', icon: '🔔', tile: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
+  { label: '我的投票', icon: '🗳️', tile: 'purple', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
 ]
 
 onShow(async () => {
@@ -48,6 +50,7 @@ onShow(async () => {
     const data = await request('/miniapp/home')
     applyHomeData(data, Boolean(data?.__offline))
     await loadRecent()
+    loadPendingVotes()
   } catch (error) {
     const cached = getCachedData('/miniapp/home')
     if (cached && isNetworkError(error)) {
@@ -65,10 +68,27 @@ onPullDownRefresh(async () => {
     const data = await request('/miniapp/home')
     applyHomeData(data, Boolean(data?.__offline))
     await loadRecent()
+    loadPendingVotes()
   } catch {} finally {
     uni.stopPullDownRefresh()
   }
 })
+
+async function loadPendingVotes() {
+  try {
+    const votes = await request('/miniapp/votes?scope=pending')
+    const rows = Array.isArray(votes) ? votes : []
+    pendingVotes.value = rows.filter((vote) => !vote.submitted).length
+  } catch {
+    pendingVotes.value = 0
+  }
+}
+
+function badgeCount(item) {
+  if (item.badge === 'messages') return Number(home.value.unreadMessages || 0)
+  if (item.badge === 'votes') return pendingVotes.value
+  return 0
+}
 
 function applyHomeData(data, offline) {
   const next = { ...(data || {}) }
@@ -169,7 +189,7 @@ function friendlyTime(value) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar title="员工积分" :back="false" right="通知" @right="uni.navigateTo({ url: '/pages/messages/index' })" />
+    <NavBar title="员工积分" :back="false" />
 
     <view class="hero card-hero">
       <view class="hero-top">
@@ -204,7 +224,7 @@ function friendlyTime(value) {
         <view v-for="item in shortcuts" :key="item.label" class="shortcut" @tap="item.action()">
           <view class="shortcut-icon-wrap">
             <view class="icon-tile shortcut-icon" :class="item.tile">{{ item.icon }}</view>
-            <text v-if="item.badge && home.unreadMessages > 0" class="shortcut-badge">{{ home.unreadMessages > 99 ? '99+' : home.unreadMessages }}</text>
+            <text v-if="badgeCount(item) > 0" class="shortcut-badge">{{ badgeCount(item) > 99 ? '99+' : badgeCount(item) }}</text>
           </view>
           <text class="shortcut-label">{{ item.label }}</text>
         </view>
@@ -241,6 +261,7 @@ function friendlyTime(value) {
       </view>
     </view>
     <AiFloatBall />
+    <AppTabBar />
   </view>
 </template>
 

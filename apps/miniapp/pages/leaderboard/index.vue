@@ -4,6 +4,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const list = ref([])
 const loading = ref(false)
@@ -73,7 +74,7 @@ function formatPoints(value) {
 
 <template>
   <view class="page page-nav">
-    <NavBar title="积分排名" right="排行规则" @right="uni.navigateTo({ url: '/pages/rules/index' })" />
+    <NavBar title="积分排名" />
 
     <view class="segmented">
       <text class="tab" :class="{ active: rankBy === 'actual' }" @tap="switchRank('actual')">实际积分排名</text>
@@ -119,6 +120,7 @@ function formatPoints(value) {
     </view>
 
     <AiFloatBall />
+    <AppTabBar />
   </view>
 </template>
 

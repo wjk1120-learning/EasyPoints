@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { loginEmployee, request } from '../../api'
+import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const home = ref({ pointsBalance: 0, monthDelta: 0, employee: {} })
 const myRank = ref(null)
@@ -53,26 +54,6 @@ function open(url) {
   uni.navigateTo({ url })
 }
 
-function openSettings() {
-  uni.showActionSheet({
-    itemList: ['重新登录'],
-    success() {
-      relogin()
-    }
-  })
-}
-
-async function relogin() {
-  try {
-    await loginEmployee({ wecomUserId: uni.getStorageSync('wecomUserId') || 'zhangsan' })
-    home.value = await request('/miniapp/home')
-    await loadRank()
-    uni.showToast({ title: '登录成功' })
-  } catch (error) {
-    uni.showToast({ title: error?.message || '登录失败', icon: 'none' })
-  }
-}
-
 function formatPoints(value) {
   const num = Number(value || 0)
   return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -81,7 +62,7 @@ function formatPoints(value) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar title="我的" :back="false" right="设置" @right="openSettings" />
+    <NavBar title="我的" :back="false" />
 
     <view class="card profile">
       <view class="avatar">{{ initial() }}</view>
@@ -128,6 +109,8 @@ function formatPoints(value) {
       </view>
       <text class="safe-body">积分数据与业务身份实时同步，如信息有误请联系系统积分管理员。</text>
     </view>
+
+    <AppTabBar />
   </view>
 </template>
 

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const tab = ref('pending')
 const rows = ref([])
@@ -83,6 +84,8 @@ function multipleOf(item) {
         <text class="muted">{{ tab === 'pending' ? '暂无待参与投票' : '暂无历史投票' }}</text>
       </view>
     </template>
+
+    <AppTabBar />
   </view>
 </template>
 

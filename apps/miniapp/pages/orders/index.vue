@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const orders = ref([])
 const filter = ref('all')
@@ -95,6 +96,8 @@ function formatPoints(value) {
 
     <view v-if="visibleOrders.length === 0" class="card card-empty"><text class="muted">暂无兑换记录</text></view>
     <view v-if="visibleOrders.length > 0" class="list-footer">已展示全部兑换记录</view>
+
+    <AppTabBar />
   </view>
 </template>
 

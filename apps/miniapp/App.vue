@@ -22,7 +22,7 @@ page {
 
 .page {
   min-height: 100vh;
-  padding: 24rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 24rpx calc(160rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -32,7 +32,7 @@ page {
 }
 
 .page-tab {
-  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 }
 
 /* ── 卡片 ── */

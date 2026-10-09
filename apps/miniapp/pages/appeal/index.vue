@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const pointRecordId = ref('')
 const originalRemark = ref('')
@@ -130,6 +131,8 @@ async function submit() {
     </view>
 
     <view class="button submit-button" @tap="submit">✈ 提交申诉</view>
+
+    <AppTabBar />
   </view>
 </template>
 

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const sections = ref([])
 const missing = ref('')
@@ -77,6 +78,8 @@ function iconOf(index) {
 
     <view v-if="!missing && sections.length === 0" class="card card-empty"><text class="muted">暂无规则内容</text></view>
     <view v-if="sections.length > 0" class="list-footer">如对规则有疑问，请联系系统积分管理员</view>
+
+    <AppTabBar />
   </view>
 </template>
 

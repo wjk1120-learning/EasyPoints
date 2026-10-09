@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const vote = ref(null)
 const selected = ref([])
@@ -114,6 +115,8 @@ function deadlineOf(voteData) {
       </view>
       <text class="tip">投票只作管理员评审参考，不会自动加积分；提交后不可修改。</text>
     </template>
+
+    <AppTabBar />
   </view>
 </template>
 

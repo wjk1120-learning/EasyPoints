@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { onShow, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 import { requestPaged } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const rows = ref([])
 const loading = ref(false)
@@ -188,6 +189,7 @@ function formatTime(value) {
       <text class="muted">已加载全部</text>
     </view>
     <AiFloatBall />
+    <AppTabBar />
   </view>
 </template>
 

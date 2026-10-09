@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const tab = ref('all')
 const rows = ref([])
@@ -103,6 +104,8 @@ function titleOf(item) {
     </template>
 
     <view class="footer-link" @tap="uni.switchTab({ url: '/pages/points/index' })">从积分明细发起新申诉 ›</view>
+
+    <AppTabBar />
   </view>
 </template>
 

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getApiBase, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const gifts = ref([])
 const balance = ref(0)
@@ -61,7 +62,7 @@ function formatPoints(value) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar title="积分商城" :back="false" right="兑换记录" @right="uni.navigateTo({ url: '/pages/orders/index' })" />
+    <NavBar title="积分商城" :back="false" />
 
     <view class="card mall-head">
       <view class="mall-balance">
@@ -140,6 +141,8 @@ function formatPoints(value) {
         </view>
       </view>
     </view>
+
+    <AppTabBar />
   </view>
 </template>
 

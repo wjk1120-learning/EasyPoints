@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const groups = ref({})
 const balance = ref(null)
@@ -75,15 +76,6 @@ async function loadRecords() {
   } catch {}
 }
 
-function pickFilter() {
-  uni.showActionSheet({
-    itemList: chips.map((chip) => chip.label),
-    success(res) {
-      filter.value = chips[res.tapIndex].key
-    }
-  })
-}
-
 function iconOf(record) {
   if (typeLabel(record) === '人工奖惩') return { emoji: '⚡', cls: 'purple' }
   return Number(record.pointsDelta) > 0 ? { emoji: '↑', cls: 'green' } : { emoji: '↓', cls: 'red' }
@@ -124,7 +116,7 @@ function formatTime(value) {
 
 <template>
   <view class="page page-tab page-nav">
-    <NavBar title="积分明细" :back="false" right="筛选" @right="pickFilter" />
+    <NavBar title="积分明细" :back="false" />
 
     <view class="card head-card">
       <view class="row between">
@@ -159,6 +151,8 @@ function formatTime(value) {
       </text>
     </view>
     <view v-if="!loading && rows.length === 0" class="card card-empty"><text class="muted">暂无符合条件的积分记录</text></view>
+
+    <AppTabBar />
   </view>
 </template>
 

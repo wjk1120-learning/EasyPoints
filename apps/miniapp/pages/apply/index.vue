@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const view = ref('form')
 const points = ref('')
@@ -149,11 +150,12 @@ const filters = [
 
 <template>
   <view class="page page-nav">
-    <NavBar
-      :title="view === 'form' ? '积分申请' : '我的积分申请'"
-      :right="view === 'form' ? '我的申请' : '新建申请'"
-      @right="switchView(view === 'form' ? 'mine' : 'form')"
-    />
+    <NavBar :title="view === 'form' ? '积分申请' : '我的申请'" />
+
+    <view class="segmented">
+      <text class="tab" :class="{ active: view === 'form' }" @tap="switchView('form')">积分申请</text>
+      <text class="tab" :class="{ active: view === 'mine' }" @tap="switchView('mine')">我的申请</text>
+    </view>
 
     <template v-if="view === 'form'">
       <view class="card card-info intro">
@@ -229,12 +231,12 @@ const filters = [
     </template>
 
     <template v-else>
-      <view class="segmented">
+      <view class="chips">
         <text
           v-for="item in filters"
           :key="item.key"
-          class="tab"
-          :class="{ active: filter === item.key }"
+          class="chip"
+          :class="{ 'chip-on': filter === item.key }"
           @tap="filter = item.key"
         >{{ item.label }}</text>
       </view>
@@ -261,6 +263,8 @@ const filters = [
         <view v-if="visibleRows.length > 0" class="list-footer">已展示全部申请记录</view>
       </template>
     </template>
+
+    <AppTabBar />
   </view>
 </template>
 
@@ -270,6 +274,27 @@ const filters = [
   align-items: flex-start;
   gap: 12rpx;
   padding: 24rpx 28rpx;
+  margin-top: 20rpx;
+}
+
+.chips {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  margin-bottom: 16rpx;
+}
+
+.chip {
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.chip-on {
+  background: #2f6bff;
+  color: #ffffff;
 }
 
 .intro-icon {

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const message = ref({ title: '', summary: '', type: '', createdAt: '' })
 
@@ -80,6 +81,8 @@ function goAppeal() {
     <text v-if="canAppeal()" class="muted tip">申诉需绑定本人积分流水，请在积分明细中选择对应记录后发起。</text>
 
     <view v-if="isVote()" class="button ghost" @tap="uni.navigateTo({ url: '/pages/votes/index' })">查看投票</view>
+
+    <AppTabBar />
   </view>
 </template>
 

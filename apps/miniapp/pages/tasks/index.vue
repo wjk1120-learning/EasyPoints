@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
 
 const tab = ref('all')
 const view = ref('list')
@@ -195,8 +196,7 @@ function describe(task) {
     <NavBar
       :title="view === 'submit' ? '提交成果' : '任务大厅'"
       :back="view === 'submit'"
-      :right="view === 'submit' ? '保存草稿' : '任务规则'"
-      @right="view === 'submit' ? saveDraft() : uni.navigateTo({ url: '/pages/rules/index' })"
+      @back="view = 'list'"
     />
 
     <template v-if="view === 'list'">
@@ -270,6 +270,9 @@ function describe(task) {
           </view>
         </view>
         <text class="muted image-note">附件暂不随成果提交，待后端上传接口就绪后开放。</text>
+        <view class="draft-row">
+          <text class="draft-link" @tap="saveDraft">💾 保存草稿</text>
+        </view>
       </view>
 
       <view class="notice-amber">
@@ -279,6 +282,8 @@ function describe(task) {
 
       <view class="button submit-button" @tap="submit">✈ 提交审核</view>
     </template>
+
+    <AppTabBar />
 
     <view v-if="detailFor" class="mask" @tap="detailFor = null">
       <view class="dialog" @tap.stop>
@@ -461,6 +466,21 @@ function describe(task) {
 .image-note {
   display: block;
   margin-top: 16rpx;
+}
+
+.draft-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
+.draft-link {
+  font-size: 24rpx;
+  color: #2f6bff;
+}
+
+.draft-link:active {
+  opacity: 0.6;
 }
 
 .notice-amber {
