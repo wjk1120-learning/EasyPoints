@@ -12,6 +12,7 @@ import { mallGifts } from "../api/mall/mall";
 import { orders as fetchOrders } from "../api/order/order";
 import { applicationsPaged } from "../api/application/application";
 import { taskRecordsPaged, tasksPaged } from "../api/task/task";
+import { getRule } from "../api/rule/rule";
 import type { Application } from "../api/application/types";
 
 const router = useRouter();
@@ -23,6 +24,10 @@ const pendingOrdersCount = ref(0);
 const pendingAppealsCount = ref(0);
 const pendingApplicationsCount = ref(0);
 const pendingTasksCount = ref(0);
+/** 积分规则（员工端规则中心实时同步内容） */
+const ruleHtml = ref("");
+const ruleLoading = ref(false);
+const ruleEmpty = computed(() => !String(ruleHtml.value || "").replace(/<[^>]+>/g, "").trim());
 
 const pendingTotal = computed(
   () => pendingOrdersCount.value + pendingAppealsCount.value + pendingApplicationsCount.value + pendingTasksCount.value
@@ -40,26 +45,31 @@ function isPendingStatus(status: string) {
 }
 
 async function loadDashboard() {
+  ruleLoading.value = true;
   try {
-    const [employees, appeals, orders, gifts, applicationsResult, tasksResult, taskRecordsResult] = await Promise.all([
+    const [employees, appeals, orders, gifts, applicationsResult, tasksResult, taskRecordsResult, rule] = await Promise.all([
       fetchEmployees(),
       fetchAppeals(),
       fetchOrders(),
       mallGifts(),
       applicationsPaged({ page: 1, pageSize: 200 }).catch(() => ({ data: [] as Application[], meta: { total: 0, page: 1, pageSize: 200 } })),
       tasksPaged({ page: 1, pageSize: 1 }).catch(() => ({ meta: { total: 0 } })),
-      taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } }))
+      taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } })),
+      getRule().catch(() => null)
     ]);
 
     employeesCount.value = employees.length;
-    giftsCount.value = gifts.filter((gift) => gift.status === "active").length;
+    giftsCount.value = gifts.length;
     pendingAppealsCount.value = appeals.filter((appeal) => isPendingStatus(appeal.status)).length;
     pendingOrdersCount.value = orders.filter((order) => order.status === "pending_review").length;
     pendingApplicationsCount.value = applicationsResult.data.filter((item) => item.status === "pending_review").length;
     tasksCount.value = tasksResult.meta.total;
     pendingTasksCount.value = taskRecordsResult.meta.total;
+    ruleHtml.value = rule?.content || "";
   } catch (error) {
     console.error("加载工作台数据失败", error);
+  } finally {
+    ruleLoading.value = false;
   }
 }
 
@@ -105,7 +115,7 @@ onMounted(() => {
     <!-- 数据概览 -->
     <div class="stats-grid">
       <div class="stat-tile stat-tile--primary">
-        <span class="stat-label">在职员工</span>
+        <span class="stat-label">员工总人数</span>
         <strong class="stat-value">{{ employeesCount }}</strong>
       </div>
       <div class="stat-tile stat-tile--info">
@@ -113,7 +123,7 @@ onMounted(() => {
         <strong class="stat-value">{{ tasksCount }}</strong>
       </div>
       <div class="stat-tile stat-tile--refund">
-        <span class="stat-label">可兑换礼品</span>
+        <span class="stat-label">礼品总数</span>
         <strong class="stat-value">{{ giftsCount }}</strong>
       </div>
       <div class="stat-tile stat-tile--warning">
@@ -122,42 +132,20 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 关键业务规则 -->
+    <!-- 积分规则（员工端实时同步） -->
     <div class="main">
-      <el-card class="business-rules-des">
+      <el-card class="rules-card">
         <div class="rule-title">
           <el-icon color="var(--color-primary)" size="24" style="transform: translateY(2px)"><Reading /></el-icon>
-          <h3>关键业务规则说明</h3>
+          <h3>积分规则</h3>
+          <span class="rule-sync-tag">员工端实时同步</span>
+          <el-button size="small" text type="primary" @click="router.push('/rules')">前往编辑</el-button>
         </div>
-        <div class="rules">
-          <div class="rule-info">
-            <div class="rule-number">01</div>
-            <div>
-              <div style="color: var(--color-text-primary);">双积分规则</div>
-              <p class="rule-desc">加分/审核通过：可用积分、累计积分同步增加；兑换礼品仅扣可用积分；管理员人工扣分双积分同扣。累计积分只增不减（仅人工扣分可减少），用于荣誉排名。</p>
-            </div>
+        <div v-loading="ruleLoading" class="rule-body">
+          <div v-if="ruleEmpty" class="rule-empty">
+            暂无规则内容，请前往「规则配置」填写，保存后员工端实时生效。
           </div>
-          <div class="rule-info">
-            <div class="rule-number">02</div>
-            <div>
-              <div style="color: var(--color-text-primary);">审核闭环</div>
-              <p class="rule-desc">员工主动获积分与兑换均需管理员审核生效；驳回必填原因并推送员工通知；每条异议仅支持一次申诉，处理后闭环。</p>
-            </div>
-          </div>
-          <div class="rule-info">
-            <div class="rule-number">03</div>
-            <div>
-              <div style="color: var(--color-text-primary);">流水不可篡改</div>
-              <p class="rule-desc">积分流水生成后不可修改删除，纠错通过新增反向冲正流水完成，原始记录永久留存、全程可追溯。</p>
-            </div>
-          </div>
-          <div class="rule-info">
-            <div class="rule-number">04</div>
-            <div>
-              <div style="color: var(--color-text-primary);">全程留痕</div>
-              <p class="rule-desc">所有积分操作、审核、申诉、投票行为写入系统日志，日志不可删改，支持按时间与类型查询审计。</p>
-            </div>
-          </div>
+          <div v-else class="rule-preview" v-html="ruleHtml"></div>
         </div>
       </el-card>
     </div>
@@ -169,10 +157,13 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 // 小节标题（品牌竖条与全站 panel 语言一致）
 .section {
+  flex-shrink: 0;
+
   .section-head {
     display: flex;
     align-items: baseline;
@@ -337,6 +328,7 @@ onMounted(() => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
+  flex-shrink: 0;
 }
 
 .stat-tile {
@@ -391,60 +383,82 @@ onMounted(() => {
   }
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 20px;
-}
-
 .main {
+  flex: 1;
+  min-height: 0;
   margin-top: 20px;
-  width: 100%;
+  display: flex;
 
-  .business-rules-des {
-    width: 100%;
-    overflow-y: auto;
+  .rules-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    :deep(.el-card__body) {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
     .rule-title {
-      padding: 5px 0 15px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
-      vertical-align: middle;
-      border-bottom: 2px solid var(--color-border);
       gap: 10px;
+      padding: 5px 0 15px;
+      border-bottom: 2px solid var(--color-border);
 
       h3 {
         margin: 0;
         font-weight: 500;
       }
+
+      .rule-sync-tag {
+        font-size: 12px;
+        color: var(--color-primary);
+        background: var(--el-color-primary-light-9);
+        border-radius: 4px;
+        padding: 2px 8px;
+      }
+
+      .el-button {
+        margin-left: auto;
+      }
     }
 
-    .rules {
+    // 内容超长时在卡内滚动，整页不出现滚动条
+    .rule-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
       padding-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
 
-      .rule-info {
-        display: flex;
+      .rule-empty {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+      }
 
-        .rule-number {
-          margin-right: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 50px;
-          height: 30px;
-          font-size: 14px;
-          background-color: var(--el-color-primary-light-9);
-          color: var(--color-primary);
+      // 与规则配置预览一致的阅读排版
+      .rule-preview {
+        line-height: 1.8;
+        color: var(--color-text-regular);
+
+        :deep(h2) {
+          font-size: 16px;
+          color: var(--color-text-primary);
+          border-left: 3px solid var(--color-primary);
+          padding-left: 10px;
         }
 
-        .rule-desc {
-          color: var(--color-text-regular);
-          font-size: 14px;
+        :deep(ul) {
+          padding-left: 22px;
+        }
+
+        :deep(li) {
+          margin-bottom: 6px;
         }
       }
     }

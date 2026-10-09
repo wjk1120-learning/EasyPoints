@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import type { AdminInfo } from "./api/auth/types";
 import { badges as fetchBadges, login } from "./api/auth/auth";
@@ -198,6 +198,14 @@ watch(
         <el-menu-item index="/tasks">
           <el-icon><Management /></el-icon>
           <span>任务管理</span>
+        </el-menu-item>
+        <el-menu-item index="/votes">
+          <el-icon><Stamp /></el-icon>
+          <span>投票管理</span>
+        </el-menu-item>
+        <el-menu-item index="/rules">
+          <el-icon><Reading /></el-icon>
+          <span>规则配置</span>
         </el-menu-item>
         <el-menu-item index="/mall">
           <el-icon><Present /></el-icon>

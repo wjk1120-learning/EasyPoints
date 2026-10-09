@@ -1,15 +1,49 @@
 <script setup lang="ts">
 /**
- * 操作日志（PRD 5.6）：全部操作留痕查询。
+ * 操作日志（PRD 5.6）：全部操作留痕查询，含「投票操作日志」类型（PRD 5.9.3）。
  * 日志禁止删除、禁止修改，永久留存，本页只读。
+ * 投票后端未落地期间，投票操作日志由前端 vote mock 记录并合并展示（isMockEnabled 时）。
  */
-import { onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { logsPaged } from "../api/log/log";
 import type { OperationLog } from "../api/log/types";
+import type { VoteOpLog } from "../api/vote/types";
+import { mockVoteLogs } from "../mock/vote";
+import { isMockEnabled } from "../mock";
 
 const rows = ref<OperationLog[]>([]);
 const loading = ref(false);
 const meta = reactive({ total: 0, page: 1, pageSize: 50 });
+/** 日志类型筛选：全部 / vote（投票操作日志）/ system（系统操作） */
+const logType = ref("");
+
+/** 投票操作日志 → 操作日志行结构（mock 期间） */
+function voteLogsAsRows(): OperationLog[] {
+  if (!isMockEnabled()) return [];
+  return mockVoteLogs().map((log: VoteOpLog, index) => ({
+    id: 100000 + log.id,
+    traceId: `trace-vote-${log.action}-${log.id}`,
+    action: log.action,
+    actionText: log.actionText,
+    actorText: log.actorText,
+    businessSummary: `投票「${log.voteTitle}」：${log.detail}`,
+    resultText: "成功",
+    createdAt: log.createdAt,
+    _order: index
+  })) as OperationLog[];
+}
+
+const displayRows = computed(() => {
+  const voteRows = voteLogsAsRows();
+  if (logType.value === "vote") return voteRows;
+  const merged = [...rows.value, ...voteRows].sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+  if (logType.value === "system") return merged.filter((row) => !String(row.action || "").startsWith("vote."));
+  return merged;
+});
+
+const displayTotal = computed(() => (logType.value ? displayRows.value.length : meta.total));
 
 function formatTime(value: string | number | undefined) {
   if (!value) return "";
@@ -58,6 +92,11 @@ onMounted(load);
 
     <div class="panel-body">
       <div class="filter-bar">
+        <el-select v-model="logType" placeholder="日志类型" class="filter-item filter-item--md">
+          <el-option value="" label="全部类型" />
+          <el-option value="vote" label="投票操作日志" />
+          <el-option value="system" label="系统操作" />
+        </el-select>
         <el-select v-model="meta.pageSize" placeholder="每页" class="filter-item filter-item--sm">
           <el-option :value="20" label="20 / 页" />
           <el-option :value="50" label="50 / 页" />
@@ -65,7 +104,7 @@ onMounted(load);
         </el-select>
       </div>
 
-      <el-table :data="rows" border v-loading="loading">
+      <el-table :data="displayRows" border v-loading="loading">
         <el-table-column prop="traceId" label="追踪编号" width="290" show-overflow-tooltip />
         <el-table-column prop="actionText" label="动作" width="140" />
         <el-table-column prop="actorText" label="操作人" width="180" show-overflow-tooltip />
@@ -84,7 +123,7 @@ onMounted(load);
         <el-pagination
           background
           layout="total, prev, pager, next, jumper"
-          :total="meta.total"
+          :total="displayTotal"
           :page-size="meta.pageSize"
           :current-page="meta.page"
           @current-change="
@@ -143,6 +182,10 @@ onMounted(load);
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.filter-item--md {
+  width: 180px;
 }
 
 .filter-item--sm {

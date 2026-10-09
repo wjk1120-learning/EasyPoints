@@ -5,6 +5,8 @@ import EmployeePoints from "./views/EmployeePoints.vue";
 import Points from "./views/Points.vue";
 import ReviewCenter from "./views/ReviewCenter.vue";
 import TaskManage from "./views/TaskManage.vue";
+import VoteManage from "./views/VoteManage.vue";
+import RuleConfig from "./views/RuleConfig.vue";
 import Mall from "./views/Mall.vue";
 import Reports from "./views/Reports.vue";
 import Logs from "./views/Logs.vue";
@@ -15,6 +17,8 @@ const routes: RouteRecordRaw[] = [
   { path: "/points", component: Points, meta: { title: "积分录入" } },
   { path: "/review-center", component: ReviewCenter, meta: { title: "审核中心" } },
   { path: "/tasks", component: TaskManage, meta: { title: "任务管理" } },
+  { path: "/votes", component: VoteManage, meta: { title: "投票管理" } },
+  { path: "/rules", component: RuleConfig, meta: { title: "规则配置" } },
   { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
   { path: "/reports", component: Reports, meta: { title: "明细报表" } },
   { path: "/logs", component: Logs, meta: { title: "操作日志" } },

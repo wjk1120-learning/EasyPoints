@@ -99,8 +99,40 @@
 
 **可选优化**：`GET /admin/badges` 扩展返回 `{ exchangePending, taskPending, applicationPending, appealPending }`，前端由 4 次请求合并为 1 次；同时顶栏角标从现有 appeals/orders 两类扩为四类。
 
-### 3.7 后续章节（随阶段推进补充）
+### 3.7 投票管理（vote 域）｜优先级：P1｜前端已 mock 先行
 
-- 3.7 投票管理全套（vote 域）——阶段 4
-- 3.8 规则配置读写（rule 域）——阶段 5
-- 3.9 全套 Excel 导出 + 日志分类筛选扩展——阶段 6
+**现状**：后端无此模块，前端走 mock（`src/mock/vote.ts` 即实现目标，数据结构见 `src/api/vote/types.ts`）。
+
+**硬约束（PRD 3.4 第 7 条）**：投票仅作管理员审核参考，**不自动生成积分、不自动完成审核**；管理员看完统计仍需回到审核中心人工处理。
+
+| 接口 | 方法/路径 | 说明 |
+|---|---|---|
+| 投票列表 | `GET /admin/votes?page=&pageSize=&title=&status=` | status 为推导状态：not_started/in_progress/ended（由时间+closed 推导）；按创建时间倒序；每行含 `submittedCount`（已提交人数） |
+| 新建投票 | `POST /admin/votes` | body 见 VotePayload；服务端校验：标题非空、≥2 选项、开始<截止、≥1 参与人 |
+| 编辑投票 | `POST /admin/votes/{id}/update` | **仅未开始可编辑**；已开始返回 409 |
+| 手动关闭 | `POST /admin/votes/{id}/close` | 关闭后员工不可提交，状态视为已结束；已结束返回 409 |
+| 投票统计 | `GET /admin/votes/{id}/stats` | 返回 VoteStats：应参与/实际参与/参与率/每选项票数占比/人员明细；未开始返回 409 |
+| 统计导出 | `GET /admin/votes/{id}/stats.xlsx` | Excel 含投票信息+选项统计+明细；前端当前 CSV 兜底，后端就绪后切换 |
+
+**字段契约**：Vote `{ id, title, description, relatedType(""|"task"|"application"), relatedId, relatedLabel, voteType("single"|"multiple"), options[{id,text}], startTime, endTime("YYYY-MM-DD HH:mm"), participantIds[], participantNames[], closed, submittedCount, createdBy, createdAt, updatedAt }`。
+
+**业务规则**：仅管理员可建/编/关；参与人为手动勾选的员工子集，未被勾选员工不可见；每人限投 1 次、提交后不可改（小程序端约束）；到期自动关闭；投票创建/编辑/关闭/导出/员工提交全部写「投票操作日志」（PRD 5.6 第 5 类）；到开始时间自动向参与员工推送通知（走 outbox）。
+
+**关联前端文件**：`src/api/vote/vote.ts`、`src/utils/vote.ts`（状态推导/校验/CSV）、`src/views/VoteManage.vue`
+
+### 3.8 规则配置（rule 域）｜优先级：P1｜前端已 mock 先行
+
+**现状**：后端无此模块，前端走 mock（`src/mock/rule.ts` 即实现目标）。
+
+| 接口 | 方法/路径 | 说明 |
+|---|---|---|
+| 获取规则 | `GET /admin/rules` | 返回 `{ data: { content(富文本HTML), updatedAt, updatedBy } }`；**用户端规则中心读取同一接口**，保存后即时生效、无需小程序发版 |
+| 保存规则 | `PUT /admin/rules` | body: `{ content }`；返回更新后的 RuleContent |
+
+**业务规则**：富文本由前端 wangeditor 产出（后端存储原样 HTML，长度上限建议 100KB）；内容为空时前端拦截保存；建议每次保存写操作日志 `rule.updated`（归入系统操作类）。
+
+**关联前端文件**：`src/api/rule/rule.ts`、`src/views/RuleConfig.vue`
+
+### 3.9 后续章节（随阶段推进补充）
+
+- 3.9 全套 Excel 导出 + 日志分类筛选扩展（含日志按时间范围筛选、五类日志类型筛选）——阶段 6
