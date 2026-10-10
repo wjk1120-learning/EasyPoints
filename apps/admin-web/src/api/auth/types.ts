@@ -1,4 +1,4 @@
-/** auth 域类型：登录请求/响应、管理员信息、顶栏角标 */
+/** auth 域类型：登录请求/响应、管理员信息 */
 
 /** 管理员账号信息（/admin/auth/login 返回） */
 export interface AdminInfo {
@@ -20,10 +20,4 @@ export interface LoginPayload {
 export interface LoginResult {
   token: string
   admin: AdminInfo
-}
-
-/** 顶栏待审角标（/admin/badges） */
-export interface BadgesResult {
-  appealsUnread: number
-  ordersUnread: number
 }

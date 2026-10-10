@@ -38,8 +38,8 @@
 | # | 域 | 接口 | 状态 |
 |---|---|---|---|
 | 1 | auth | POST /admin/auth/login | 旧后端已实现，SpringBoot 重做 |
-| 2 | auth | GET /admin/badges | 旧后端已实现；建议扩展四类计数（3.1） |
-| 3 | auth | POST /admin/badges/mark-seen | 旧后端已实现 |
+| 2 | auth | GET /admin/badges | 旧后端已实现；前端已弃用，SpringBoot 建议实现聚合版（3.1） |
+| 3 | auth | POST /admin/badges/mark-seen | 前端已弃用，SpringBoot 不需要实现 |
 | 4 | employee | GET /admin/employees | 旧后端已实现；需增加双积分字段（3.2） |
 | 5 | wecom | POST /admin/wecom/sync-contacts | mock；需真正对接企微（3.3） |
 | 6 | points | POST /admin/points/adjustment | 旧后端已实现；需升级双积分语义（3.4） |
@@ -89,12 +89,11 @@
 | 接口 | 方法/路径 | 请求 | 响应 data | 说明 |
 |---|---|---|---|---|
 | 登录 | `POST /admin/auth/login` | body: `{ username, password }` | `{ token, admin: AdminInfo }` | JWT 12h |
-| 待办角标 | `GET /admin/badges` | — | `{ appealsUnread, ordersUnread }` | 顶栏角标 |
-| 角标已读 | `POST /admin/badges/mark-seen` | body: `{ keys: string[] }` | — | 前端处理后调用 |
+| 待办角标（聚合） | `GET /admin/badges` | — | `{ exchangePending, taskPending, applicationPending, appealPending }` | 四类待审数 |
 
 **AdminInfo**：`{ id, username, name, role: super_admin|hr_admin|department_admin, departmentIds?: number[] }`（部门管理员带管辖部门列表）。
 
-**SpringBoot 建议一步到位（P2）**：badges 扩展为 `{ appealsUnread, ordersUnread, exchangePending, taskPending, applicationPending, appealPending }`（后四类=各审核 Tab 待审数）。当前前端用 4 个列表接口 `pageSize=1&status=待审` 拼 `meta.total`，后端给聚合后前端合并为 1 次请求。
+**待办角标口径（2026-10-10 调整）**：旧接口的两类「未读数」语义（appealsUnread/ordersUnread）与 mark-seen 已读机制**已废弃，SpringBoot 不需要实现**。现前端侧边栏「工作台/审核中心」徽标 = 四类待审合计，由前端并发查四个列表接口（`pageSize=1&status=待审`）拼 `meta.total`（与审核中心 Tab 计数同口径）。SpringBoot 直接实现上表的聚合接口，前端即由 4 次请求合并为 1 次。
 
 **关联前端**：`src/api/auth/`、`src/views/Login.vue`、`src/App.vue`。
 

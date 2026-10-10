@@ -4,7 +4,11 @@ import { ElMessage } from "element-plus";
 import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import type { AdminInfo } from "./api/auth/types";
-import { badges as fetchBadges, login } from "./api/auth/auth";
+import { login } from "./api/auth/auth";
+import { ordersPaged } from "./api/order/order";
+import { taskRecordsPaged } from "./api/task/task";
+import { applicationsPaged } from "./api/application/application";
+import { appealsPaged } from "./api/appeal/appeal";
 
 const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
@@ -13,8 +17,9 @@ const admin = ref<AdminInfo | null>(loadAdmin());
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
-const badges = reactive({ appeals: 0, orders: 0 });
-const dashboardBadge = computed(() => Number(badges.appeals || 0) + Number(badges.orders || 0));
+/** 四类待审合计（兑换/任务/申请/申诉），侧边栏工作台与审核中心徽标共用 */
+const badges = reactive({ pending: 0 });
+const dashboardBadge = computed(() => Number(badges.pending || 0));
 let badgeTimer: ReturnType<typeof setInterval> | null = null;
 
 function loadAdmin(): AdminInfo | null {
@@ -86,16 +91,22 @@ function handleLogoutEvent(event: Event) {
   }
 }
 
+/** 刷新侧边栏待办徽标：四类待审合计，与审核中心 Tab 计数同口径（申诉过渡期用旧状态值）。
+ * 后端聚合角标接口（接口清单 3.1 badges 扩展）就绪后可换为单次请求。 */
 async function refreshBadges() {
   if (!token.value) return;
-  try {
-    const result = await fetchBadges();
-    badges.appeals = Number(result.appealsUnread || 0);
-    badges.orders = Number(result.ordersUnread || 0);
-  } catch {
-    badges.appeals = 0;
-    badges.orders = 0;
-  }
+  const empty = { data: [], meta: { total: 0, page: 1, pageSize: 1 } };
+  const [exchange, task, application, appeal] = await Promise.all([
+    ordersPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    applicationsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    appealsPaged({ page: 1, pageSize: 1, status: "pending_department_review" }).catch(() => empty),
+  ]);
+  badges.pending =
+    Number(exchange.meta.total || 0) +
+    Number(task.meta.total || 0) +
+    Number(application.meta.total || 0) +
+    Number(appeal.meta.total || 0);
 }
 
 function handleBadgeRefreshEvent() {
@@ -124,8 +135,7 @@ watch(
   isAuthed,
   (value) => {
     if (!value) {
-      badges.appeals = 0;
-      badges.orders = 0;
+      badges.pending = 0;
       if (badgeTimer) {
         clearInterval(badgeTimer);
         badgeTimer = null;
@@ -134,7 +144,7 @@ watch(
     }
     refreshBadges();
     if (badgeTimer) clearInterval(badgeTimer);
-    badgeTimer = setInterval(refreshBadges, 15000);
+    badgeTimer = setInterval(refreshBadges, 60000);
   },
   { immediate: true }
 );
