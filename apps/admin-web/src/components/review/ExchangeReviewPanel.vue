@@ -162,7 +162,7 @@ watch(
       <el-table-column label="申请人" width="140">
         <template #default="{ row }">{{ employeeLabel(row.employeeId, row.employeeName) }}</template>
       </el-table-column>
-      <el-table-column prop="giftName" label="礼品" min-width="180" />
+      <el-table-column prop="giftName" label="礼品" min-width="120" />
       <el-table-column label="消耗积分" width="110">
         <template #default="{ row }">
           <span class="delta-cost">-{{ row.pointsCost }}</span>
@@ -173,7 +173,7 @@ watch(
           <el-tag :type="statusTag(row.status)" effect="plain">{{ statusText(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="更新时间" width="180">
+      <el-table-column label="更新时间" width="280">
         <template #default="{ row }">{{ formatTimeText(row.updatedAt || row.createdAt) }}</template>
       </el-table-column>
       <el-table-column label="操作" width="220" fixed="right">
