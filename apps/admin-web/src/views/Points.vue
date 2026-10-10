@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { CirclePlus, RemoveFilled } from "@element-plus/icons-vue";
 import { employees as fetchEmployees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
@@ -13,11 +13,17 @@ const single = reactive({
   type: "reward" as "reward" | "penalty",
   remark: ""
 });
+/** 批量名单行：pointsDelta 为 null 表示未填写（提交前必须全部填写且非 0） */
 const batch = reactive({
   month: new Date().toISOString().slice(0, 7),
   batchRemark: "",
-  items: [] as { employeeId: number; pointsDelta: number; remark: string }[]
+  items: [] as { employeeId: number; pointsDelta: number | null; remark: string }[]
 });
+/** 范围选择：勾选的部门（仅负责往名单加人，移除在表格行内操作） */
+const scopeDepartmentIds = ref<number[]>([]);
+const addEmployeeId = ref<number | null>(null);
+/** 部门勾选变化差集计算用的上一次快照 */
+let prevDeptIds: number[] = [];
 
 const monthOptions = computed(() => {
   const options: { value: string; label: string }[] = [];
@@ -36,6 +42,80 @@ const employeeNameMap = computed(() => {
   return map;
 });
 
+/** 部门选项（从员工列表推导；员工数据已按管理员权限裁剪） */
+const departmentOptions = computed(() => {
+  const map = new Map<number, string>();
+  for (const item of employees.value) {
+    if (item.status !== "active") continue;
+    if (!map.has(item.departmentId)) map.set(item.departmentId, item.departmentName || `部门${item.departmentId}`);
+  }
+  return [...map].map(([id, name]) => ({ id, name }));
+});
+
+/** 可搜索添加的员工（在职；已在名单的禁用） */
+const addableEmployees = computed(() => employees.value.filter((item) => item.status === "active"));
+
+function inBatch(employeeId: number) {
+  return batch.items.some((row) => row.employeeId === employeeId);
+}
+
+/** 追加名单（按 employeeId 去重，仅在职员工），返回新增人数 */
+function appendRows(list: Employee[]): number {
+  let added = 0;
+  for (const item of list) {
+    if (item.status !== "active" || inBatch(item.id)) continue;
+    batch.items.push({ employeeId: item.id, pointsDelta: null, remark: "" });
+    added++;
+  }
+  return added;
+}
+
+function addDepartmentEmployees(departmentId: number) {
+  const list = employees.value.filter((item) => item.departmentId === departmentId);
+  const added = appendRows(list);
+  const name = departmentOptions.value.find((item) => item.id === departmentId)?.name || `部门${departmentId}`;
+  if (added) ElMessage.success(`已加入 ${name} ${added} 名员工`);
+}
+
+/** 部门勾选变化：勾选=整批加入；取消勾选=移出该部门中还未填写积分的人（已填分保留，避免误删工作量） */
+function onDepartmentsChange(ids: number[]) {
+  const removed = prevDeptIds.filter((id) => !ids.includes(id));
+  const added = ids.filter((id) => !prevDeptIds.includes(id));
+  for (const departmentId of added) addDepartmentEmployees(departmentId);
+  if (removed.length) {
+    let removedCount = 0;
+    batch.items = batch.items.filter((row) => {
+      const emp = employees.value.find((item) => item.id === row.employeeId);
+      const inRemovedDept = Boolean(emp && removed.includes(emp.departmentId));
+      const filled = row.pointsDelta != null && Number(row.pointsDelta) !== 0;
+      if (inRemovedDept && !filled) {
+        removedCount++;
+        return false;
+      }
+      return true;
+    });
+    if (removedCount) ElMessage.info(`已移除 ${removedCount} 名未填写积分的员工（已填分的保留）`);
+  }
+  prevDeptIds = [...ids];
+}
+
+/** 一键加入权限内全部在职员工 */
+function addAllEmployees() {
+  const added = appendRows(employees.value);
+  ElMessage.success(added ? `已加入全部在职员工 ${added} 名` : "全部员工均已在名单中");
+}
+
+/** 搜索添加单个员工（跨部门小团队场景），添加后清空选择 */
+function onAddEmployee(employeeId: number) {
+  const emp = employees.value.find((item) => item.id === employeeId);
+  if (emp && appendRows([emp])) ElMessage.success(`已加入 ${emp.name}`);
+  addEmployeeId.value = null;
+}
+
+function removeRow(index: number) {
+  batch.items.splice(index, 1);
+}
+
 function formatEmployee(value: number | string | null | undefined) {
   if (value == null) return "";
   return employeeNameMap.value.get(String(value)) || String(value);
@@ -43,8 +123,10 @@ function formatEmployee(value: number | string | null | undefined) {
 
 onMounted(async () => {
   employees.value = await fetchEmployees();
-  if (employees.value.length && single.employeeId == null) single.employeeId = employees.value[0].id;
-  batch.items = employees.value.map((item) => ({ employeeId: item.id, pointsDelta: 0, remark: "" }));
+  if (employees.value.length && single.employeeId == null) {
+    const firstActive = employees.value.find((item) => item.status === "active");
+    if (firstActive) single.employeeId = firstActive.id;
+  }
 });
 
 async function submitSingle() {
@@ -56,8 +138,35 @@ async function submitSingle() {
 }
 
 async function submitBatch() {
-  await monthlyBatch(batch);
-  ElMessage.success("月度批量录分已提交");
+  if (!batch.items.length) {
+    ElMessage.warning("请先选择录入范围——可按部门勾选、一键全部员工，或搜索添加个别员工");
+    return;
+  }
+  const blank = batch.items.filter((row) => row.pointsDelta == null || Number(row.pointsDelta) === 0);
+  if (blank.length) {
+    ElMessage.warning(`还有 ${blank.length} 人未填写积分（积分不能为空或 0，不给的人请移除）`);
+    return;
+  }
+  const monthLabel = monthOptions.value.find((item) => item.value === batch.month)?.label || batch.month;
+  try {
+    await ElMessageBox.confirm(
+      `即将为 ${batch.items.length} 名员工录入 ${monthLabel} 积分，统一备注：${batch.batchRemark || "（未设置）"}。提交后将生成不可修改的积分流水，请确认无误。`,
+      "高危操作确认",
+      { type: "warning", confirmButtonText: "确认提交", cancelButtonText: "再检查一下" }
+    );
+  } catch {
+    return;
+  }
+  await monthlyBatch({
+    month: batch.month,
+    batchRemark: batch.batchRemark,
+    items: batch.items.map((row) => ({ employeeId: row.employeeId, pointsDelta: Number(row.pointsDelta), remark: row.remark }))
+  });
+  ElMessage.success(`月度批量录分已提交（${batch.items.length} 名员工）`);
+  batch.items = [];
+  batch.batchRemark = "";
+  scopeDepartmentIds.value = [];
+  prevDeptIds = [];
 }
 </script>
 
@@ -137,22 +246,69 @@ async function submitBatch() {
               <el-input v-model="batch.batchRemark" type="textarea" :rows="1" placeholder="应用于所有未填写单人备注的记录" />
             </el-form-item>
           </el-form>
+          <div class="batch-scope">
+            <span class="scope-label">录入范围</span>
+            <el-select
+              v-model="scopeDepartmentIds"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="勾选部门整批加入"
+              style="width: 220px"
+              @change="onDepartmentsChange"
+            >
+              <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+            <el-button @click="addAllEmployees">全部员工</el-button>
+            <el-select
+              v-model="addEmployeeId"
+              filterable
+              placeholder="搜索姓名添加个别员工"
+              style="width: 220px"
+              @change="onAddEmployee"
+            >
+              <el-option
+                v-for="item in addableEmployees"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+                :disabled="inBatch(item.id)"
+              />
+            </el-select>
+          </div>
         </div>
 
         <!-- 可滚动表格区域 -->
         <div class="batch-table-wrap">
-          <el-table :data="batch.items" border size="small" style="width: 100%">
+          <el-empty v-if="!batch.items.length" :image-size="90">
+            <template #description>
+              <p class="empty-title">请先选择录入范围</p>
+              <p class="empty-hint">可按部门勾选、一键全部员工，或搜索添加个别员工</p>
+            </template>
+          </el-empty>
+          <el-table v-else :data="batch.items" border size="small" style="width: 100%">
             <el-table-column label="员工" width="150" show-overflow-tooltip>
               <template #default="{ row }">{{ formatEmployee(row.employeeId) }}</template>
             </el-table-column>
             <el-table-column label="积分" width="160">
               <template #default="{ row }">
-                <el-input-number v-model="row.pointsDelta" controls-position="right" size="small" style="width: 100%" />
+                <el-input-number
+                  v-model="row.pointsDelta"
+                  placeholder="必填"
+                  controls-position="right"
+                  size="small"
+                  style="width: 100%"
+                />
               </template>
             </el-table-column>
             <el-table-column label="单人备注" min-width="200">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="留空则使用统一备注" size="small" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="70" align="center">
+              <template #default="{ $index }">
+                <el-button link type="danger" size="small" @click="removeRow($index)">移除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -350,6 +506,35 @@ async function submitBatch() {
   flex-shrink: 0;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
+}
+
+// 录入范围选择行
+.batch-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+
+  .scope-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-regular);
+    flex-shrink: 0;
+  }
+}
+
+// 空态引导
+.empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-regular);
+}
+
+.empty-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-placeholder);
 }
 
 .batch-form {
