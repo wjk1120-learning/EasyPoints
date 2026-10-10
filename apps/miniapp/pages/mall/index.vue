@@ -4,6 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import { getApiBase, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const gifts = ref([])
 const balance = ref(0)
@@ -85,10 +88,10 @@ function formatPoints(value) {
     </view>
 
     <view class="gift-grid">
-      <view v-for="gift in displayGifts" :key="gift.id" class="gift" :class="{ sold: isSoldOut(gift) }" @tap="openRedeem(gift)">
+      <view v-for="gift in displayGifts" :key="gift.id" class="gift press" :class="{ sold: isSoldOut(gift) }" @tap="openRedeem(gift)">
         <view class="cover">
           <image v-if="gift.coverImageUrl" class="cover-img" :src="apiBase + gift.coverImageUrl" mode="aspectFill" />
-          <view v-else class="cover-placeholder">🎁</view>
+          <view v-else class="cover-placeholder"><AppIcon name="gift" :size="64" color="faint" /></view>
           <text class="cover-tag" :class="isSoldOut(gift) ? 'cover-tag-sold' : 'cover-tag-on'">
             {{ isSoldOut(gift) ? '已售罄' : '上架中' }}
           </text>
@@ -98,7 +101,7 @@ function formatPoints(value) {
           <text class="gift-name">{{ gift.name }}</text>
           <view class="gift-price-row">
             <view class="gift-price">
-              <text class="gift-coin">🪙</text>
+              <AppIcon name="coin" :size="28" color="amber" />
               <text class="gift-points">{{ formatPoints(gift.pointsCost) }}</text>
               <text class="gift-unit">积分</text>
             </view>
@@ -107,18 +110,18 @@ function formatPoints(value) {
         </view>
       </view>
       <view v-if="displayGifts.length === 0" class="card card-empty gift-empty">
-        <text class="muted">{{ filter === 'redeemable' ? '当前积分暂无可兑换的礼品' : '暂无上架礼品' }}</text>
+        <EmptyState icon="shopping-bag" title="商城暂无礼品" />
       </view>
     </view>
 
     <view v-if="dialog" class="mask" @tap="dialog = null">
       <view class="dialog" @tap.stop>
-        <view class="dialog-close" @tap="dialog = null">✕</view>
+        <view class="dialog-close" @tap="dialog = null"><AppIcon name="x" :size="32" color="muted" /></view>
         <text class="dialog-title">{{ dialog.enough ? '确认兑换' : '积分不足' }}</text>
         <view class="dialog-gift">
           <view class="dialog-cover">
             <image v-if="dialog.gift.coverImageUrl" class="cover-img" :src="apiBase + dialog.gift.coverImageUrl" mode="aspectFill" />
-            <view v-else class="cover-placeholder">🎁</view>
+            <view v-else class="cover-placeholder"><AppIcon name="gift" :size="64" color="faint" /></view>
           </view>
           <view class="dialog-gift-info">
             <text class="dialog-gift-name">{{ dialog.gift.name }}</text>
@@ -137,7 +140,7 @@ function formatPoints(value) {
         </view>
         <view v-if="dialog.enough" class="dialog-note">确认后进入审核，审核通过后发送至企业微信消息。</view>
         <view v-else class="dialog-warn">
-          <text class="dialog-warn-icon">⚠️</text>
+          <AppIcon name="alert-triangle" :size="36" color="amber" />
           <text>当前可用积分 {{ formatPoints(balance) }}，暂无法兑换该礼品</text>
         </view>
         <view class="dialog-buttons">
@@ -153,6 +156,7 @@ function formatPoints(value) {
       </view>
     </view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -168,7 +172,7 @@ function formatPoints(value) {
 .mall-balance-label {
   display: block;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .mall-balance-num {
@@ -176,14 +180,14 @@ function formatPoints(value) {
   margin-top: 4rpx;
   font-size: 44rpx;
   font-weight: 800;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
 .mall-orders-link {
   font-size: 26rpx;
   font-weight: 500;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .mall-orders-link:active {
@@ -199,14 +203,14 @@ function formatPoints(value) {
 .chip {
   padding: 10rpx 28rpx;
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #6b7280;
+  background: var(--surface);
+  color: var(--ink-3);
   font-size: 26rpx;
 }
 
 .chip-on {
-  background: #2f6bff;
-  color: #ffffff;
+  background: var(--brand);
+  color: var(--surface);
   font-weight: 600;
 }
 
@@ -221,7 +225,7 @@ function formatPoints(value) {
   width: 48.6%;
   margin-bottom: 20rpx;
   border-radius: 20rpx;
-  background: #ffffff;
+  background: var(--surface);
   overflow: hidden;
   box-shadow: 0 1rpx 2rpx rgba(23, 26, 31, 0.03), 0 8rpx 24rpx rgba(23, 26, 31, 0.04);
 }
@@ -232,7 +236,7 @@ function formatPoints(value) {
 
 .gift.sold .gift-name,
 .gift.sold .gift-points {
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .cover {
@@ -270,12 +274,12 @@ function formatPoints(value) {
 
 .cover-tag-on {
   background: rgba(255, 255, 255, 0.92);
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .cover-tag-sold {
   background: rgba(26, 34, 51, 0.55);
-  color: #ffffff;
+  color: var(--surface);
 }
 
 .cover-dim {
@@ -292,7 +296,7 @@ function formatPoints(value) {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -306,30 +310,26 @@ function formatPoints(value) {
 }
 
 .gift-price {
-  display: flex;
-  align-items: baseline;
-  gap: 6rpx;
-}
-
-.gift-coin {
-  font-size: 22rpx;
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
 }
 
 .gift-points {
   font-size: 32rpx;
   font-weight: 800;
-  color: #2f6bff;
+  color: var(--brand);
   font-variant-numeric: tabular-nums;
 }
 
 .gift-unit {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .gift-stock {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .gift-empty {
@@ -341,7 +341,7 @@ function formatPoints(value) {
   width: 620rpx;
   padding: 40rpx 32rpx 32rpx;
   border-radius: 28rpx;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .dialog-close {
@@ -353,7 +353,7 @@ function formatPoints(value) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b4bac3;
+  color: var(--faint);
   font-size: 28rpx;
 }
 
@@ -361,7 +361,7 @@ function formatPoints(value) {
   display: block;
   font-size: 34rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .dialog-gift {
@@ -371,7 +371,7 @@ function formatPoints(value) {
   margin-top: 28rpx;
   padding: 20rpx;
   border-radius: 16rpx;
-  background: #f7f8fa;
+  background: var(--field);
 }
 
 .dialog-cover {
@@ -395,7 +395,7 @@ function formatPoints(value) {
 .dialog-gift-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .dialog-tag {
@@ -411,27 +411,27 @@ function formatPoints(value) {
 
 .dialog-label {
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .dialog-cost {
   font-size: 28rpx;
   font-weight: 700;
-  color: #f04438;
+  color: var(--red);
   font-variant-numeric: tabular-nums;
 }
 
 .dialog-after {
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
 .dialog-note {
   margin-top: 24rpx;
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
   line-height: 1.6;
 }
 
@@ -442,8 +442,8 @@ function formatPoints(value) {
   margin-top: 24rpx;
   padding: 18rpx 20rpx;
   border-radius: 12rpx;
-  background: #feecec;
-  color: #f04438;
+  background: var(--red-soft);
+  color: var(--red);
   font-size: 24rpx;
 }
 
@@ -458,7 +458,7 @@ function formatPoints(value) {
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 16rpx;
-  background: #f2f3f5;
+  background: var(--fill);
   color: #344156;
   font-size: 30rpx;
   font-weight: 600;
@@ -474,8 +474,8 @@ function formatPoints(value) {
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 16rpx;
-  background: #2f6bff;
-  color: #ffffff;
+  background: var(--brand);
+  color: var(--surface);
   font-size: 30rpx;
   font-weight: 600;
   text-align: center;
@@ -486,7 +486,7 @@ function formatPoints(value) {
 }
 
 .dialog-ok-disabled {
-  background: #ebedf0;
-  color: #b4bac3;
+  background: var(--line);
+  color: var(--faint);
 }
 </style>

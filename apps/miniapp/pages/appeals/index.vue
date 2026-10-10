@@ -4,6 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const tab = ref('all')
 const rows = ref([])
@@ -47,16 +50,16 @@ function statusPill(item) {
 
 function bannerOf(item) {
   const text = `${item.status || ''}${item.statusText || ''}`
-  if (/approved|通过/.test(text)) return { cls: 'banner-green', icon: '✓', text: '申诉通过，积分已按结论调整' }
+  if (/approved|通过/.test(text)) return { cls: 'banner-green', icon: 'check-circle', text: '申诉通过，积分已按结论调整' }
   if (/rejected|驳回/.test(text)) {
     const reason = item.resolution || item.reviewRemark || item.result
-    return { cls: 'banner-red', icon: '✕', text: reason ? `处理意见：${reason}` : '申诉未通过，如有疑问联系积分管理员' }
+    return { cls: 'banner-red', icon: 'x-circle', text: reason ? `处理意见：${reason}` : '申诉未通过，如有疑问联系积分管理员' }
   }
   if (/维持/.test(text)) {
     const reason = item.resolution || item.reviewRemark || item.result
-    return { cls: 'banner-red', icon: '✕', text: reason ? `处理意见：${reason}` : '维持原判' }
+    return { cls: 'banner-red', icon: 'x-circle', text: reason ? `处理意见：${reason}` : '维持原判' }
   }
-  return { cls: 'banner-amber', icon: '⏱', text: '预计 3 个工作日内完成处理' }
+  return { cls: 'banner-amber', icon: 'clock', text: '预计 3 个工作日内完成处理' }
 }
 
 function formatDate(value) {
@@ -95,16 +98,21 @@ function titleOf(item) {
         </view>
         <text class="muted appeal-sub">申诉 · {{ formatDate(item.createdAt) }}</text>
         <view class="banner" :class="bannerOf(item).cls">
-          <text class="banner-icon">{{ bannerOf(item).icon }}</text>
+          <AppIcon
+            :name="bannerOf(item).icon"
+            :size="36"
+            :color="bannerOf(item).cls === 'banner-green' ? 'green' : bannerOf(item).cls === 'banner-red' ? 'red' : 'amber'"
+          />
           <text class="banner-text">{{ bannerOf(item).text }}</text>
         </view>
       </view>
-      <view v-if="visibleRows.length === 0" class="card card-empty"><text class="muted">暂无申诉记录</text></view>
+      <view v-if="visibleRows.length === 0" class="card card-empty"><EmptyState icon="shield" title="暂无申诉记录" /></view>
       <view v-if="visibleRows.length > 0" class="list-footer">已展示全部申诉记录</view>
     </template>
 
     <view class="footer-link" @tap="uni.switchTab({ url: '/pages/points/index' })">从积分明细发起新申诉 ›</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -120,7 +128,7 @@ function titleOf(item) {
   margin-right: 16rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,23 +151,18 @@ function titleOf(item) {
 }
 
 .banner-amber {
-  background: #fff6e8;
+  background: var(--amber-soft);
   color: #b45309;
 }
 
 .banner-green {
-  background: #e8f7ee;
-  color: #16a34a;
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .banner-red {
-  background: #feecec;
-  color: #f04438;
-}
-
-.banner-icon {
-  flex-shrink: 0;
-  font-size: 24rpx;
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 .banner-text {
@@ -171,14 +174,14 @@ function titleOf(item) {
   text-align: center;
   padding: 8rpx 0;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 
 .footer-link {
   text-align: center;
   padding: 16rpx 0;
   font-size: 24rpx;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .footer-link:active {

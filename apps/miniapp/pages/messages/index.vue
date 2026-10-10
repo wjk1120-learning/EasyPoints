@@ -4,6 +4,9 @@ import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const messages = ref([])
 const loading = ref(false)
@@ -21,24 +24,24 @@ const visibleMessages = computed(() => {
 function typeMeta(item) {
   const text = `${item?.type || ''} ${item?.title || ''} ${item?.summary || ''}`
   if (item?.type === 'vote_assigned' || item?.type === 'vote' || /投票/.test(text)) {
-    return { label: '投票', emoji: '🗳️', tile: 'purple' }
+    return { label: '投票', icon: 'check-square', tile: 'purple' }
   }
   if (item?.type === 'order_status' || /兑换|订单/.test(text)) {
-    return { label: '兑换审核', emoji: '🛍️', tile: 'blue' }
+    return { label: '兑换审核', icon: 'shopping-bag', tile: 'blue' }
   }
   if (item?.type === 'task' || /任务/.test(text)) {
-    return { label: '任务审核', emoji: '📋', tile: 'amber' }
+    return { label: '任务审核', icon: 'clipboard', tile: 'amber' }
   }
   if (/申诉/.test(text)) {
-    return { label: '申诉结果', emoji: '🛡️', tile: 'green' }
+    return { label: '申诉结果', icon: 'shield', tile: 'green' }
   }
   if (/申请/.test(text)) {
-    return { label: '积分申请', emoji: '📝', tile: 'purple' }
+    return { label: '积分申请', icon: 'file-text', tile: 'purple' }
   }
   if (/积分/.test(text)) {
-    return { label: '积分变动', emoji: '✨', tile: 'green' }
+    return { label: '积分变动', icon: 'activity', tile: 'green' }
   }
-  return { label: '其他', emoji: '🔔', tile: 'blue' }
+  return { label: '其他', icon: 'bell', tile: 'blue' }
 }
 
 onShow(load)
@@ -140,19 +143,33 @@ function displayTitle(item) {
       <text class="list-head-text">{{ unreadCount > 0 ? `${unreadCount} 条未读消息` : '消息已全部已读' }}</text>
       <view class="list-head-actions">
         <text v-if="unreadCount > 0" class="list-head-read" @tap="markAllRead">全部已读</text>
-        <text class="list-head-filter" @tap="pickType">☰ {{ typeFilter === 'all' ? '全部类型' : typeFilter }}</text>
+        <view class="list-head-filter" @tap="pickType">
+          <AppIcon name="list" :size="26" color="brand" />
+          <text>{{ typeFilter === 'all' ? '全部类型' : typeFilter }}</text>
+        </view>
       </view>
     </view>
+
+    <!-- 加载骨架：行式（圆点 + 两行文字），布局与消息行一致 -->
+    <template v-if="loading">
+      <view v-for="n in 4" :key="`sk-${n}`" class="msg">
+        <view class="sk sk-icon" />
+        <view class="sk-lines">
+          <view class="sk sk-line w64" />
+          <view class="sk sk-line w40" />
+        </view>
+      </view>
+    </template>
 
     <view
       v-for="item in visibleMessages"
       :key="item.id"
-      class="msg"
+      class="msg press"
       :class="{ 'msg-read': item.isRead }"
       @tap="openMessage(item)"
     >
       <view class="icon-tile msg-icon" :class="typeMeta(item).tile">
-        <text>{{ typeMeta(item).emoji }}</text>
+        <AppIcon :name="typeMeta(item).icon" :size="36" :color="typeMeta(item).tile === 'blue' ? 'brand' : typeMeta(item).tile" />
         <view v-if="!item.isRead" class="msg-dot" />
       </view>
       <view class="msg-main">
@@ -165,9 +182,12 @@ function displayTitle(item) {
       </view>
     </view>
 
-    <view v-if="!loading && visibleMessages.length === 0" class="card card-empty"><text class="muted">暂无通知</text></view>
+    <view v-if="!loading && visibleMessages.length === 0" class="card card-empty">
+      <EmptyState icon="bell" title="暂无通知" />
+    </view>
     <view v-if="visibleMessages.length > 0" class="list-footer">消息按时间排序 · 上拉加载更多</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -182,7 +202,7 @@ function displayTitle(item) {
 
 .list-head-text {
   font-size: 24rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .list-head-actions {
@@ -193,7 +213,7 @@ function displayTitle(item) {
 
 .list-head-read {
   font-size: 24rpx;
-  color: #2f6bff;
+  color: var(--brand);
   font-weight: 500;
 }
 
@@ -202,8 +222,11 @@ function displayTitle(item) {
 }
 
 .list-head-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .list-head-filter:active {
@@ -216,7 +239,7 @@ function displayTitle(item) {
   padding: 26rpx 28rpx;
   margin-bottom: 16rpx;
   border-radius: 20rpx;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 1rpx 2rpx rgba(23, 26, 31, 0.03), 0 8rpx 24rpx rgba(23, 26, 31, 0.04);
 }
 
@@ -243,8 +266,8 @@ function displayTitle(item) {
   width: 16rpx;
   height: 16rpx;
   border-radius: 999rpx;
-  background: #f04438;
-  border: 3rpx solid #ffffff;
+  background: var(--red);
+  border: 3rpx solid var(--surface);
   box-sizing: content-box;
 }
 
@@ -259,7 +282,7 @@ function displayTitle(item) {
   margin-right: 16rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -267,27 +290,27 @@ function displayTitle(item) {
 
 .msg-title-read {
   font-weight: 500;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .msg-time {
   flex-shrink: 0;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 
 .msg-summary {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .msg-summary-read {
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .msg-tag {
@@ -296,16 +319,38 @@ function displayTitle(item) {
   font-size: 22rpx;
 }
 
-.tag-blue { color: #2f6bff; }
-.tag-green { color: #16a34a; }
-.tag-amber { color: #d97706; }
-.tag-purple { color: #7c5cbf; }
-.tag-red { color: #f04438; }
+.tag-blue { color: var(--brand); }
+.tag-green { color: var(--green); }
+.tag-amber { color: var(--amber); }
+.tag-purple { color: var(--purple); }
+.tag-red { color: var(--red); }
 
 .list-footer {
   text-align: center;
   padding: 16rpx 0 8rpx;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
+
+/* ── 加载骨架尺寸 ── */
+.sk-icon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.w40 { width: 40%; }
+.w64 { width: 64%; }
 </style>

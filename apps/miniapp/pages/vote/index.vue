@@ -4,6 +4,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const vote = ref(null)
 const selected = ref([])
@@ -90,8 +92,14 @@ function deadlineOf(voteData) {
         </view>
         <text class="vote-title">{{ vote.title }}</text>
         <text v-if="vote.description" class="vote-desc">{{ vote.description }}</text>
-        <text v-if="vote.relatedLabel" class="related">📌 关联：{{ vote.relatedLabel }}</text>
-        <text v-if="deadlineOf(vote)" class="deadline">⏱ {{ locked ? '截止' : '截至' }} {{ deadlineOf(vote) }}</text>
+        <view v-if="vote.relatedLabel" class="related">
+          <AppIcon name="bookmark" :size="24" color="muted" />
+          <text>关联：{{ vote.relatedLabel }}</text>
+        </view>
+        <view v-if="deadlineOf(vote)" class="deadline">
+          <AppIcon name="clock" :size="24" color="amber" />
+          <text>{{ locked ? '截止' : '截至' }} {{ deadlineOf(vote) }}</text>
+        </view>
       </view>
 
       <view class="card">
@@ -104,7 +112,7 @@ function deadlineOf(voteData) {
           @tap="toggle(option)"
         >
           <view class="option-check" :class="{ 'option-check-on': selected.includes(String(option.id)) }">
-            <text v-if="selected.includes(String(option.id))" class="option-check-mark">✓</text>
+            <AppIcon v-if="selected.includes(String(option.id))" name="check" :size="24" color="white" />
           </view>
           <text class="option-text">{{ option.text || option.label }}</text>
         </view>
@@ -116,6 +124,7 @@ function deadlineOf(voteData) {
       <text class="tip">投票只作管理员评审参考，不会自动加积分；提交后不可修改。</text>
     </template>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -126,7 +135,7 @@ function deadlineOf(voteData) {
   margin-top: 20rpx;
   font-size: 34rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   line-height: 1.4;
 }
 
@@ -139,23 +148,27 @@ function deadlineOf(voteData) {
 }
 
 .related {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .deadline {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #d97706;
+  color: var(--amber);
 }
 
 .block-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .option {
@@ -165,13 +178,13 @@ function deadlineOf(voteData) {
   margin-top: 20rpx;
   padding: 24rpx;
   border-radius: 16rpx;
-  border: 2rpx solid #ebedf0;
+  border: 2rpx solid var(--line);
   background: #fafbfc;
 }
 
 .option.on {
-  border-color: #2f6bff;
-  background: #edf3ff;
+  border-color: var(--brand);
+  background: var(--brand-soft);
 }
 
 .option-locked {
@@ -191,27 +204,21 @@ function deadlineOf(voteData) {
 }
 
 .option-check-on {
-  border-color: #2f6bff;
-  background: #2f6bff;
-}
-
-.option-check-mark {
-  color: #ffffff;
-  font-size: 22rpx;
-  font-weight: 700;
+  border-color: var(--brand);
+  background: var(--brand);
 }
 
 .option-text {
   flex: 1;
   min-width: 0;
   font-size: 28rpx;
-  color: #1a2233;
+  color: var(--ink);
   line-height: 1.5;
 }
 
 .button.disabled {
-  background: #ebedf0;
-  color: #b4bac3;
+  background: var(--line);
+  color: var(--faint);
 }
 
 .tip {
@@ -219,7 +226,7 @@ function deadlineOf(voteData) {
   margin-top: 16rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
   line-height: 1.6;
 }
 </style>

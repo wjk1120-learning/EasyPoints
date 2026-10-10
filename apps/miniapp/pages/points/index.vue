@@ -4,6 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const groups = ref({})
 const balance = ref(null)
@@ -77,8 +80,8 @@ async function loadRecords() {
 }
 
 function iconOf(record) {
-  if (typeLabel(record) === '人工奖惩') return { emoji: '⚡', cls: 'purple' }
-  return Number(record.pointsDelta) > 0 ? { emoji: '↑', cls: 'green' } : { emoji: '↓', cls: 'red' }
+  if (typeLabel(record) === '人工奖惩') return { icon: 'zap', cls: 'purple' }
+  return Number(record.pointsDelta) > 0 ? { icon: 'trending-up', cls: 'green' } : { icon: 'trending-down', cls: 'red' }
 }
 
 function appeal(record) {
@@ -139,19 +142,38 @@ function formatTime(value) {
       </view>
     </view>
 
-    <view v-if="loading" class="card card-empty"><text class="muted">加载中...</text></view>
-    <view v-for="record in rows" :key="record.id" class="card record-card" @tap="appeal(record)">
-      <view class="icon-tile record-icon" :class="iconOf(record).cls">{{ iconOf(record).emoji }}</view>
+    <view v-if="loading" class="card card-empty">
+      <view v-for="n in 3" :key="n" class="sk-record">
+        <view class="sk sk-avatar" />
+        <view class="sk-lines">
+          <view class="sk sk-line w64" />
+          <view class="sk sk-line w32" />
+        </view>
+        <view class="sk sk-line sk-amount" />
+      </view>
+    </view>
+    <view v-for="record in rows" :key="record.id" class="card record-card press" @tap="appeal(record)">
+      <view class="icon-tile record-icon" :class="iconOf(record).cls">
+        <AppIcon :name="iconOf(record).icon" :size="32" :color="iconOf(record).cls" />
+      </view>
       <view class="record-main">
         <text class="record-title">{{ record.remark }}</text>
         <text class="muted">{{ formatTime(record.occurredAt || record.createdAt) }} · {{ typeLabel(record) }}</text>
       </view>
-      <text class="record-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
-        {{ signedPoints(record.pointsDelta) }}
-      </text>
+      <view class="record-side">
+        <text class="record-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
+          {{ signedPoints(record.pointsDelta) }}
+        </text>
+        <!-- 申诉入口提示：整卡点击即进申诉页，这里只是可见按键；@tap.stop 防止与整卡触发叠加 -->
+        <view class="appeal-chip" @tap.stop="appeal(record)">
+          <AppIcon name="shield" :size="20" color="muted" />
+          <text>申诉</text>
+        </view>
+      </view>
     </view>
-    <view v-if="!loading && rows.length === 0" class="card card-empty"><text class="muted">暂无符合条件的积分记录</text></view>
+    <view v-if="!loading && rows.length === 0" class="card card-empty"><EmptyState icon="inbox" title="暂无符合条件的积分流水" /></view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -164,7 +186,7 @@ function formatTime(value) {
 .head-label {
   display: block;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .head-num {
@@ -172,7 +194,7 @@ function formatTime(value) {
   margin-top: 6rpx;
   font-size: 56rpx;
   font-weight: 800;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -180,7 +202,7 @@ function formatTime(value) {
   align-self: flex-start;
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .chips {
@@ -191,12 +213,12 @@ function formatTime(value) {
 
 .chip {
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--ink-3);
   padding: 8rpx 0;
 }
 
 .chip-on {
-  color: #2f6bff;
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -230,7 +252,7 @@ function formatTime(value) {
 .record-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -242,4 +264,65 @@ function formatTime(value) {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* 金额 + 申诉按键的右侧竖排 */
+.record-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.appeal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 4rpx 14rpx;
+  border-radius: var(--r-full);
+  border: 1rpx solid var(--line);
+  background: var(--surface);
+  font-size: 20rpx;
+  color: var(--muted);
+}
+
+.record-card:active .appeal-chip {
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  background: var(--brand-soft);
+}
+
+/* ── 骨架占位尺寸 ── */
+.sk-record {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 14rpx 0;
+}
+
+.sk-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-amount {
+  width: 96rpx;
+  height: 32rpx;
+}
+
+.w32 { width: 32%; }
+.w64 { width: 64%; }
 </style>

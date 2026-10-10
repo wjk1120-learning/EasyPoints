@@ -4,6 +4,9 @@ import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const tab = ref('all')
 const view = ref('list')
@@ -209,6 +212,15 @@ function describe(task) {
       <view v-if="missing" class="card"><text class="muted">{{ missing }}</text></view>
 
       <template v-else>
+        <template v-if="loading && rows.length === 0">
+          <view v-for="n in 3" :key="`sk-${n}`" class="card task-card">
+            <view class="row between">
+              <view class="sk sk-line w40" />
+              <view class="sk sk-line w20" />
+            </view>
+            <view class="sk sk-line w64 sk-task-desc" />
+          </view>
+        </template>
         <view v-for="task in sortedRows" :key="task.id" class="card task-card">
           <view class="row between">
             <text class="task-title">{{ task.title || task.name }}</text>
@@ -216,8 +228,8 @@ function describe(task) {
           </view>
           <text v-if="describe(task)" class="task-desc">{{ describe(task) }}</text>
           <view class="task-meta">
-            <text class="task-reward">🎁 +{{ rewardOf(task) }} 积分</text>
-            <text v-if="deadlineOf(task)" class="task-deadline">📅 截至 {{ deadlineOf(task) }}</text>
+            <view class="task-reward"><AppIcon name="gift" :size="26" color="brand" /><text>+{{ rewardOf(task) }} 积分</text></view>
+            <view v-if="deadlineOf(task)" class="task-deadline"><AppIcon name="calendar" :size="24" color="muted" /><text>截至 {{ deadlineOf(task) }}</text></view>
           </view>
 
           <template v-if="tab === 'all'">
@@ -227,13 +239,13 @@ function describe(task) {
             <view v-if="isClaimable(task)" class="button task-button" @tap="claim(task)">领取任务</view>
             <view v-else class="task-actions">
               <view v-if="isRunning(task)" class="small-button" @tap="openSubmit(task)">提交成果</view>
-              <view v-if="isReviewing(task)" class="small-button ghost" @tap="openDetail(task)">查看成果</view>
-              <view v-if="isApproved(task) || isHistory(task)" class="small-button ghost" @tap="openDetail(task)">查看详情</view>
+              <view v-if="isReviewing(task)" class="small-button ghost press" @tap="openDetail(task)">查看成果</view>
+              <view v-if="isApproved(task) || isHistory(task)" class="small-button ghost press" @tap="openDetail(task)">查看详情</view>
               <view v-if="isRejected(task)" class="small-button danger" @tap="appealHint">发起申诉</view>
             </view>
           </template>
         </view>
-        <view v-if="!loading && rows.length === 0" class="card card-empty"><text class="muted">暂无任务</text></view>
+        <view v-if="!loading && rows.length === 0" class="card card-empty"><EmptyState icon="target" title="暂无任务" /></view>
       </template>
     </template>
 
@@ -244,7 +256,10 @@ function describe(task) {
           <text class="pill blue">进行中</text>
         </view>
         <text v-if="describe(submitFor)" class="task-desc">{{ describe(submitFor) }}</text>
-        <text v-if="deadlineOf(submitFor)" class="task-deadline-line">⏱ 截止时间：{{ deadlineOf(submitFor) }}</text>
+        <view v-if="deadlineOf(submitFor)" class="task-deadline-line">
+          <AppIcon name="clock" :size="24" color="amber" />
+          <text>截止时间：{{ deadlineOf(submitFor) }}</text>
+        </view>
       </view>
 
       <view class="card">
@@ -261,24 +276,25 @@ function describe(task) {
             <image class="image-preview" :src="img" mode="aspectFill" @tap="removeImage(index)" />
           </view>
           <view v-if="resultImages.length < 6" class="image-add" @tap="chooseImage">
-            <text class="image-add-icon">🖼️</text>
+            <AppIcon name="image" :size="48" color="faint" />
             <text class="image-add-text">继续上传</text>
           </view>
         </view>
         <text class="muted image-note">附件暂不随成果提交，待后端上传接口就绪后开放。</text>
         <view class="draft-row">
-          <text class="draft-link" @tap="saveDraft">💾 保存草稿</text>
+          <view class="draft-link" @tap="saveDraft"><AppIcon name="save" :size="24" color="muted" /><text>保存草稿</text></view>
         </view>
       </view>
 
       <view class="notice-amber">
-        <text class="notice-amber-icon">⏱</text>
+        <AppIcon name="clock" :size="28" color="amber" />
         <text>提交后进入审核，审核期间不可修改。</text>
       </view>
 
-      <view class="button submit-button" @tap="submit">✈ 提交审核</view>
+      <view class="button submit-button" @tap="submit">提交审核</view>
     </template>
 
+    <AiFloatBall />
     <AppTabBar />
 
     <view v-if="detailFor" class="mask" @tap="detailFor = null">
@@ -290,8 +306,8 @@ function describe(task) {
         <text v-if="describe(detailFor)" class="task-desc">{{ describe(detailFor) }}</text>
         <text v-if="detailFor.result || detailFor.submitContent" class="task-desc">成果：{{ detailFor.result || detailFor.submitContent }}</text>
         <view class="task-meta">
-          <text class="task-reward">🎁 +{{ rewardOf(detailFor) }} 积分</text>
-          <text v-if="deadlineOf(detailFor)" class="task-deadline">📅 截至 {{ deadlineOf(detailFor) }}</text>
+          <view class="task-reward"><AppIcon name="gift" :size="26" color="brand" /><text>+{{ rewardOf(detailFor) }} 积分</text></view>
+          <view v-if="deadlineOf(detailFor)" class="task-deadline"><AppIcon name="calendar" :size="24" color="muted" /><text>截至 {{ deadlineOf(detailFor) }}</text></view>
         </view>
         <view class="button ghost dialog-close-button" @tap="detailFor = null">知道了</view>
       </view>
@@ -309,12 +325,12 @@ function describe(task) {
 
 .list-head-text {
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .list-head-sort {
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .list-head-sort:active {
@@ -331,7 +347,7 @@ function describe(task) {
   margin-right: 16rpx;
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -341,7 +357,7 @@ function describe(task) {
   display: block;
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
   line-height: 1.6;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -357,21 +373,29 @@ function describe(task) {
 }
 
 .task-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
   font-size: 26rpx;
   font-weight: 600;
-  color: #d97706;
+  color: var(--amber);
 }
 
 .task-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .task-deadline-line {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
   margin-top: 16rpx;
   font-size: 24rpx;
-  color: #d97706;
+  color: var(--amber);
 }
 
 .task-button {
@@ -390,18 +414,18 @@ function describe(task) {
 .field-label {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .field-required {
-  color: #f04438;
+  color: var(--red);
   margin-right: 6rpx;
 }
 
 .field-optional {
   font-size: 22rpx;
   font-weight: 400;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .result-textarea {
@@ -456,7 +480,7 @@ function describe(task) {
 
 .image-add-text {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .image-note {
@@ -471,8 +495,11 @@ function describe(task) {
 }
 
 .draft-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
   font-size: 24rpx;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .draft-link:active {
@@ -485,7 +512,7 @@ function describe(task) {
   gap: 10rpx;
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
-  background: #fff6e8;
+  background: var(--amber-soft);
   color: #b45309;
   font-size: 24rpx;
 }
@@ -498,11 +525,24 @@ function describe(task) {
   margin-top: 32rpx;
 }
 
+/* ── 骨架占位 ── */
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-task-desc {
+  margin-top: 20rpx;
+}
+
+.w20 { width: 20%; }
+.w40 { width: 40%; }
+.w64 { width: 64%; }
+
 .dialog {
   width: 620rpx;
   padding: 32rpx;
   border-radius: 28rpx;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .dialog-close-button {

@@ -4,6 +4,8 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const tab = ref('pending')
 const rows = ref([])
@@ -66,8 +68,20 @@ function multipleOf(item) {
     <view v-if="missing" class="card"><text class="muted">{{ missing }}</text></view>
 
     <template v-else>
-      <view v-if="loading" class="card card-empty"><text class="muted">加载中...</text></view>
-      <view v-for="item in rows" :key="item.id" class="card vote-card" @tap="openVote(item)">
+      <view v-if="loading" class="card card-empty">
+        <view class="sk-vote-list">
+          <view v-for="n in 3" :key="n" class="sk-vote">
+            <view class="sk sk-line w40" />
+            <view class="sk sk-line w64" />
+            <view class="sk-opts">
+              <view class="sk sk-opt" />
+              <view class="sk sk-opt sk-opt-s" />
+              <view class="sk sk-opt" />
+            </view>
+          </view>
+        </view>
+      </view>
+      <view v-for="item in rows" :key="item.id" class="card vote-card press" @tap="openVote(item)">
         <view class="row between">
           <text class="vote-title">{{ item.title }}</text>
           <text v-if="item.submitted" class="pill green">已提交</text>
@@ -81,10 +95,11 @@ function multipleOf(item) {
         </view>
       </view>
       <view v-if="!loading && rows.length === 0" class="card card-empty">
-        <text class="muted">{{ tab === 'pending' ? '暂无待参与投票' : '暂无历史投票' }}</text>
+        <EmptyState icon="check-square" :title="tab === 'pending' ? '暂无待参与投票' : '暂无历史投票'" />
       </view>
     </template>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -104,7 +119,7 @@ function multipleOf(item) {
   margin-right: 16rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -114,7 +129,7 @@ function multipleOf(item) {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--ink-3);
   line-height: 1.6;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -127,6 +142,42 @@ function multipleOf(item) {
 
 .vote-deadline {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
+
+/* ── 加载骨架（对应投票卡：两行文字 + 一排小选项块） ── */
+.sk-vote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 36rpx;
+}
+
+.sk-vote {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.sk-opts {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 4rpx;
+}
+
+.sk-opt {
+  width: 112rpx;
+  height: 40rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-opt-s {
+  width: 88rpx;
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.w40 { width: 40%; }
+.w64 { width: 64%; }
 </style>

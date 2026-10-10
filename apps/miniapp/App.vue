@@ -18,6 +18,36 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 28rpx;
   line-height: 1.5;
+
+  /* 设计 token：颜色/圆角/阴影的唯一出处，页面样式用 var(--*) 取值，禁止再硬编码 */
+  --brand: #2f6bff;
+  --brand-grad-a: #2e6bf2;
+  --brand-grad-b: #5a8cff;
+  --ink: #1a2233;
+  --ink-2: #4e5561;
+  --ink-3: #6b7280;
+  --muted: #9aa1ab;
+  --faint: #b4bac3;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --field: #f7f8fa;
+  --fill: #f2f3f5;
+  --line: #ebedf0;
+  --line-soft: #f2f3f5;
+  --green: #16a34a;
+  --red: #f04438;
+  --amber: #d97706;
+  --purple: #7c5cbf;
+  --brand-soft: #edf3ff;
+  --green-soft: #e8f7ee;
+  --amber-soft: #fff6e8;
+  --red-soft: #feecec;
+  --purple-soft: #f1edff;
+  --r-md: 16rpx;
+  --r-lg: 20rpx;
+  --r-xl: 24rpx;
+  --r-full: 999rpx;
+  --shadow-card: 0 1rpx 2rpx rgba(23, 26, 31, 0.03), 0 8rpx 24rpx rgba(23, 26, 31, 0.04);
 }
 
 .page {
@@ -509,5 +539,55 @@ page {
   font-weight: 500;
   background: #edf3ff;
   color: #2f6bff;
+}
+
+/* ── 骨架屏：加载占位块，配合 .sk-line/.sk-tile 等尺寸类使用 ── */
+.sk {
+  position: relative;
+  overflow: hidden;
+  background: #eef0f3;
+  border-radius: 12rpx;
+}
+
+.sk::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: sk-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes sk-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── 入场动效：页面区块淡入上移，克制使用 ── */
+.fade-up {
+  animation: fade-up 0.28s ease both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 按压反馈：可点卡片/入口统一用 ── */
+.press {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.press:active {
+  transform: scale(0.97);
+  opacity: 0.88;
 }
 </style>

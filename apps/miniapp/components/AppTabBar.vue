@@ -1,12 +1,15 @@
 <script setup>
 import { ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
+// 图标用统一线性图标组件（与全端同一套），选中 brand / 未选中 muted；
+// pages.json 里的原生 tabBar 仅作占位（运行时被 hideTabBar 隐藏），不受此处影响。
 const TABS = [
-  { path: 'pages/home/index', text: '首页', icon: '/static/tabbar/home.png', activeIcon: '/static/tabbar/home-active.png' },
-  { path: 'pages/mall/index', text: '商城', icon: '/static/tabbar/mall.png', activeIcon: '/static/tabbar/mall-active.png' },
-  { path: 'pages/tasks/index', text: '任务', icon: '/static/tabbar/tasks.png', activeIcon: '/static/tabbar/tasks-active.png' },
-  { path: 'pages/points/index', text: '明细', icon: '/static/tabbar/points.png', activeIcon: '/static/tabbar/points-active.png' },
-  { path: 'pages/mine/index', text: '我的', icon: '/static/tabbar/mine.png', activeIcon: '/static/tabbar/mine-active.png' }
+  { path: 'pages/home/index', text: '首页', icon: 'home' },
+  { path: 'pages/mall/index', text: '商城', icon: 'shopping-bag' },
+  { path: 'pages/tasks/index', text: '任务', icon: 'target' },
+  { path: 'pages/points/index', text: '明细', icon: 'list' },
+  { path: 'pages/mine/index', text: '我的', icon: 'user' }
 ]
 
 const activePath = ref('')
@@ -33,7 +36,7 @@ function onTap(tab) {
       @tap="onTap(tab)"
     >
       <view class="tab-icon-wrap">
-        <image class="tab-icon" :src="tab.path === activePath ? tab.activeIcon : tab.icon" mode="aspectFit" />
+        <AppIcon :name="tab.icon" :size="44" :color="tab.path === activePath ? 'brand' : 'muted'" />
       </view>
       <text class="tab-text">{{ tab.text }}</text>
     </view>
@@ -81,11 +84,6 @@ function onTap(tab) {
 
 .tab-item-active .tab-icon-wrap {
   background: #eef4ff;
-}
-
-.tab-icon {
-  width: 44rpx;
-  height: 44rpx;
 }
 
 .tab-text {

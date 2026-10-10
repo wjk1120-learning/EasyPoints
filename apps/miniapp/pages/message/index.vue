@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const message = ref({ title: '', summary: '', type: '', createdAt: '' })
 
@@ -73,15 +75,16 @@ function goAppeal() {
     </view>
 
     <view v-if="canAppeal()" class="notice-amber">
-      <text class="notice-icon">💡</text>
+      <AppIcon name="lightbulb" :size="32" color="amber" />
       <text>如对审核结果有异议，可在 7 日内发起申诉。</text>
     </view>
 
-    <view v-if="canAppeal()" class="button" @tap="goAppeal">✈ 发起申诉</view>
+    <view v-if="canAppeal()" class="button" @tap="goAppeal">发起申诉</view>
     <text v-if="canAppeal()" class="muted tip">申诉需绑定本人积分流水，请在积分明细中选择对应记录后发起。</text>
 
     <view v-if="isVote()" class="button ghost" @tap="uni.navigateTo({ url: '/pages/votes/index' })">查看投票</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -92,7 +95,7 @@ function goAppeal() {
   margin-top: 24rpx;
   font-size: 38rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   line-height: 1.4;
 }
 
@@ -114,10 +117,6 @@ function goAppeal() {
   color: #b45309;
   font-size: 24rpx;
   line-height: 1.6;
-}
-
-.notice-icon {
-  font-size: 26rpx;
 }
 
 .tip {

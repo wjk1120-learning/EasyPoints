@@ -4,6 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const view = ref('form')
 const points = ref('')
@@ -159,7 +162,7 @@ const filters = [
 
     <template v-if="view === 'form'">
       <view class="card card-info intro">
-        <text class="intro-icon">💡</text>
+        <AppIcon name="lightbulb" :size="30" color="amber" />
         <text class="intro-text">用于申请未被任务覆盖的突出贡献积分。提交后进入部门管理员审核。</text>
       </view>
 
@@ -177,7 +180,7 @@ const filters = [
           <text class="field-suffix">积分</text>
         </view>
         <view v-if="pointsTouched && pointsEmpty" class="error-text"><text class="error-icon">ⓘ</text>申请分值不能为空</view>
-        <view v-if="pointsNegative" class="form-warn">⚠ 申请分值不能为负数</view>
+        <view v-if="pointsNegative" class="form-warn"><AppIcon name="alert-triangle" :size="24" color="red" /><text>申请分值不能为负数</text></view>
         <view v-else-if="pointsTouched && pointsInvalid" class="error-text"><text class="error-icon">ⓘ</text>申请分值需为正整数</view>
 
         <view class="field-label desc-label"><text class="field-required">*</text>贡献描述</view>
@@ -197,7 +200,7 @@ const filters = [
             <image class="image-preview" :src="img" mode="aspectFill" @tap="removeImage(index)" />
           </view>
           <view v-if="images.length < 6" class="image-add" @tap="chooseImage">
-            <text class="image-add-icon">🖼️</text>
+            <AppIcon name="image" :size="48" color="faint" />
             <text class="image-add-text">{{ images.length > 0 ? '继续上传' : '上传图片' }}</text>
           </view>
         </view>
@@ -225,7 +228,7 @@ const filters = [
       </view>
 
       <view class="button" :class="{ disabled: !formValid }" @tap="submit">
-        {{ formValid ? '✈ 提交申请' : '请完善必填信息' }}
+        {{ formValid ? '提交申请' : '请完善必填信息' }}
       </view>
       <text class="submit-note">提交成功后状态为「待审核」</text>
     </template>
@@ -259,11 +262,12 @@ const filters = [
             <view class="small-button" @tap="appealHint">发起申诉</view>
           </view>
         </view>
-        <view v-if="visibleRows.length === 0" class="card card-empty"><text class="muted">暂无申请</text></view>
+        <view v-if="visibleRows.length === 0" class="card card-empty"><EmptyState icon="file-text" title="暂无申请" /></view>
         <view v-if="visibleRows.length > 0" class="list-footer">已展示全部申请记录</view>
       </template>
     </template>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -287,14 +291,14 @@ const filters = [
 .chip {
   padding: 10rpx 24rpx;
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #6b7280;
+  background: var(--surface);
+  color: var(--ink-3);
   font-size: 24rpx;
 }
 
 .chip-on {
-  background: #2f6bff;
-  color: #ffffff;
+  background: var(--brand);
+  color: var(--surface);
 }
 
 .intro-icon {
@@ -312,18 +316,18 @@ const filters = [
 .field-label {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .field-required {
-  color: #f04438;
+  color: var(--red);
   margin-right: 6rpx;
 }
 
 .field-optional {
   font-size: 22rpx;
   font-weight: 400;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .field-row {
@@ -332,14 +336,14 @@ const filters = [
   margin-top: 16rpx;
   padding: 0 24rpx;
   height: 88rpx;
-  background: #f7f8fa;
-  border: 1rpx solid #ebedf0;
+  background: var(--field);
+  border: 1rpx solid var(--line);
   border-radius: 16rpx;
   box-sizing: border-box;
 }
 
 .field-row-error {
-  border-color: #f04438;
+  border-color: var(--red);
   background: #fffafa;
 }
 
@@ -348,12 +352,12 @@ const filters = [
   min-width: 0;
   height: 100%;
   font-size: 28rpx;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .field-suffix {
   font-size: 26rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .error-text {
@@ -361,7 +365,7 @@ const filters = [
   align-items: center;
   gap: 8rpx;
   margin-top: 12rpx;
-  color: #f04438;
+  color: var(--red);
   font-size: 24rpx;
 }
 
@@ -370,11 +374,14 @@ const filters = [
 }
 
 .form-warn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   margin-top: 16rpx;
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
-  background: #feecec;
-  color: #f04438;
+  background: var(--red-soft);
+  color: var(--red);
   font-size: 24rpx;
 }
 
@@ -434,7 +441,7 @@ const filters = [
 
 .image-add-text {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .image-note {
@@ -445,7 +452,7 @@ const filters = [
 .block-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .steps {
@@ -466,8 +473,8 @@ const filters = [
   width: 44rpx;
   height: 44rpx;
   border-radius: 50%;
-  background: #2f6bff;
-  color: #ffffff;
+  background: var(--brand);
+  color: var(--surface);
   font-size: 24rpx;
   font-weight: 700;
   display: flex;
@@ -477,7 +484,7 @@ const filters = [
 
 .step-label {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--ink-3);
 }
 
 .step-line {
@@ -488,8 +495,8 @@ const filters = [
 }
 
 .button.disabled {
-  background: #ebedf0;
-  color: #b4bac3;
+  background: var(--line);
+  color: var(--faint);
 }
 
 .submit-note {
@@ -497,7 +504,7 @@ const filters = [
   text-align: center;
   margin-top: 16rpx;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 
 .apply-card {
@@ -510,7 +517,7 @@ const filters = [
   margin-right: 16rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -523,7 +530,7 @@ const filters = [
 .apply-points {
   font-size: 30rpx;
   font-weight: 700;
-  color: #2f6bff;
+  color: var(--brand);
   font-variant-numeric: tabular-nums;
 }
 
@@ -544,7 +551,7 @@ const filters = [
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: #f04438;
+  color: var(--red);
   line-height: 1.5;
 }
 
@@ -552,6 +559,6 @@ const filters = [
   text-align: center;
   padding: 8rpx 0;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 </style>

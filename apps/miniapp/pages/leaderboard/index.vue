@@ -5,6 +5,8 @@ import { request } from '../../api'
 import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const list = ref([])
 const loading = ref(false)
@@ -81,11 +83,17 @@ function formatPoints(value) {
       <text class="tab" :class="{ active: rankBy === 'available' }" @tap="switchRank('available')">实时积分排名</text>
     </view>
 
-    <text class="update-line">⟳ 数据更新于 {{ updatedAt || '--:--' }} 自动刷新</text>
+    <view class="update-line">
+      <AppIcon name="refresh" :size="22" color="muted" />
+      <text>数据更新于 {{ updatedAt || '--:--' }} 自动刷新</text>
+    </view>
     <text v-if="sameBoard" class="same-board-note">双榜字段待后端提供，两个页签暂展示同一份可用积分。</text>
 
     <view v-if="myEntry" class="card my-rank">
-      <text class="my-rank-label">📍 我的排名 · 置顶</text>
+      <view class="my-rank-label">
+        <AppIcon name="map-pin" :size="24" color="brand" />
+        <text>我的排名 · 置顶</text>
+      </view>
       <view class="row my-rank-row">
         <text class="my-rank-num">{{ myEntry.rank }}</text>
         <view class="my-avatar" :style="{ background: pastel(myEntry.rank).bg, color: pastel(myEntry.rank).fg }">
@@ -101,8 +109,20 @@ function formatPoints(value) {
 
     <view class="card board">
       <view class="board-title">全员榜单</view>
-      <view v-if="loading" class="board-empty"><text class="muted">加载中…</text></view>
-      <view v-else-if="list.length === 0" class="board-empty"><text class="muted">暂无数据</text></view>
+      <view v-if="loading" class="board-empty">
+        <view v-for="n in 3" :key="n" class="sk-row">
+          <view class="rank-badge"><view class="sk sk-rank" /></view>
+          <view class="sk sk-avatar" />
+          <view class="sk-lines">
+            <view class="sk sk-line w40" />
+            <view class="sk sk-line w24" />
+          </view>
+          <view class="sk sk-line sk-points" />
+        </view>
+      </view>
+      <view v-else-if="list.length === 0" class="board-empty">
+        <EmptyState icon="trophy" title="暂无排名数据" />
+      </view>
       <view v-for="(item, index) in list" :key="item.id" class="board-row">
         <view class="rank-badge">
           <view v-if="item.rank <= 3" class="medal" :style="{ background: medalColors[item.rank] }">{{ item.rank }}</view>
@@ -126,11 +146,13 @@ function formatPoints(value) {
 
 <style scoped>
 .update-line {
-  display: block;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
   margin: 16rpx 0 4rpx;
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .same-board-note {
@@ -138,19 +160,22 @@ function formatPoints(value) {
   text-align: center;
   margin-bottom: 8rpx;
   font-size: 20rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 
 .my-rank {
-  background: #edf3ff;
+  background: var(--brand-soft);
   box-shadow: none;
   padding: 24rpx 28rpx;
 }
 
 .my-rank-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
   font-size: 22rpx;
   font-weight: 600;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .my-rank-row {
@@ -161,7 +186,7 @@ function formatPoints(value) {
 .my-rank-num {
   font-size: 44rpx;
   font-weight: 800;
-  color: #2f6bff;
+  color: var(--brand);
   font-variant-numeric: tabular-nums;
   min-width: 56rpx;
   text-align: center;
@@ -190,7 +215,7 @@ function formatPoints(value) {
 .my-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .my-dept {
@@ -202,14 +227,14 @@ function formatPoints(value) {
   flex-shrink: 0;
   font-size: 32rpx;
   font-weight: 800;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
 .board-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   margin-bottom: 8rpx;
 }
 
@@ -223,7 +248,7 @@ function formatPoints(value) {
   align-items: center;
   gap: 20rpx;
   padding: 22rpx 0;
-  border-bottom: 1rpx solid #f5f6f8;
+  border-bottom: 1rpx solid var(--bg);
 }
 
 .board-row:last-of-type {
@@ -253,7 +278,7 @@ function formatPoints(value) {
 .rank-num {
   font-size: 28rpx;
   font-weight: 500;
-  color: #9aa1ab;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -280,19 +305,61 @@ function formatPoints(value) {
 .board-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .board-dept {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .board-points {
   flex-shrink: 0;
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── 加载骨架（对应排行行：名次块 + 圆点 + 两行文字 + 数字条） ── */
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx 0;
+}
+
+.sk-rank {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+}
+
+.sk-avatar {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-points {
+  flex-shrink: 0;
+  width: 96rpx;
+  height: 32rpx;
+}
+
+.w24 { width: 24%; }
+.w40 { width: 40%; }
 </style>

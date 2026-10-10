@@ -4,17 +4,18 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const home = ref({ pointsBalance: 0, monthDelta: 0, employee: {} })
 const myRank = ref(null)
 
 const services = [
-  { label: '我的申请', icon: '📝', tile: 'purple', url: '/pages/apply/index' },
-  { label: '兑换记录', icon: '🛍️', tile: 'blue', url: '/pages/orders/index' },
-  { label: '申诉记录', icon: '🛡️', tile: 'amber', url: '/pages/appeals/index' },
-  { label: '规则中心', icon: '📖', tile: 'green', url: '/pages/rules/index' },
-  { label: '我的投票', icon: '🗳️', tile: 'purple', url: '/pages/votes/index' },
-  { label: '积分大厅', icon: '🏛️', tile: 'blue', url: '/pages/hall/index' }
+  { label: '我的申请', icon: 'file-text', tile: 'purple', url: '/pages/apply/index' },
+  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', url: '/pages/orders/index' },
+  { label: '申诉记录', icon: 'shield', tile: 'amber', url: '/pages/appeals/index' },
+  { label: '规则中心', icon: 'book-open', tile: 'green', url: '/pages/rules/index' },
+  { label: '我的投票', icon: 'check-square', tile: 'purple', url: '/pages/votes/index' }
 ]
 
 onShow(async () => {
@@ -73,7 +74,6 @@ function formatPoints(value) {
         </view>
         <text class="muted">{{ home.employee?.departmentName || '未分配部门' }}</text>
       </view>
-      <text class="profile-chevron">›</text>
     </view>
 
     <view class="card stats">
@@ -95,8 +95,10 @@ function formatPoints(value) {
 
     <view class="card">
       <view class="block-title">我的服务</view>
-      <view v-for="item in services" :key="item.label" class="service" @tap="open(item.url)">
-        <view class="icon-tile service-icon" :class="item.tile">{{ item.icon }}</view>
+      <view v-for="item in services" :key="item.label" class="service press" @tap="open(item.url)">
+        <view class="icon-tile service-icon" :class="item.tile">
+          <AppIcon :name="item.icon" :size="44" :color="item.tile === 'blue' ? 'brand' : item.tile" />
+        </view>
         <text class="service-label">{{ item.label }}</text>
         <text class="service-chevron">›</text>
       </view>
@@ -104,12 +106,13 @@ function formatPoints(value) {
 
     <view class="card card-info safe-card">
       <view class="row safe-head">
-        <text class="safe-icon">🛡️</text>
+        <AppIcon name="shield" :size="32" color="green" />
         <text class="safe-title">积分账户安全</text>
       </view>
       <text class="safe-body">积分数据与业务身份实时同步，如信息有误请联系系统积分管理员。</text>
     </view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -151,12 +154,7 @@ function formatPoints(value) {
 .name {
   font-size: 32rpx;
   font-weight: 700;
-  color: #1a2233;
-}
-
-.profile-chevron {
-  color: #c9cfd8;
-  font-size: 36rpx;
+  color: var(--ink);
 }
 
 .stats {
@@ -176,25 +174,25 @@ function formatPoints(value) {
 .stat-num {
   font-size: 36rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .stat-divider {
   width: 1rpx;
   height: 56rpx;
-  background: #f2f3f5;
+  background: var(--line-soft);
 }
 
 .block-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .service {
@@ -202,7 +200,7 @@ function formatPoints(value) {
   align-items: center;
   gap: 20rpx;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f5f6f8;
+  border-bottom: 1rpx solid var(--bg);
 }
 
 .service:last-of-type {
@@ -224,7 +222,7 @@ function formatPoints(value) {
   flex: 1;
   font-size: 28rpx;
   font-weight: 500;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .service-chevron {
@@ -240,14 +238,10 @@ function formatPoints(value) {
   gap: 10rpx;
 }
 
-.safe-icon {
-  font-size: 28rpx;
-}
-
 .safe-title {
   font-size: 26rpx;
   font-weight: 600;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .safe-body {

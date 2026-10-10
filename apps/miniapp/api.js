@@ -1,4 +1,22 @@
 let loginPromise = null;
+// 预览模拟数据兜底（见 mock/index.js 头部说明；后端接口就绪后按说明删除）
+import { mockFallback, mockFieldPatch } from "./mock/index.js";
+
+function readMock(path, method, error) {
+  try {
+    return mockFallback(path, method, error);
+  } catch {
+    return null;
+  }
+}
+
+function patchFields(path, data) {
+  try {
+    return mockFieldPatch(path, data);
+  } catch {
+    return data;
+  }
+}
 
 function normalizeApiBase(value) {
   if (value === false || value === true || value == null) return "";
@@ -160,7 +178,8 @@ export async function request(path, options = {}) {
       throw new Error(retry.data?.message || "请求失败");
     }
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      const data = response.data.data;
+      let data = response.data.data;
+      if (isGetMethod(method)) data = patchFields(path, data);
       if (isGetMethod(method)) writeCache(path, data);
       clearAuthError();
       return data;
@@ -171,6 +190,8 @@ export async function request(path, options = {}) {
     if (isNetworkError(error) && cached != null) {
       return { ...cached, __offline: true };
     }
+    const mocked = readMock(path, method, error);
+    if (mocked != null) return mocked;
     throw error;
   }
 }
@@ -203,15 +224,18 @@ export async function requestPaged(path, options = {}) {
     if (isNetworkError(error) && cached != null) {
       return { ...cached, __offline: true };
     }
+    const mocked = readMock(path, method, error);
+    if (mocked != null) return mocked;
     throw error;
   }
 }
 
-export async function askAi(question) {
+// history：最近几轮对话 [{role, content}]，配合后端多轮契约（见 ai/BACKEND-SPEC.md §2）；旧后端会忽略该字段
+export async function askAi(question, history = []) {
   return request("/miniapp/ai/ask", {
     method: "POST",
     header: { "content-type": "application/json" },
-    data: { question }
+    data: { question, history }
   });
 }
 

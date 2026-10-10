@@ -5,10 +5,13 @@ import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } fro
 import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const home = ref({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
 const recent = ref([])
 const pendingVotes = ref(0)
+const loading = ref(true)
 const showSettings = ref(false)
 const apiBase = ref('')
 const wecomUserId = ref('')
@@ -23,14 +26,18 @@ const actualPoints = computed(() => {
   const value = home.value.actualPoints ?? home.value.honorPoints
   return value == null || value === '' ? null : Number(value)
 })
+const monthDeltaText = computed(() => {
+  const delta = Number(home.value.monthDelta || 0)
+  return `${delta > 0 ? '+' : ''}${formatPoints(delta)}`
+})
 
 const shortcuts = [
-  { label: '任务大厅', icon: '📋', tile: 'green', action: () => uni.switchTab({ url: '/pages/tasks/index' }) },
-  { label: '积分排名', icon: '🏆', tile: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
-  { label: '积分申请', icon: '📝', tile: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
-  { label: '规则中心', icon: '📖', tile: 'blue', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
-  { label: '通知中心', icon: '🔔', tile: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
-  { label: '我的投票', icon: '🗳️', tile: 'purple', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
+  { label: '积分商城', icon: 'shopping-bag', tile: 'blue', tone: 'brand', action: () => uni.switchTab({ url: '/pages/mall/index' }) },
+  { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
+  { label: '积分申请', icon: 'file-text', tile: 'purple', tone: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
+  { label: '规则中心', icon: 'book-open', tile: 'blue', tone: 'brand', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
+  { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
+  { label: '我的投票', icon: 'check-square', tile: 'purple', tone: 'purple', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
 ]
 
 onShow(async () => {
@@ -60,6 +67,8 @@ onShow(async () => {
     offlineMode.value = false
     authError.value = error?.message || '加载失败'
     uni.showToast({ title: authError.value, icon: 'none' })
+  } finally {
+    loading.value = false
   }
 })
 
@@ -114,10 +123,16 @@ async function loadRecent() {
 
 function recordIcon(record) {
   const text = `${record.type || ''} ${record.sourceType || ''}`
-  if (/exchange|order|mall/.test(text)) return { emoji: '🛍️', tile: 'red' }
-  if (/penalty|deduct/.test(text)) return { emoji: '⚠️', tile: 'red' }
-  if (/reward|manual|bonus/.test(text)) return { emoji: '🎁', tile: 'green' }
-  return Number(record.pointsDelta) > 0 ? { emoji: '📈', tile: 'green' } : { emoji: '📉', tile: 'red' }
+  if (/exchange|order|mall/.test(text)) return { icon: 'shopping-bag', tile: 'red', tone: 'red' }
+  if (/penalty|deduct/.test(text)) return { icon: 'alert-triangle', tile: 'red', tone: 'red' }
+  if (/reward|manual|bonus/.test(text)) return { icon: 'gift', tile: 'green', tone: 'green' }
+  return Number(record.pointsDelta) > 0
+    ? { icon: 'trending-up', tile: 'green', tone: 'green' }
+    : { icon: 'trending-down', tile: 'red', tone: 'red' }
+}
+
+function openPoints() {
+  uni.switchTab({ url: '/pages/points/index' })
 }
 
 function saveSettings() {
@@ -191,63 +206,112 @@ function friendlyTime(value) {
   <view class="page page-tab page-nav">
     <NavBar title="首页" :back="false" />
 
-    <view class="hero card-hero">
-      <view class="hero-top">
-        <view class="hero-who">
-          <text class="hero-name">{{ home.employee?.name || '员工' }}</text>
-          <text class="hero-dept">{{ home.employee?.departmentName || '未分配部门' }}</text>
+    <!-- 首次加载骨架：布局与真实内容一一对应，避免数据到达后跳动 -->
+    <template v-if="loading">
+      <view class="card">
+        <view class="sk-head">
+          <view class="sk sk-line w40" />
+          <view class="sk sk-line w24" />
         </view>
-        <text class="hero-badge">在职</text>
-      </view>
-      <view class="hero-scores">
-        <view class="hero-score">
-          <text class="hero-label">实时积分</text>
-          <text class="hero-num">{{ formatPoints(availablePoints) }}</text>
-        </view>
-        <view class="hero-score">
-          <text class="hero-label">实际积分</text>
-          <text class="hero-num">{{ actualPoints == null ? '—' : formatPoints(actualPoints) }}</text>
+        <view class="hero-sk-nums">
+          <view class="sk sk-num w32" />
+          <view class="sk sk-num w32" />
         </view>
       </view>
-      <text v-if="actualPoints == null" class="hero-note">实际积分字段待后端提供，当前展示「—」</text>
-    </view>
-
-    <view v-if="offlineMode" class="card"><text class="muted">离线模式，展示上次成功数据</text></view>
-    <view v-if="authError && !offlineMode" class="card">
-      <text class="muted">{{ authError }}</text>
-      <view class="button" style="margin-top: 16rpx" @tap="relogin">重新登录</view>
-    </view>
-
-    <view class="card">
-      <view class="block-title">快捷入口</view>
-      <view class="shortcut-grid">
-        <view v-for="item in shortcuts" :key="item.label" class="shortcut" @tap="item.action()">
-          <view class="shortcut-icon-wrap">
-            <view class="icon-tile shortcut-icon" :class="item.tile">{{ item.icon }}</view>
-            <text v-if="badgeCount(item) > 0" class="shortcut-badge">{{ badgeCount(item) > 99 ? '99+' : badgeCount(item) }}</text>
+      <view class="card">
+        <view class="sk sk-line w28" />
+        <view class="shortcut-grid">
+          <view v-for="n in 6" :key="n" class="shortcut">
+            <view class="sk sk-tile" />
+            <view class="sk sk-line sk-label" />
           </view>
-          <text class="shortcut-label">{{ item.label }}</text>
         </view>
       </view>
-    </view>
+      <view class="card">
+        <view class="sk sk-line w36" />
+        <view v-for="n in 3" :key="n" class="record-row recent-row">
+          <view class="sk sk-avatar" />
+          <view class="sk-lines">
+            <view class="sk sk-line w64" />
+            <view class="sk sk-line w32" />
+          </view>
+          <view class="sk sk-line w20" />
+        </view>
+      </view>
+    </template>
 
-    <view class="card">
-      <view class="row between block-title-row">
-        <text class="block-title">最近积分变动</text>
-        <text class="link" @tap="uni.switchTab({ url: '/pages/points/index' })">查看全部</text>
-      </view>
-      <view v-if="recent.length === 0" class="recent-empty"><text class="muted">暂无积分流水</text></view>
-      <view v-for="record in recent" :key="record.id" class="record-row recent-row">
-        <view class="icon-tile recent-icon" :class="recordIcon(record).tile">{{ recordIcon(record).emoji }}</view>
-        <view class="recent-main">
-          <text class="recent-title">{{ record.remark }}</text>
-          <text class="muted">{{ friendlyTime(record.occurredAt || record.createdAt) }}</text>
+    <template v-else>
+      <view class="hero card-hero fade-up">
+        <view class="hero-top">
+          <view class="hero-who">
+            <text class="hero-name">{{ home.employee?.name || '员工' }}</text>
+            <text class="hero-dept">{{ home.employee?.departmentName || '未分配部门' }}</text>
+          </view>
+          <view class="hero-chip">本月 {{ monthDeltaText }}</view>
         </view>
-        <text class="recent-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
-          {{ record.pointsDelta > 0 ? '+' : '' }}{{ formatPoints(record.pointsDelta) }}
-        </text>
+        <view class="hero-scores">
+          <view class="hero-score">
+            <text class="hero-label">实时积分</text>
+            <text class="hero-num">{{ formatPoints(availablePoints) }}</text>
+          </view>
+          <view class="hero-score">
+            <text class="hero-label">实际积分</text>
+            <text class="hero-num">{{ actualPoints == null ? '—' : formatPoints(actualPoints) }}</text>
+          </view>
+        </view>
+        <text v-if="actualPoints == null" class="hero-note">实际积分字段待后端提供，当前展示「—」</text>
       </view>
-    </view>
+
+      <view v-if="offlineMode" class="card notice fade-up d1">
+        <AppIcon name="alert-triangle" :size="32" color="amber" />
+        <text class="muted">离线模式，展示上次成功数据</text>
+      </view>
+      <view v-if="authError && !offlineMode" class="card notice-col fade-up d1">
+        <view class="notice">
+          <AppIcon name="alert-triangle" :size="32" color="red" />
+          <text class="muted">{{ authError }}</text>
+        </view>
+        <view class="button notice-button" @tap="relogin">重新登录</view>
+      </view>
+
+      <view class="card fade-up d1">
+        <view class="block-title">快捷入口</view>
+        <view class="shortcut-grid">
+          <view v-for="item in shortcuts" :key="item.label" class="shortcut press" @tap="item.action()">
+            <view class="shortcut-icon-wrap">
+              <view class="icon-tile shortcut-icon" :class="item.tile">
+                <AppIcon :name="item.icon" :size="44" :color="item.tone" />
+              </view>
+              <text v-if="badgeCount(item) > 0" class="shortcut-badge">{{ badgeCount(item) > 99 ? '99+' : badgeCount(item) }}</text>
+            </view>
+            <text class="shortcut-label">{{ item.label }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card fade-up d2">
+        <view class="row between block-title-row">
+          <text class="block-title">最近积分变动</text>
+          <view class="more-link press" @tap="openPoints">
+            <text class="link">查看全部</text>
+            <AppIcon name="chevron-right" :size="26" color="muted" />
+          </view>
+        </view>
+        <EmptyState v-if="recent.length === 0" icon="inbox" title="暂无积分流水" />
+        <view v-for="record in recent" :key="record.id" class="record-row recent-row">
+          <view class="icon-tile recent-icon" :class="recordIcon(record).tile">
+            <AppIcon :name="recordIcon(record).icon" :size="34" :color="recordIcon(record).tone" />
+          </view>
+          <view class="recent-main">
+            <text class="recent-title">{{ record.remark }}</text>
+            <text class="muted">{{ friendlyTime(record.occurredAt || record.createdAt) }}</text>
+          </view>
+          <text class="recent-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
+            {{ record.pointsDelta > 0 ? '+' : '' }}{{ formatPoints(record.pointsDelta) }}
+          </text>
+        </view>
+      </view>
+    </template>
 
     <view class="settings-toggle muted" @tap="toggleSettings">{{ showSettings ? '收起设置' : '展开设置' }}</view>
     <view v-if="showSettings" class="card">
@@ -255,9 +319,9 @@ function friendlyTime(value) {
       <input v-model="apiBase" class="input" placeholder="http://192.168.x.x:3000" />
       <text class="muted">wecomUserId</text>
       <input v-model="wecomUserId" class="input" placeholder="zhangsan" />
-      <view class="row" style="gap: 16rpx; margin-top: 16rpx">
-        <view class="button" style="flex: 1" @tap="saveSettings">保存</view>
-        <view class="button ghost" style="flex: 1" @tap="relogin">保存并登录</view>
+      <view class="row settings-actions">
+        <view class="button" @tap="saveSettings">保存</view>
+        <view class="button ghost" @tap="relogin">保存并登录</view>
       </view>
     </view>
     <AiFloatBall />
@@ -266,17 +330,20 @@ function friendlyTime(value) {
 </template>
 
 <style scoped>
+/* ── 顶部积分卡 ── */
 .hero {
   /* 与 .card 的 margin-bottom 对齐：信息卡→快捷入口、快捷入口→最近变动 间距一致 */
   margin-bottom: 20rpx;
   padding: 36rpx 32rpx;
-  border-radius: 24rpx;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--brand-grad-a), var(--brand-grad-b));
 }
 
 .hero-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 24rpx;
 }
 
 .hero-who {
@@ -288,6 +355,7 @@ function friendlyTime(value) {
   display: block;
   font-size: 36rpx;
   font-weight: 700;
+  letter-spacing: 0.5rpx;
 }
 
 .hero-dept {
@@ -297,12 +365,14 @@ function friendlyTime(value) {
   opacity: 0.82;
 }
 
-.hero-badge {
+.hero-chip {
   flex-shrink: 0;
+  padding: 8rpx 20rpx;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.2);
   font-size: 22rpx;
-  padding: 6rpx 20rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.22);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .hero-scores {
@@ -326,6 +396,7 @@ function friendlyTime(value) {
   font-size: 48rpx;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5rpx;
 }
 
 .hero-note {
@@ -335,16 +406,34 @@ function friendlyTime(value) {
   opacity: 0.75;
 }
 
+/* ── 离线/鉴权提示 ── */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.notice-button {
+  margin-top: 16rpx;
+}
+
+/* ── 区块标题 ── */
 .block-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .block-title-row {
   margin-bottom: 8rpx;
 }
 
+.more-link {
+  display: flex;
+  align-items: center;
+}
+
+/* ── 快捷入口 ── */
 .shortcut-grid {
   display: flex;
   flex-wrap: wrap;
@@ -359,10 +448,6 @@ function friendlyTime(value) {
   align-items: center;
 }
 
-.shortcut:active {
-  opacity: 0.7;
-}
-
 .shortcut-icon-wrap {
   position: relative;
 }
@@ -370,7 +455,6 @@ function friendlyTime(value) {
 .shortcut-icon {
   width: 88rpx;
   height: 88rpx;
-  font-size: 40rpx;
 }
 
 .shortcut-badge {
@@ -381,8 +465,8 @@ function friendlyTime(value) {
   height: 32rpx;
   line-height: 32rpx;
   padding: 0 8rpx;
-  border-radius: 999rpx;
-  background: #f04438;
+  border-radius: var(--r-full);
+  background: var(--red);
   color: #fff;
   font-size: 18rpx;
   font-weight: 600;
@@ -393,14 +477,10 @@ function friendlyTime(value) {
 .shortcut-label {
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #4e5561;
+  color: var(--ink-2);
 }
 
-.recent-empty {
-  padding: 24rpx 0 8rpx;
-  text-align: center;
-}
-
+/* ── 最近积分变动 ── */
 .recent-row {
   display: flex;
   align-items: center;
@@ -411,7 +491,6 @@ function friendlyTime(value) {
   width: 72rpx;
   height: 72rpx;
   border-radius: 50%;
-  font-size: 32rpx;
 }
 
 .recent-main {
@@ -425,7 +504,7 @@ function friendlyTime(value) {
 .recent-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -438,8 +517,74 @@ function friendlyTime(value) {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── 骨架占位尺寸 ── */
+.sk-head {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.hero-sk-nums {
+  display: flex;
+  gap: 96rpx;
+  margin-top: 40rpx;
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-num {
+  height: 56rpx;
+  border-radius: 14rpx;
+}
+
+.sk-tile {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: var(--r-lg);
+}
+
+.sk-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-label {
+  margin-top: 12rpx;
+  height: 20rpx;
+  width: 56rpx;
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.w20 { width: 20%; }
+.w24 { width: 24%; }
+.w28 { width: 28%; }
+.w32 { width: 32%; }
+.w36 { width: 36%; }
+.w40 { width: 40%; }
+.w64 { width: 64%; }
+
+/* ── 调试设置（默认隐藏） ── */
 .settings-toggle {
   text-align: center;
   padding: 16rpx 0;
+}
+
+.settings-actions {
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.settings-actions .button {
+  flex: 1;
 }
 </style>

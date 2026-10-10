@@ -4,16 +4,19 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const sections = ref([])
 const missing = ref('')
 const collapsed = ref({})
 
 const SECTION_ICONS = [
-  { emoji: '🏛️', tile: 'blue' },
-  { emoji: '📋', tile: 'green' },
-  { emoji: '🛍️', tile: 'amber' },
-  { emoji: '🛡️', tile: 'purple' }
+  { icon: 'landmark', tile: 'blue' },
+  { icon: 'clipboard', tile: 'green' },
+  { icon: 'shopping-bag', tile: 'amber' },
+  { icon: 'shield', tile: 'purple' }
 ]
 
 onShow(async () => {
@@ -51,7 +54,7 @@ function iconOf(index) {
 
     <view class="card card-info sync-banner">
       <view class="row sync-head">
-        <text class="sync-icon">🔄</text>
+        <view class="sync-icon"><AppIcon name="refresh" :size="26" color="brand" /></view>
         <text class="sync-title">规则与企业后台实时同步</text>
       </view>
       <text class="sync-body">如有更新将通过通知中心提醒。</text>
@@ -60,9 +63,11 @@ function iconOf(index) {
     <view v-if="missing" class="card"><text class="muted">{{ missing }}</text></view>
 
     <view v-for="(section, index) in sections" :key="index" class="card rule-card">
-      <view class="row between" @tap="toggle(index)">
+      <view class="row between press" @tap="toggle(index)">
         <view class="row rule-head">
-          <view class="icon-tile rule-icon" :class="iconOf(index).tile">{{ iconOf(index).emoji }}</view>
+          <view class="icon-tile rule-icon" :class="iconOf(index).tile">
+            <AppIcon :name="iconOf(index).icon" :size="36" :color="iconOf(index).tile === 'blue' ? 'brand' : iconOf(index).tile" />
+          </view>
           <text class="rule-title">{{ section.title }}</text>
         </view>
         <text class="rule-chevron" :class="{ 'rule-chevron-up': collapsed[index] }">⌄</text>
@@ -76,9 +81,10 @@ function iconOf(index) {
       </view>
     </view>
 
-    <view v-if="!missing && sections.length === 0" class="card card-empty"><text class="muted">暂无规则内容</text></view>
+    <view v-if="!missing && sections.length === 0" class="card card-empty"><EmptyState icon="book-open" title="暂无规则" /></view>
     <view v-if="sections.length > 0" class="list-footer">如对规则有疑问，请联系系统积分管理员</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -93,13 +99,14 @@ function iconOf(index) {
 }
 
 .sync-icon {
-  font-size: 26rpx;
+  display: inline-flex;
+  align-items: center;
 }
 
 .sync-title {
   font-size: 26rpx;
   font-weight: 600;
-  color: #2f6bff;
+  color: var(--brand);
 }
 
 .sync-body {
@@ -130,11 +137,11 @@ function iconOf(index) {
   min-width: 0;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .rule-chevron {
-  color: #b4bac3;
+  color: var(--faint);
   font-size: 28rpx;
   transition: transform 0.2s;
 }
@@ -159,7 +166,7 @@ function iconOf(index) {
   width: 10rpx;
   height: 10rpx;
   border-radius: 999rpx;
-  background: #2f6bff;
+  background: var(--brand);
   margin-top: 16rpx;
 }
 
@@ -175,6 +182,6 @@ function iconOf(index) {
   text-align: center;
   padding: 8rpx 0;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 </style>

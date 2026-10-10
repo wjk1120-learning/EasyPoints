@@ -4,6 +4,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const pointRecordId = ref('')
 const originalRemark = ref('')
@@ -118,7 +120,7 @@ async function submit() {
           <image class="image-preview" :src="img" mode="aspectFill" @tap="removeImage(index)" />
         </view>
         <view v-if="images.length < 6" class="image-add" @tap="chooseImage">
-          <text class="image-add-icon">🖼️</text>
+          <AppIcon name="image" :size="48" color="faint" />
           <text class="image-add-text">{{ images.length > 0 ? '继续上传' : '上传图片' }}</text>
         </view>
       </view>
@@ -126,12 +128,13 @@ async function submit() {
     </view>
 
     <view class="safe-note">
-      <text class="safe-note-icon">🛡️</text>
+      <AppIcon name="shield" :size="28" color="green" />
       <text>申诉提交后不可撤回，处理结果将通过通知中心发送。</text>
     </view>
 
-    <view class="button submit-button" @tap="submit">✈ 提交申诉</view>
+    <view class="button submit-button" @tap="submit">提交申诉</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -147,7 +150,7 @@ async function submit() {
   margin-right: 16rpx;
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -163,18 +166,18 @@ async function submit() {
 .field-label {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1a2233;
+  color: var(--ink);
 }
 
 .field-required {
-  color: #f04438;
+  color: var(--red);
   margin-right: 6rpx;
 }
 
 .field-optional {
   font-size: 22rpx;
   font-weight: 400;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .appeal-textarea {
@@ -229,7 +232,7 @@ async function submit() {
 
 .image-add-text {
   font-size: 22rpx;
-  color: #9aa1ab;
+  color: var(--muted);
 }
 
 .image-note {
@@ -242,7 +245,7 @@ async function submit() {
   align-items: flex-start;
   gap: 10rpx;
   padding: 8rpx 8rpx 0;
-  color: #6b7280;
+  color: var(--ink-3);
   font-size: 24rpx;
   line-height: 1.6;
 }

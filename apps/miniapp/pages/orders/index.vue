@@ -4,6 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
+import AiFloatBall from '../../components/AiFloatBall.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
 const orders = ref([])
 const filter = ref('all')
@@ -32,11 +35,11 @@ onShow(async () => {
 
 function statusPill(order) {
   const status = String(order.status || '')
-  if (status === 'pending_review') return { label: '审核中', cls: 'amber', icon: '⏱', tile: 'amber' }
-  if (status === 'approved' || status === 'shipped' || status === 'completed') return { label: '已通过', cls: 'green', icon: '✓', tile: 'green' }
-  if (status === 'rejected') return { label: '已驳回', cls: 'red', icon: '✕', tile: 'red' }
-  if (status === 'cancelled') return { label: '已取消', cls: '', icon: '✕', tile: '' }
-  return { label: status || '未知', cls: '', icon: '⏱', tile: '' }
+  if (status === 'pending_review') return { label: '审核中', cls: 'amber', icon: 'refresh', tile: 'amber' }
+  if (status === 'approved' || status === 'shipped' || status === 'completed') return { label: '已通过', cls: 'green', icon: 'check-circle', tile: 'green' }
+  if (status === 'rejected') return { label: '已驳回', cls: 'red', icon: 'x-circle', tile: 'red' }
+  if (status === 'cancelled') return { label: '已取消', cls: '', icon: 'x-circle', tile: '' }
+  return { label: status || '未知', cls: '', icon: 'refresh', tile: '' }
 }
 
 function formatTime(value) {
@@ -83,7 +86,9 @@ function formatPoints(value) {
 
     <view v-for="order in visibleOrders" :key="order.id" class="card order-card">
       <view class="row order-head">
-        <view class="icon-tile order-icon" :class="statusPill(order).tile">{{ statusPill(order).icon }}</view>
+        <view class="icon-tile order-icon" :class="statusPill(order).tile">
+          <AppIcon :name="statusPill(order).icon" :size="26" :color="statusPill(order).cls || 'muted'" />
+        </view>
         <text class="order-name">{{ order.giftName }}</text>
         <text class="pill order-pill" :class="statusPill(order).cls">{{ statusPill(order).label }}</text>
       </view>
@@ -94,9 +99,10 @@ function formatPoints(value) {
       </view>
     </view>
 
-    <view v-if="visibleOrders.length === 0" class="card card-empty"><text class="muted">暂无兑换记录</text></view>
+    <view v-if="visibleOrders.length === 0" class="card card-empty"><EmptyState icon="shopping-bag" title="暂无兑换记录" /></view>
     <view v-if="visibleOrders.length > 0" class="list-footer">已展示全部兑换记录</view>
 
+    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
@@ -123,7 +129,7 @@ function formatPoints(value) {
   min-width: 0;
   font-size: 28rpx;
   font-weight: 700;
-  color: #1a2233;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -150,7 +156,7 @@ function formatPoints(value) {
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: #f04438;
+  color: var(--red);
   line-height: 1.5;
 }
 
@@ -158,6 +164,6 @@ function formatPoints(value) {
   text-align: center;
   padding: 8rpx 0;
   font-size: 22rpx;
-  color: #b4bac3;
+  color: var(--faint);
 }
 </style>
