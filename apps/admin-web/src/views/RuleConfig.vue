@@ -174,14 +174,10 @@ onBeforeUnmount(() => {
     border-bottom: 1px solid var(--color-border);
   }
 
-  .editor-content {
-    height: 440px;
-    overflow-y: auto;
-
-    :deep(.w-e-text-placeholder) {
-      color: var(--color-text-placeholder);
-      font-style: normal;
-    }
+  // 编辑器占位文字（编辑器 DOM 为运行时插入，须用 :deep 匹配）
+  :deep(.w-e-text-placeholder) {
+    color: var(--color-text-placeholder);
+    font-style: normal;
   }
 }
 

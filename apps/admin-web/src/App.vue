@@ -10,7 +10,6 @@ const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
 const admin = ref<AdminInfo | null>(loadAdmin());
-const avatarUrl = ref('/images/avatar.png')
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
@@ -237,7 +236,7 @@ watch(
               <div class="username">{{ admin?.name }}</div>
               <div class="role">{{ formatRole(admin?.role) }}</div>
             </div>
-            <el-avatar class="user-avatar" shape="square" :size="40" :src="avatarUrl" />
+            <el-avatar class="user-avatar" shape="square" :size="40" src="/images/avatar.svg" />
           </div>
         </div>
       </el-header>
