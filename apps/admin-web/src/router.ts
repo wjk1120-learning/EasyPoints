@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/votes", component: VoteManage, meta: { title: "投票管理" } },
   { path: "/rules", component: RuleConfig, meta: { title: "规则配置" } },
   { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
-  { path: "/reports", component: Reports, meta: { title: "明细报表" } },
+  { path: "/reports", component: Reports, meta: { title: "数据导出" } },
   { path: "/logs", component: Logs, meta: { title: "操作日志" } },
   // 旧入口收敛：三类独立审核页并入审核中心对应 Tab（PRD 5.2）
   { path: "/orders", redirect: "/review-center?tab=exchange" },

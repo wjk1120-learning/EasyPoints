@@ -6,6 +6,8 @@ import { download, get } from "../../utils/request"
 export const ReportApi = {
   Records: "/admin/reports/point-records",
   RecordsXlsx: "/admin/reports/point-records.xlsx",
+  /** 全员积分汇总导出（每人一行：姓名/可用积分/累计积分），后端待实现（契约 3.9） */
+  PointsSummaryXlsx: "/admin/reports/points-summary.xlsx",
 } as const
 
 /** 全量流水（旧接口，工作台计数用） */
@@ -21,4 +23,9 @@ export function reportsPaged(params: RecordQuery): Promise<Paged<PointRecord>> {
 /** 导出积分明细 Excel（含备注列；文件名带日期戳） */
 export async function exportPointRecordsXlsx(params: RecordQuery = {}): Promise<Blob> {
   return download(ReportApi.RecordsXlsx, { ...params })
+}
+
+/** 导出全员积分汇总 Excel（每人一行：姓名 + 可用积分 + 累计积分；契约 3.9） */
+export function exportPointsSummaryXlsx(): Promise<Blob> {
+  return download(ReportApi.PointsSummaryXlsx)
 }

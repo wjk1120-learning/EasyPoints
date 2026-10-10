@@ -9,6 +9,7 @@ import { ArrowDown, ArrowUp, Delete, Plus } from "@element-plus/icons-vue";
 import {
   closeVote,
   createVote,
+  exportVoteStatsXlsx,
   updateVote,
   voteStats,
   votesPaged,
@@ -20,8 +21,8 @@ import type { Employee } from "../api/employee/types";
 import { tasksPaged } from "../api/task/task";
 import { applicationsPaged } from "../api/application/application";
 import { VOTE_STATUS_MAP, statusMeta } from "../utils/status";
-import { buildVoteStatsCsv, deriveVoteStatus, validateVotePayload } from "../utils/vote";
-import { formatTimeText } from "../utils/format";
+import { deriveVoteStatus, validateVotePayload } from "../utils/vote";
+import { fileTimestamp, formatTimeText } from "../utils/format";
 import { saveBlob } from "../utils/request";
 import { createSubmitLock } from "../utils/submit-lock";
 
@@ -266,17 +267,18 @@ async function openStats(row: Vote) {
   }
 }
 
-function exportStats() {
+async function exportStats() {
   if (!statsDrawer.vote || !statsDrawer.stats) return;
   exporting.value = true;
   try {
-    const csv = buildVoteStatsCsv(statsDrawer.vote, statsDrawer.stats);
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-    const stamp = new Date().toISOString().slice(0, 10);
-    saveBlob(blob, `vote-stats-${statsDrawer.vote.title}-${stamp}.csv`);
-    // 导出行为写「投票操作日志」（PRD 5.9.3；mock 阶段由前端记录，后端就绪后由导出接口记录）
+    // 导出文件由后端生成（契约 3.7 stats.xlsx），前端只触发下载；导出行为写投票操作日志
+    const blob = await exportVoteStatsXlsx(statsDrawer.vote.id);
+    saveBlob(blob, `投票统计-${statsDrawer.vote.title}-${fileTimestamp()}.xlsx`);
     mockLogVoteExported(statsDrawer.vote.id);
-    ElMessage.success("统计已导出（当前为 CSV 兜底，后端就绪后切换 Excel 接口）");
+    ElMessage.success("投票统计已导出");
+  } catch (error) {
+    const message = (error as Error)?.message || "导出失败";
+    ElMessage.error(/404|Cannot|not found/i.test(message) ? "该导出接口后端尚未上线，已列入接口清单待实现" : message);
   } finally {
     exporting.value = false;
   }
@@ -476,7 +478,7 @@ onMounted(async () => {
         </el-table>
 
         <div class="stats-footer">
-          <el-button type="primary" :loading="exporting" @click="exportStats">导出统计（CSV）</el-button>
+          <el-button type="primary" :loading="exporting" @click="exportStats">导出统计 Excel</el-button>
         </div>
       </template>
     </div>

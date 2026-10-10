@@ -6,7 +6,7 @@ import type {
   TaskRecordQuery,
   TaskRecordReviewPayload,
 } from "./types"
-import { get, post, put } from "../../utils/request"
+import { download, get, post, put } from "../../utils/request"
 import { withMock } from "../../mock"
 import {
   mockCreateTask,
@@ -30,6 +30,8 @@ export const TaskApi = {
 export const TaskRecordApi = {
   List: "/admin/task-records",
   Review: (id: number | string) => `/admin/task-records/${id}/review`,
+  /** 任务审核记录表导出（后端待实现，契约见 docs/admin-web-api-requirements.md 3.9） */
+  RecordsXlsx: "/admin/task-records.xlsx",
 } as const
 
 export type { Task, TaskPayload, EmployeeTask, TaskRecordQuery, TaskRecordReviewPayload } from "./types"
@@ -94,4 +96,9 @@ export function reviewTaskRecord(id: number | string, payload: TaskRecordReviewP
     () => post<unknown>(TaskRecordApi.Review(id), payload),
     () => mockReviewTaskRecord(id, payload),
   )
+}
+
+/** 导出任务审核记录表 Excel：文件由后端生成（前端只触发下载；后端待实现，契约 3.9） */
+export function exportTaskRecordsXlsx(params: TaskRecordQuery = {}): Promise<Blob> {
+  return download(TaskRecordApi.RecordsXlsx, { ...params })
 }

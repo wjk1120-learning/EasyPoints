@@ -1,6 +1,6 @@
 import type { Paged } from "../types"
 import type { Vote, VotePayload, VoteQuery, VoteStats } from "./types"
-import { get, post } from "../../utils/request"
+import { download, get, post } from "../../utils/request"
 import { withMock } from "../../mock"
 import { mockCloseVote, mockCreateVote, mockUpdateVote, mockVoteStats, mockVotesPaged } from "../../mock/vote"
 
@@ -53,4 +53,9 @@ export function voteStats(id: number | string): Promise<VoteStats> {
     () => get<VoteStats>(VoteApi.Stats(id)),
     () => mockVoteStats(id),
   )
+}
+
+/** 导出投票统计 Excel：文件由后端生成（前端只触发下载；后端待实现，契约 3.7） */
+export function exportVoteStatsXlsx(id: number | string): Promise<Blob> {
+  return download(VoteApi.StatsXlsx(id))
 }

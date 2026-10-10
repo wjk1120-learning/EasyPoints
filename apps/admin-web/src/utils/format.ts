@@ -1,4 +1,10 @@
 /** 时间格式化：YYYY-MM-DD HH:mm:ss；非法值原样返回 */
+/** 导出文件名时间戳：yyyyMMddHHmmss（PRD 5.7 文件命名带时间戳） */
+export function fileTimestamp(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
+}
+
 export function formatTimeText(value: string | number | null | undefined): string {
   if (!value) return "";
   const date = new Date(value);

@@ -95,31 +95,33 @@ async function save() {
   if (!name) return ElMessage.error("请填写礼品名称");
   if (!Number.isFinite(Number(form.pointsCost)) || Number(form.pointsCost) <= 0) return ElMessage.error("所需积分必须大于 0");
   if (!Number.isFinite(Number(form.stock)) || Number(form.stock) < 0) return ElMessage.error("库存不能为负数");
+  // 礼品名称唯一（含已下架礼品；编辑时排除自身），后端落地唯一约束见接口清单
+  const duplicate = rows.value.find((row) => row.name.trim() === name && row.id !== editId.value);
+  if (duplicate) return ElMessage.error(`礼品名称「${name}」已存在（含已下架礼品），请更换名称`);
 
   saving.value = true;
   try {
     if (editId.value) {
-      const updated = await updateGift(editId.value, {
+      await updateGift(editId.value, {
         name,
         pointsCost: form.pointsCost,
         stock: form.stock,
         limitPerUser: form.limitPerUser,
         status: form.status
       });
-      coverImageUrl.value = updated.coverImageUrl || coverImageUrl.value;
       ElMessage.success("已保存");
     } else {
-      const created = await createGift({
+      await createGift({
         name,
         pointsCost: form.pointsCost,
         stock: form.stock,
         limitPerUser: form.limitPerUser,
         status: form.status
       });
-      editId.value = created.id;
-      coverImageUrl.value = created.coverImageUrl || "";
-      ElMessage.success("已创建");
+      ElMessage.success("已创建，如需上传封面请在该礼品行点击「编辑」上传");
     }
+    dialogVisible.value = false;
+    resetForm();
     await load();
   } finally {
     saving.value = false;

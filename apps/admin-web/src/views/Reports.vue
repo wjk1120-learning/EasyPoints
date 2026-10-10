@@ -1,173 +1,249 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from "vue";
+/**
+ * 数据导出管理（PRD 5.7）：五类数据导出，文件一律由后端生成 Excel，前端只触发下载。
+ * 导出列口径（2026-10-10 用户定稿，契约见接口清单 3.9）：
+ * - 全员积分数据表：每人一行（姓名 + 可用积分 + 累计积分），契约接口待后端实现
+ * - 个人积分明细：流水明细含备注（PRD 核心规则），员工/月份必选，走已上线接口
+ * - 兑换记录表：姓名 + 兑换商品 + 兑换时间；任务审核记录表：领取人/状态/任务名称/任务成果
+ * - 投票统计数据表：投票主题 + 选项票数 + 最高票选项 + 参与人员明细（PRD 3.4-7；最高票选项为 2026-10-10 用户补充）
+ */
+import { computed, onMounted, reactive, ref } from "vue";
+import { ElMessage } from "element-plus";
+import { Document, Download, Files, DataAnalysis, Collection } from "@element-plus/icons-vue";
 import { employees as fetchEmployees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
-import { exportPointRecordsXlsx, reportsPaged } from "../api/report/report";
-import type { PointRecord } from "../api/report/types";
+import { exportPointRecordsXlsx, exportPointsSummaryXlsx } from "../api/report/report";
+import { exportOrdersXlsx } from "../api/order/order";
+import { exportTaskRecordsXlsx } from "../api/task/task";
+import { exportVoteStatsXlsx, votesPaged } from "../api/vote/vote";
+import type { Vote } from "../api/vote/vote";
+import { ORDER_STATUS_MAP } from "../utils/status";
+import { fileTimestamp } from "../utils/format";
 import { saveBlob } from "../utils/request";
 
-const rows = ref<PointRecord[]>([]);
-const downloading = ref(false);
-const loading = ref(false);
 const employees = ref<Employee[]>([]);
-const meta = reactive({ total: 0, page: 1, pageSize: 50 });
-const query = reactive({ employeeId: "", month: "" });
+const votes = ref<Vote[]>([]);
 
-function formatTime(value: string | number | undefined) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  const s = String(date.getSeconds()).padStart(2, "0");
-  return `${y}-${m}-${d} ${h}:${min}:${s}`;
+/** 各导出卡的筛选与 loading 状态 */
+const full = reactive({ exporting: false });
+const personal = reactive({ employeeId: "", month: "", exporting: false });
+const exchange = reactive({ employeeId: "", status: "", exporting: false });
+const taskExport = reactive({ status: "", exporting: false });
+const voteExport = reactive({ voteId: "" as number | "", exporting: false });
+
+const employeeOptions = computed(() => employees.value.map((item) => ({ id: item.id, name: item.name })));
+
+/** 后端导出接口未上线时的友好提示（契约见接口清单 3.9） */
+function exportErrorMsg(error: unknown): string {
+  const message = (error as Error)?.message || "导出失败";
+  return /404|Cannot|not found/i.test(message) ? "该导出接口后端尚未上线，已列入接口清单待实现" : message;
 }
 
-function formatType(value: unknown) {
-  const type = String(value || "");
-  if (type === "reward") return "加分";
-  if (type === "penalty") return "扣分";
-  if (type === "performance") return "绩效";
-  if (type === "exchange") return "兑换";
-  if (type === "refund") return "退分";
-  if (type === "reversal") return "冲正";
-  return type;
-}
-
-async function load() {
-  loading.value = true;
+/** 1. 全员积分数据表（每人一行：姓名 + 可用积分 + 累计积分；后端待实现，契约 3.9） */
+async function exportFull() {
+  full.exporting = true;
   try {
-    const result = await reportsPaged({
-      page: meta.page,
-      pageSize: meta.pageSize,
-      employeeId: query.employeeId,
-      month: query.month
-    });
-    rows.value = result.data;
-    meta.total = result.meta.total;
+    const blob = await exportPointsSummaryXlsx();
+    saveBlob(blob, `全员积分数据表-${fileTimestamp()}.xlsx`);
+    ElMessage.success("全员积分数据表已导出");
+  } catch (error) {
+    ElMessage.error(exportErrorMsg(error));
   } finally {
-    loading.value = false;
+    full.exporting = false;
   }
 }
 
-watch(
-  () => [query.employeeId, query.month, meta.pageSize],
-  () => {
-    meta.page = 1;
-    load();
+/** 2. 个人积分明细（后端真实 xlsx 接口；「个人」明细必须指定员工与月份） */
+async function exportPersonal() {
+  if (!personal.employeeId) {
+    ElMessage.warning("请先选择员工");
+    return;
   }
-);
+  if (!personal.month) {
+    ElMessage.warning("请先选择月份");
+    return;
+  }
+  personal.exporting = true;
+  try {
+    const blob = await exportPointRecordsXlsx({ employeeId: personal.employeeId, month: personal.month });
+    const who = employees.value.find((item) => String(item.id) === String(personal.employeeId))?.name || `员工(${personal.employeeId})`;
+    saveBlob(blob, `积分明细-${who}-${personal.month}-${fileTimestamp()}.xlsx`);
+    ElMessage.success("个人积分明细已导出");
+  } catch (error) {
+    ElMessage.error(exportErrorMsg(error));
+  } finally {
+    personal.exporting = false;
+  }
+}
+
+/** 3. 兑换记录表（后端待实现，契约 3.9） */
+async function exportExchange() {
+  exchange.exporting = true;
+  try {
+    const blob = await exportOrdersXlsx({
+      employeeId: exchange.employeeId || undefined,
+      status: exchange.status || undefined
+    });
+    saveBlob(blob, `兑换记录表-${fileTimestamp()}.xlsx`);
+    ElMessage.success("兑换记录表已导出");
+  } catch (error) {
+    ElMessage.error(exportErrorMsg(error));
+  } finally {
+    exchange.exporting = false;
+  }
+}
+
+/** 4. 任务审核记录表（后端待实现，契约 3.9） */
+async function exportTaskRecords() {
+  taskExport.exporting = true;
+  try {
+    const blob = await exportTaskRecordsXlsx({ status: taskExport.status || undefined });
+    saveBlob(blob, `任务审核记录表-${fileTimestamp()}.xlsx`);
+    ElMessage.success("任务审核记录表已导出");
+  } catch (error) {
+    ElMessage.error(exportErrorMsg(error));
+  } finally {
+    taskExport.exporting = false;
+  }
+}
+
+/** 5. 投票统计数据表（后端待实现，契约 3.7/3.9） */
+async function exportVote() {
+  if (!voteExport.voteId) {
+    ElMessage.warning("请先选择投票");
+    return;
+  }
+  voteExport.exporting = true;
+  try {
+    const vote = votes.value.find((item) => item.id === Number(voteExport.voteId));
+    if (!vote) throw new Error("投票不存在");
+    const blob = await exportVoteStatsXlsx(vote.id);
+    saveBlob(blob, `投票统计-${vote.title}-${fileTimestamp()}.xlsx`);
+    ElMessage.success("投票统计数据表已导出");
+  } catch (error) {
+    ElMessage.error(exportErrorMsg(error));
+  } finally {
+    voteExport.exporting = false;
+  }
+}
 
 onMounted(async () => {
-  employees.value = await fetchEmployees();
-  await load();
+  employees.value = await fetchEmployees().catch(() => []);
+  const votesResult = await votesPaged({ page: 1, pageSize: 200 }).catch(() => ({ data: [] as Vote[] }));
+  votes.value = votesResult.data;
 });
-
-async function downloadXlsx() {
-  downloading.value = true;
-  try {
-    const blob = await exportPointRecordsXlsx({ employeeId: query.employeeId, month: query.month });
-    saveBlob(blob, `point-records-${new Date().toISOString().slice(0, 10)}.xlsx`);
-  } finally {
-    downloading.value = false;
-  }
-}
 </script>
 
 <template>
-  <div class="report-page">
-    <div class="panel">
-      <!-- 面板头部 -->
-      <div class="panel-head">
-        <span class="panel-bar" />
-        <h3 class="panel-title">积分明细报表</h3>
-        <div class="panel-head-extra">
-          <el-button type="primary" :loading="downloading" class="btn-export" @click="downloadXlsx">
-            导出 Excel
-          </el-button>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-bar" />
+      <h3 class="panel-title">数据导出</h3>
+    </div>
+
+    <div class="panel-body">
+      <div class="export-grid">
+        <!-- 1 全员积分数据表 -->
+        <div class="export-card">
+          <div class="export-head">
+            <el-icon :size="20" color="var(--color-primary)"><Document /></el-icon>
+            <div>
+              <div class="export-name">全员积分数据表</div>
+              <div class="export-desc">每人一行：姓名 + 可用积分 + 累计积分</div>
+            </div>
+          </div>
+          <el-button type="primary" plain :icon="Download" :loading="full.exporting" @click="exportFull">导出 Excel</el-button>
         </div>
-      </div>
 
-      <!-- 筛选栏 -->
-      <div class="filter-bar">
-        <el-select v-model="query.employeeId" clearable placeholder="选择员工" class="filter-item">
-          <el-option v-for="item in employees" :key="item.id" :label="item.name" :value="String(item.id)" />
-        </el-select>
-        <el-date-picker v-model="query.month" type="month" placeholder="月份（YYYY-MM）" value-format="YYYY-MM" clearable class="filter-item filter-month" />
-        <el-select v-model="meta.pageSize" placeholder="每页条数" class="filter-item filter-page-size">
-          <el-option :value="20" label="20 条 / 页" />
-          <el-option :value="50" label="50 条 / 页" />
-          <el-option :value="100" label="100 条 / 页" />
-        </el-select>
-      </div>
+        <!-- 2 个人积分明细 -->
+        <div class="export-card">
+          <div class="export-head">
+            <el-icon :size="20" color="var(--color-primary)"><Files /></el-icon>
+            <div>
+              <div class="export-name">个人积分明细</div>
+              <div class="export-desc">按员工 / 月份筛选积分流水明细，含备注</div>
+            </div>
+          </div>
+          <div class="export-filters">
+            <el-select v-model="personal.employeeId" clearable filterable placeholder="请选择员工" style="width: 150px">
+              <el-option v-for="item in employeeOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
+            </el-select>
+            <el-date-picker v-model="personal.month" type="month" value-format="YYYY-MM" placeholder="请选择月份" style="width: 140px" />
+          </div>
+          <el-button type="primary" plain :icon="Download" :loading="personal.exporting" @click="exportPersonal">导出 Excel</el-button>
+        </div>
 
-      <!-- 表格 -->
-      <div class="table-wrap">
-        <el-table :data="rows" border v-loading="loading" class="report-table">
-          <el-table-column prop="employeeName" label="员工" width="120" />
-          <el-table-column prop="pointsDelta" label="分值" width="100" />
-          <el-table-column label="类型" width="140">
-            <template #default="{ row }">
-              <el-tag :type="row.type === 'reward' ? 'success' : row.type === 'penalty' ? 'danger' : 'info'" size="small" effect="plain">
-                {{ formatType(row.type) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="operatorName" label="操作人" width="140" />
-          <el-table-column prop="occurredAt" label="时间" width="210">
-            <template #default="{ row }">{{ formatTime(row.occurredAt) }}</template>
-          </el-table-column>
-          <el-table-column prop="remark" label="备注原因" min-width="260" show-overflow-tooltip />
-        </el-table>
-      </div>
+        <!-- 3 兑换记录表 -->
+        <div class="export-card">
+          <div class="export-head">
+            <el-icon :size="20" color="var(--color-points-refund)"><DataAnalysis /></el-icon>
+            <div>
+              <div class="export-name">兑换记录表</div>
+              <div class="export-desc">导出姓名、兑换商品、兑换时间（可按员工/状态筛选）</div>
+            </div>
+          </div>
+          <div class="export-filters">
+            <el-select v-model="exchange.employeeId" clearable filterable placeholder="员工（可空）" style="width: 150px">
+              <el-option v-for="item in employeeOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
+            </el-select>
+            <el-select v-model="exchange.status" clearable placeholder="状态（可空）" style="width: 140px">
+              <el-option v-for="(meta, key) in ORDER_STATUS_MAP" :key="key" :value="key" :label="meta.text" />
+            </el-select>
+          </div>
+          <el-button type="primary" plain :icon="Download" :loading="exchange.exporting" @click="exportExchange">导出 Excel</el-button>
+        </div>
 
-      <!-- 底部分页 -->
-      <div class="pagination-bar">
-        <el-pagination
-          background
-          layout="total, prev, pager, next, jumper"
-          :total="meta.total"
-          :page-size="meta.pageSize"
-          :current-page="meta.page"
-          @current-change="
-            (p: number) => {
-              meta.page = p;
-              load();
-            }
-          "
-        />
+        <!-- 4 任务审核记录表 -->
+        <div class="export-card">
+          <div class="export-head">
+            <el-icon :size="20" color="var(--color-status-pending)"><Collection /></el-icon>
+            <div>
+              <div class="export-name">任务审核记录表</div>
+              <div class="export-desc">导出任务领取人、状态、任务名称、任务成果</div>
+            </div>
+          </div>
+          <div class="export-filters">
+            <el-select v-model="taskExport.status" clearable placeholder="状态（可空）" style="width: 180px">
+              <el-option value="in_progress" label="进行中" />
+              <el-option value="pending_review" label="待审核" />
+              <el-option value="approved" label="已通过" />
+              <el-option value="rejected" label="已驳回" />
+            </el-select>
+          </div>
+          <el-button type="primary" plain :icon="Download" :loading="taskExport.exporting" @click="exportTaskRecords">导出 Excel</el-button>
+        </div>
+
+        <!-- 5 投票统计数据表 -->
+        <div class="export-card">
+          <div class="export-head">
+            <el-icon :size="20" color="var(--el-color-info)"><Collection /></el-icon>
+            <div>
+              <div class="export-name">投票统计数据表</div>
+              <div class="export-desc">导出投票主题、各选项票数、最高票选项、参与明细（选投票）</div>
+            </div>
+          </div>
+          <div class="export-filters">
+            <el-select v-model="voteExport.voteId" filterable placeholder="选择投票" style="width: 300px">
+              <el-option v-for="item in votes" :key="item.id" :value="item.id" :label="item.title" />
+            </el-select>
+          </div>
+          <el-button type="primary" plain :icon="Download" :loading="voteExport.exporting" @click="exportVote">导出 Excel</el-button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-// ==============================
-// 页面容器
-// ==============================
-.report-page {
-  height: 100%;
-}
-
-// ==============================
-// 面板
-// ==============================
 .panel {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
   background: #fff;
   border-radius: 8px;
   border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-// ==============================
-// 面板头部
-// ==============================
 .panel-head {
   display: flex;
   align-items: center;
@@ -175,7 +251,6 @@ async function downloadXlsx() {
   padding: 14px 20px;
   background: var(--color-bg-page);
   border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
 }
 
 .panel-bar {
@@ -193,110 +268,52 @@ async function downloadXlsx() {
   color: var(--color-text-primary);
 }
 
-.panel-head-extra {
-  margin-left: auto;
+.panel-body {
+  padding: 20px;
 }
 
-// 导出按钮
-.btn-export {
-  border-radius: 6px;
-  font-weight: 500;
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: var(--color-primary-hover);
-    border-color: var(--color-primary-hover);
-  }
-
-  &:active {
-    background-color: var(--color-primary-active);
-    border-color: var(--color-primary-active);
-  }
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
 }
 
-// ==============================
-// 筛选栏
-// ==============================
-.filter-bar {
+.export-card {
   display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border);
-}
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
 
-.filter-item {
-  width: 200px;
-}
+  .export-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
 
-.filter-month {
-  width: 160px;
-}
+    .el-icon {
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
 
-.filter-page-size {
-  width: 140px;
-}
+    .export-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
 
-// ==============================
-// 表格容器
-// ==============================
-.table-wrap {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px 20px;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 3px;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-placeholder);
-  }
-}
-
-// ==============================
-// 表格样式
-// ==============================
-.report-table {
-  width: 100%;
-
-  :deep(.el-table__header th) {
-    background: var(--color-bg-muted);
-    color: var(--color-text-regular);
-    font-weight: 600;
-    font-size: 13px;
-  }
-
-  :deep(.el-table__row) {
-    transition: background 0.15s;
-
-    &:hover > td {
-      background: var(--el-color-primary-light-9);
+    .export-desc {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
     }
   }
-}
 
-// ==============================
-// 底部分页
-// ==============================
-.pagination-bar {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-page);
+  .export-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 }
 </style>

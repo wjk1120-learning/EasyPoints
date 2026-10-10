@@ -83,8 +83,11 @@ export interface VoteOpLog {
   actionText: string
   /** 操作管理员 / 提交员工 */
   actorText: string
-  voteTitle: string
-  /** 操作内容详情 */
-  detail: string
+  /** 操作对象：投票「标题」 */
+  target: string
+  /** 操作内容 */
+  content: string
+  /** 备注详情（如所选选项、关联业务；无则空串） */
+  remark: string
   createdAt: string
 }

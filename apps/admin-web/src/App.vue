@@ -213,7 +213,7 @@ watch(
         </el-menu-item>
         <el-menu-item index="/reports">
           <el-icon><DataLine /></el-icon>
-          <span>明细报表</span>
+          <span>数据导出</span>
         </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>

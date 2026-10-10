@@ -1,8 +1,10 @@
 <script setup lang="ts">
 /**
  * 操作日志（PRD 5.6）：全部操作留痕查询，含「投票操作日志」类型（PRD 5.9.3）。
+ * 支持五类日志筛选 + 时间范围筛选（PRD 5.6）。
  * 日志禁止删除、禁止修改，永久留存，本页只读。
- * 投票后端未落地期间，投票操作日志由前端 vote mock 记录并合并展示（isMockEnabled 时）。
+ * 说明：后端日志接口暂无类型/时间筛选参数，本页拉取近期日志后客户端筛选+分页；
+ *      投票后端未落地期间，投票操作日志由前端 vote mock 记录并合并展示。
  */
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { logsPaged } from "../api/log/log";
@@ -10,75 +12,79 @@ import type { OperationLog } from "../api/log/types";
 import type { VoteOpLog } from "../api/vote/types";
 import { mockVoteLogs } from "../mock/vote";
 import { isMockEnabled } from "../mock";
+import { formatTimeText } from "../utils/format";
+import { LOG_CATEGORY_OPTIONS, LOG_CATEGORY_TEXT, logCategory, logRemark, logTarget } from "../utils/log-category";
 
 const rows = ref<OperationLog[]>([]);
 const loading = ref(false);
-const meta = reactive({ total: 0, page: 1, pageSize: 50 });
-/** 日志类型筛选：全部 / vote（投票操作日志）/ system（系统操作） */
+/** 日志类型筛选：空=全部 */
 const logType = ref("");
+/** 时间范围筛选（PRD 5.6 按时间筛选） */
+const dateRange = ref<[string, string] | "">("");
+const pageSize = ref(50);
+const page = ref(1);
 
 /** 投票操作日志 → 操作日志行结构（mock 期间） */
 function voteLogsAsRows(): OperationLog[] {
   if (!isMockEnabled()) return [];
-  return mockVoteLogs().map((log: VoteOpLog, index) => ({
+  return mockVoteLogs().map((log: VoteOpLog) => ({
     id: 100000 + log.id,
     traceId: `trace-vote-${log.action}-${log.id}`,
     action: log.action,
     actionText: log.actionText,
     actorText: log.actorText,
-    businessSummary: `投票「${log.voteTitle}」：${log.detail}`,
+    businessSummary: log.content,
     resultText: "成功",
     createdAt: log.createdAt,
-    _order: index
+    targetLabel: log.target,
+    remark: log.remark
   })) as OperationLog[];
 }
 
-const displayRows = computed(() => {
-  const voteRows = voteLogsAsRows();
-  if (logType.value === "vote") return voteRows;
-  const merged = [...rows.value, ...voteRows].sort(
-    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-  );
-  if (logType.value === "system") return merged.filter((row) => !String(row.action || "").startsWith("vote."));
-  return merged;
+/** 合并真实日志与投票日志（mock 期间），推导操作对象/备注详情，按时间倒序 */
+const mergedRows = computed(() =>
+  [...rows.value, ...voteLogsAsRows()]
+    .map((row) => ({
+      ...row,
+      targetLabel: row.targetLabel ?? logTarget(row.action, (row.payload || {}) as Record<string, unknown>),
+      remark: row.remark ?? logRemark(row.action, (row.payload || {}) as Record<string, unknown>)
+    }))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+);
+
+/** 类型 + 时间范围筛选 */
+const filteredRows = computed(() =>
+  mergedRows.value.filter((row) => {
+    if (logType.value && logCategory(row.action) !== logType.value) return false;
+    if (dateRange.value) {
+      const [start, end] = dateRange.value;
+      const time = String(row.createdAt || "");
+      if (start && time.slice(0, 10) < start) return false;
+      if (end && time.slice(0, 10) > end) return false;
+    }
+    return true;
+  })
+);
+
+/** 客户端分页 */
+const pagedRows = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredRows.value.slice(start, start + pageSize.value);
 });
 
-const displayTotal = computed(() => (logType.value ? displayRows.value.length : meta.total));
-
-function formatTime(value: string | number | undefined) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  const Y = date.getFullYear();
-  const M = String(date.getMonth() + 1).padStart(2, "0");
-  const D = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const m = String(date.getMinutes()).padStart(2, "0");
-  const s = String(date.getSeconds()).padStart(2, "0");
-  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
-}
+watch([logType, dateRange, pageSize], () => {
+  page.value = 1;
+});
 
 async function load() {
   loading.value = true;
   try {
-    const result = await logsPaged({
-      page: meta.page,
-      pageSize: meta.pageSize
-    });
+    const result = await logsPaged({ page: 1, pageSize: 500 });
     rows.value = result.data;
-    meta.total = result.meta.total;
   } finally {
     loading.value = false;
   }
 }
-
-watch(
-  () => meta.pageSize,
-  () => {
-    meta.page = 1;
-    load();
-  }
-);
 
 onMounted(load);
 </script>
@@ -94,28 +100,41 @@ onMounted(load);
       <div class="filter-bar">
         <el-select v-model="logType" placeholder="日志类型" class="filter-item filter-item--md">
           <el-option value="" label="全部类型" />
-          <el-option value="vote" label="投票操作日志" />
-          <el-option value="system" label="系统操作" />
+          <el-option v-for="item in LOG_CATEGORY_OPTIONS" :key="item.value" :value="item.value" :label="item.label" />
         </el-select>
-        <el-select v-model="meta.pageSize" placeholder="每页" class="filter-item filter-item--sm">
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          value-format="YYYY-MM-DD"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          class="filter-item--range"
+          style="width: 280px; max-width: 280px; flex: 0 0 280px"
+        />
+        <el-select v-model="pageSize" placeholder="每页" class="filter-item filter-item--sm">
           <el-option :value="20" label="20 / 页" />
           <el-option :value="50" label="50 / 页" />
           <el-option :value="100" label="100 / 页" />
         </el-select>
       </div>
 
-      <el-table :data="displayRows" border v-loading="loading">
-        <el-table-column prop="traceId" label="追踪编号" width="290" show-overflow-tooltip />
-        <el-table-column prop="actionText" label="动作" width="140" />
-        <el-table-column prop="actorText" label="操作人" width="180" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="时间" width="190">
-          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column prop="businessSummary" label="业务摘要" min-width="420" show-overflow-tooltip />
-        <el-table-column prop="resultText" label="操作结果" width="100">
+      <el-table :data="pagedRows" border v-loading="loading">
+        <el-table-column label="类型" width="130">
           <template #default="{ row }">
-            <el-tag type="success">{{ row.resultText }}</el-tag>
+            <el-tag size="small" effect="plain">{{ LOG_CATEGORY_TEXT[logCategory(row.action)] }}</el-tag>
           </template>
+        </el-table-column>
+        <el-table-column prop="actorText" label="操作人" width="160" show-overflow-tooltip />
+        <el-table-column prop="createdAt" label="操作时间" width="190">
+          <template #default="{ row }">{{ formatTimeText(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作对象" width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.targetLabel || "—" }}</template>
+        </el-table-column>
+        <el-table-column prop="businessSummary" label="操作内容" min-width="320" show-overflow-tooltip />
+        <el-table-column label="备注详情" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.remark || "—" }}</template>
         </el-table-column>
       </el-table>
 
@@ -123,15 +142,10 @@ onMounted(load);
         <el-pagination
           background
           layout="total, prev, pager, next, jumper"
-          :total="displayTotal"
-          :page-size="meta.pageSize"
-          :current-page="meta.page"
-          @current-change="
-            (p: number) => {
-              meta.page = p;
-              load();
-            }
-          "
+          :total="filteredRows.length"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="(p: number) => { page = p; }"
         />
       </div>
     </div>
@@ -188,6 +202,8 @@ onMounted(load);
   width: 180px;
 }
 
+// 日期范围选择器的宽度用内联样式固定（EP 的 date-picker 根元素不继承 scoped 标记，
+// 且自带 flex-grow:1，类规则压不住，故写死在组件 style 上）
 .filter-item--sm {
   width: 120px;
 }

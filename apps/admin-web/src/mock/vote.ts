@@ -5,7 +5,6 @@
  */
 import type { Vote, VoteOpLog, VotePayload, VoteQuery, VoteStats } from "../api/vote/types"
 import { deriveVoteStatus } from "../utils/vote"
-
 const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString()
 const atISO = (offsetDays: number) => new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000).toISOString()
 
@@ -126,14 +125,16 @@ const VOTE_ACTION_TEXT: Record<string, string> = {
 let nextLogId = 1
 const MOCK_VOTE_LOGS: VoteOpLog[] = []
 
-function pushVoteLog(action: string, actorText: string, voteTitle: string, detail: string) {
+/** 日志字段按 PRD 5.6 拆分：target=操作对象（投票标题）、content=操作内容、remark=备注详情 */
+function pushVoteLog(action: string, actorText: string, voteTitle: string, content: string, remark = "") {
   MOCK_VOTE_LOGS.push({
     id: nextLogId++,
     action,
     actionText: VOTE_ACTION_TEXT[action] || action,
     actorText,
-    voteTitle,
-    detail,
+    target: `投票「${voteTitle}」`,
+    content,
+    remark,
     createdAt: new Date().toISOString()
   })
 }
@@ -143,18 +144,18 @@ export function mockVoteLogs(): VoteOpLog[] {
   return MOCK_VOTE_LOGS.slice().sort((a, b) => b.id - a.id).map((item) => ({ ...item }))
 }
 
-// 种子日志：既有投票的管理动作 + 员工提交行为
-pushVoteLog("vote.created", "系统管理员", "10月团建活动地点评选", "创建单选投票，3 个选项，参与 5 人")
-pushVoteLog("vote.created", "系统管理员", "季度优秀员工评选", "创建多选投票，关联积分申请 #3，参与 2 人")
-pushVoteLog("vote.created", "人事管理员", "新版工作服款式投票", "创建单选投票，2 个选项，参与 4 人")
-pushVoteLog("vote.submitted", "张三", "新版工作服款式投票", "提交投票：方案 A（商务蓝）")
-pushVoteLog("vote.submitted", "王五", "新版工作服款式投票", "提交投票：方案 B（极简灰）")
-pushVoteLog("vote.submitted", "赵六", "新版工作服款式投票", "提交投票：方案 A（商务蓝）")
+// 种子日志：既有投票的管理动作 + 员工提交行为（remark=备注详情）
+pushVoteLog("vote.created", "系统管理员", "10月团建活动地点评选", "创建单选投票，3 个选项，参与 5 人", "普通调研")
+pushVoteLog("vote.created", "系统管理员", "季度优秀员工评选", "创建多选投票，2 个选项，参与 2 人", "关联：积分申请 #3")
+pushVoteLog("vote.created", "人事管理员", "新版工作服款式投票", "创建单选投票，2 个选项，参与 4 人", "普通调研")
+pushVoteLog("vote.submitted", "张三", "新版工作服款式投票", "员工提交投票", "所选选项：方案 A（商务蓝）")
+pushVoteLog("vote.submitted", "王五", "新版工作服款式投票", "员工提交投票", "所选选项：方案 B（极简灰）")
+pushVoteLog("vote.submitted", "赵六", "新版工作服款式投票", "员工提交投票", "所选选项：方案 A（商务蓝）")
 pushVoteLog("vote.closed", "系统管理员", "周末值班意向收集", "手动关闭投票，员工不可再提交")
-pushVoteLog("vote.submitted", "李四", "周末值班意向收集", "提交投票：周六可值班")
-pushVoteLog("vote.submitted", "张三", "10月团建活动地点评选", "提交投票：户外烧烤")
-pushVoteLog("vote.submitted", "李四", "10月团建活动地点评选", "提交投票：户外烧烤")
-pushVoteLog("vote.submitted", "王五", "10月团建活动地点评选", "提交投票：周边徒步")
+pushVoteLog("vote.submitted", "李四", "周末值班意向收集", "员工提交投票", "所选选项：周六可值班")
+pushVoteLog("vote.submitted", "张三", "10月团建活动地点评选", "员工提交投票", "所选选项：户外烧烤")
+pushVoteLog("vote.submitted", "李四", "10月团建活动地点评选", "员工提交投票", "所选选项：户外烧烤")
+pushVoteLog("vote.submitted", "王五", "10月团建活动地点评选", "员工提交投票", "所选选项：周边徒步")
 
 function snapshot(vote: Vote): Vote {
   return {
@@ -190,7 +191,13 @@ export function mockCreateVote(payload: VotePayload): Promise<Vote> {
     updatedAt: new Date().toISOString()
   }
   MOCK_VOTES.push(vote)
-  pushVoteLog("vote.created", "当前管理员", vote.title, `创建${vote.voteType === "single" ? "单选" : "多选"}投票，${vote.options.length} 个选项，参与 ${vote.participantIds.length} 人${vote.relatedLabel ? `，关联：${vote.relatedLabel}` : ""}`)
+  pushVoteLog(
+    "vote.created",
+    "当前管理员",
+    vote.title,
+    `创建${vote.voteType === "single" ? "单选" : "多选"}投票，${vote.options.length} 个选项，参与 ${vote.participantIds.length} 人`,
+    vote.relatedLabel || "普通调研"
+  )
   return Promise.resolve(snapshot(vote))
 }
 
