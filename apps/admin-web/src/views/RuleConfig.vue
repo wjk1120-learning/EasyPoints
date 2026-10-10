@@ -91,10 +91,10 @@ onBeforeUnmount(() => {
       <div class="editor-container">
         <Toolbar class="editor-toolbar" :editor="editorRef" :default-config="toolbarConfig" mode="default" />
         <Editor
-          class="editor-content"
           v-model="htmlValue"
           :default-config="editorConfig"
           mode="default"
+          style="height: 440px; overflow-y: hidden"
           @on-created="handleCreated"
         />
       </div>
