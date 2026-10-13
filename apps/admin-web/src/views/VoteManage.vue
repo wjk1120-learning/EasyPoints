@@ -15,7 +15,6 @@ import {
   votesPaged,
 } from "../api/vote/vote";
 import type { Vote, VotePayload, VoteStats } from "../api/vote/vote";
-import { mockLogVoteExported } from "../mock/vote";
 import { employees as fetchEmployees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
 import { tasksPaged } from "../api/task/task";
@@ -111,8 +110,6 @@ async function loadRelatedOptions() {
   relatedOptions.value = options;
 }
 
-const relatedLabelOf = (value: string) => relatedOptions.value.find((option) => option.value === value)?.label || "";
-
 function openCreate() {
   dialog.editId = null;
   form.title = "";
@@ -179,13 +176,11 @@ async function save() {
     description: String(form.description || "").trim(),
     relatedType,
     relatedId,
-    relatedLabel: relatedLabelOf(form.relatedValue),
     voteType: form.voteType,
     options: optionTexts.value.map((text) => text.trim()).filter(Boolean),
     startTime: form.startTime,
     endTime: form.endTime,
-    participantIds: participantIds.value,
-    participantNames: participantIds.value.map((id) => employees.value.find((item) => item.id === id)?.name || `员工(${id})`)
+    participantIds: participantIds.value
   };
   const error = validateVotePayload(payload);
   if (error) {
@@ -272,10 +267,9 @@ async function exportStats() {
   if (!statsDrawer.vote || !statsDrawer.stats) return;
   exporting.value = true;
   try {
-    // 导出文件由后端生成（契约 3.7 stats.xlsx），前端只触发下载；导出行为写投票操作日志
+    // 导出文件由后端生成（契约 9.6 stats.xlsx 双 Sheet 定稿），前端只触发下载
     const blob = await exportVoteStatsXlsx(statsDrawer.vote.id);
     saveBlob(blob, `投票统计-${statsDrawer.vote.title}-${fileTimestamp()}.xlsx`);
-    mockLogVoteExported(statsDrawer.vote.id);
     ElMessage.success("投票统计已导出");
   } catch (error) {
     const message = (error as Error)?.message || "导出失败";
@@ -337,7 +331,7 @@ onMounted(async () => {
           </template>
         </el-table-column>
         <el-table-column label="参与人数" width="100">
-          <template #default="{ row }">{{ row.submittedCount ?? 0 }}/{{ row.participantIds.length }}</template>
+          <template #default="{ row }">{{ row.submittedCount ?? 0 }}/{{ row.participantCount ?? row.participantIds.length }}</template>
         </el-table-column>
         <el-table-column prop="createdBy" label="创建人" width="120" />
         <el-table-column label="操作" width="220" fixed="right">

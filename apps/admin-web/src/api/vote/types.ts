@@ -1,4 +1,4 @@
-/** vote 域类型：投票管理（PRD 3.4 / 5.9；投票仅作审核参考，不自动积分、不自动审核） */
+/** vote 域类型：投票管理（契约见 docs/Easy-Points-API.md 9.1~9.6；投票仅作审核参考，不自动积分、不自动审核） */
 
 export interface VoteOption {
   id: number
@@ -8,61 +8,64 @@ export interface VoteOption {
 /** 关联业务：空串=普通调研投票；task=关联任务；application=关联积分申请工单 */
 export type VoteRelatedType = "" | "task" | "application"
 
+export type VoteStatus = "not_started" | "in_progress" | "ended"
+
 export interface Vote {
   id: number
   title: string
   description: string
   relatedType: VoteRelatedType
   relatedId?: number
-  /** 冗余展示文本，如「任务 #1 整理客户回访文档」 */
-  relatedLabel?: string
-  /** single=单选 / multiple=多选 */
+  /** 关联业务友好文本（服务端回填，如「任务 #7 · 整理客户回访文档」；普通调研为 null） */
+  relatedLabel?: string | null
+  /** single=单选 / multiple=多选（创建后不可改） */
   voteType: "single" | "multiple"
   options: VoteOption[]
   /** YYYY-MM-DD HH:mm */
   startTime: string
   /** YYYY-MM-DD HH:mm */
   endTime: string
-  /** 参与人员 ID 列表：仅被勾选员工小程序端可见该投票 */
+  /** 参与人员 ID 列表：仅被勾选员工小程序端可见该投票（编辑回填选人框按 ID） */
   participantIds: number[]
-  /** 冗余展示文本 */
+  /** 应参与人数 */
+  participantCount?: number
+  /** 参与人姓名列表（展示冗余） */
   participantNames?: string[]
-  /** 手动关闭（关闭后员工不可提交，状态视为已结束） */
+  /** 是否已手动关闭（到期结束不置位，由 status 表达） */
   closed?: boolean
-  /** 已提交人数（列表列「参与人数」分母为 participantIds.length） */
+  /** 服务端派生状态（not_started/in_progress/ended；前端 deriveVoteStatus 兜底旧数据） */
+  status?: VoteStatus
+  /** 已提交人数 */
   submittedCount?: number
-  createdBy?: string
+  createdBy?: number
   createdAt?: string
   updatedAt?: string
 }
 
-/** 新建/编辑投票参数（选项传纯文本数组，ID 由服务端生成） */
+/** 新建/编辑投票参数（9.2/9.3：options 传纯文本数组，ID 服务端生成；participantNames/relatedLabel 由服务端派生，不回传） */
 export interface VotePayload {
   title: string
+  /** 补充说明（选填；文档 9.2 payload 表未列本字段，前端按 PRD 保留，已记入后端反馈） */
   description: string
   relatedType: VoteRelatedType
   relatedId?: number
-  relatedLabel?: string
   voteType: "single" | "multiple"
   options: string[]
   startTime: string
   endTime: string
   participantIds: number[]
-  participantNames?: string[]
 }
-
-export type VoteStatus = "not_started" | "in_progress" | "ended"
 
 export interface VoteQuery {
   page?: number
   pageSize?: number
   /** 标题模糊搜索 */
   title?: string
-  /** 按推导状态筛选：not_started/in_progress/ended */
+  /** 按派生状态筛选：not_started/in_progress/ended */
   status?: string
 }
 
-/** 投票统计（PRD 5.9.2：进行中、已结束均可查看） */
+/** 投票统计（9.5：进行中、已结束均可查看） */
 export interface VoteStats {
   /** 应参与人数 */
   totalParticipants: number
@@ -70,24 +73,6 @@ export interface VoteStats {
   submittedCount: number
   /** 参与率（0-100 整数） */
   participationRate: number
-  optionStats: { text: string; votes: number; percent: number }[]
+  optionStats: { optionId: number; text: string; votes: number; percent: number }[]
   details: { employeeId: number; employeeName: string; selectedTexts: string[]; submittedAt: string }[]
-}
-
-/** 投票操作日志（PRD 5.9.3：新增日志类型「投票操作日志」，永久留存） */
-export interface VoteOpLog {
-  id: number
-  /** vote.created / vote.updated / vote.closed / vote.exported / vote.submitted */
-  action: string
-  /** 中文动作，如「投票创建」 */
-  actionText: string
-  /** 操作管理员 / 提交员工 */
-  actorText: string
-  /** 操作对象：投票「标题」 */
-  target: string
-  /** 操作内容 */
-  content: string
-  /** 备注详情（如所选选项、关联业务；无则空串） */
-  remark: string
-  createdAt: string
 }

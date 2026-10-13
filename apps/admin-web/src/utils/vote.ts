@@ -10,7 +10,8 @@ function parseTime(value: string): number {
  * 投票状态推导（PRD 3.4 第 5 条：到期自动关闭）：
  * 手动关闭 → 已结束；未到开始时间 → 未开始；超过截止时间 → 已结束；其余 → 进行中。
  */
-export function deriveVoteStatus(vote: Pick<Vote, "startTime" | "endTime" | "closed">, now: number = Date.now()): VoteStatus {
+export function deriveVoteStatus(vote: Pick<Vote, "startTime" | "endTime" | "closed"> & { status?: VoteStatus }, now: number = Date.now()): VoteStatus {
+  if (vote.status) return vote.status; // 9.1：服务端派生状态优先
   if (vote.closed) return "ended";
   const start = parseTime(vote.startTime);
   const end = parseTime(vote.endTime);

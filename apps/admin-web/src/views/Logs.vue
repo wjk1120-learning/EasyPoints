@@ -4,14 +4,11 @@
  * 支持五类日志筛选 + 时间范围筛选（PRD 5.6）。
  * 日志禁止删除、禁止修改，永久留存，本页只读。
  * 说明：后端日志接口暂无类型/时间筛选参数，本页拉取近期日志后客户端筛选+分页；
- *      投票后端未落地期间，投票操作日志由前端 vote mock 记录并合并展示。
+ *      投票操作日志由后端 vote.* 动作提供（附录 D），随操作日志统一查询展示。
  */
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { logsPaged } from "../api/log/log";
 import type { OperationLog } from "../api/log/types";
-import type { VoteOpLog } from "../api/vote/types";
-import { mockVoteLogs } from "../mock/vote";
-import { isMockEnabled } from "../mock";
 import { formatTimeText } from "../utils/format";
 import { LOG_CATEGORY_OPTIONS, LOG_CATEGORY_TEXT, logCategory, logRemark, logTarget } from "../utils/log-category";
 
@@ -24,26 +21,9 @@ const dateRange = ref<[string, string] | "">("");
 const pageSize = ref(50);
 const page = ref(1);
 
-/** 投票操作日志 → 操作日志行结构（mock 期间） */
-function voteLogsAsRows(): OperationLog[] {
-  if (!isMockEnabled()) return [];
-  return mockVoteLogs().map((log: VoteOpLog) => ({
-    id: 100000 + log.id,
-    traceId: `trace-vote-${log.action}-${log.id}`,
-    action: log.action,
-    actionText: log.actionText,
-    actorText: log.actorText,
-    businessSummary: log.content,
-    resultText: "成功",
-    createdAt: log.createdAt,
-    targetLabel: log.target,
-    remark: log.remark
-  })) as OperationLog[];
-}
-
-/** 合并真实日志与投票日志（mock 期间），推导操作对象/备注详情，按时间倒序 */
+/** 推导操作对象/备注详情，按时间倒序（投票日志由后端 vote.* 动作提供，附录 D） */
 const mergedRows = computed(() =>
-  [...rows.value, ...voteLogsAsRows()]
+  [...rows.value]
     .map((row) => ({
       ...row,
       targetLabel: row.targetLabel ?? logTarget(row.action, (row.payload || {}) as Record<string, unknown>),

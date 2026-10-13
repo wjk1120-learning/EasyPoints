@@ -1,10 +1,8 @@
 import type { Paged } from "../types"
 import type { Vote, VotePayload, VoteQuery, VoteStats } from "./types"
 import { download, get, post } from "../../utils/request"
-import { withMock } from "../../mock"
-import { mockCloseVote, mockCreateVote, mockUpdateVote, mockVoteStats, mockVotesPaged } from "../../mock/vote"
 
-/** 投票管理 REST 路径（后端待开发，契约见 docs/admin-web-api-requirements.md 3.7） */
+/** 投票管理 REST 路径（契约见 docs/Easy-Points-API.md 9.1~9.6；投票不触碰积分台账） */
 export const VoteApi = {
   List: "/admin/votes",
   Vote: (id: number | string) => `/admin/votes/${id}`,
@@ -15,47 +13,35 @@ export const VoteApi = {
 
 export type { Vote, VotePayload, VoteQuery, VoteStats } from "./types"
 
-/** 分页投票列表（创建时间倒序；支持标题模糊与状态筛选） */
+/** 分页投票列表（9.1：创建倒序；支持标题模糊与派生状态筛选） */
 export function votesPaged(params: VoteQuery = {}): Promise<Paged<Vote>> {
-  return withMock(
-    () => get<Paged<Vote>>(VoteApi.List, { ...params }),
-    () => mockVotesPaged(params),
-  )
+  return get<Paged<Vote>>(VoteApi.List, { ...params })
 }
 
-/** 新建投票：保存后到开始时间自动推送参与员工通知（通知推送为后端职责） */
+/**
+ * 新建投票（9.2：options 传纯字符串数组，ID 服务端生成；到开始时间自动推送参与员工通知）。
+ * 契约缺口：前端携带 description（选填补充说明），文档 9.2 payload 表未列，已记入后端反馈。
+ */
 export function createVote(payload: VotePayload): Promise<Vote> {
-  return withMock(
-    () => post<Vote>(VoteApi.List, payload),
-    () => mockCreateVote(payload),
-  )
+  return post<Vote>(VoteApi.List, payload)
 }
 
-/** 编辑投票：仅未开始允许，开始后不可修改题目/选项/参与人 */
+/** 编辑投票（9.3：仅未开始可编辑，voteType 不可改；选项整体重建） */
 export function updateVote(id: number | string, payload: VotePayload): Promise<Vote> {
-  return withMock(
-    () => post<Vote>(VoteApi.Vote(id) + "/update", payload),
-    () => mockUpdateVote(id, payload),
-  )
+  return post<Vote>(VoteApi.Vote(id) + "/update", payload)
 }
 
-/** 手动关闭投票：关闭后员工不可提交 */
+/** 手动关闭投票（9.4：关闭后员工不可提交；已结束后端 400「投票已结束，无需关闭」） */
 export function closeVote(id: number | string): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(VoteApi.Close(id)),
-    () => mockCloseVote(id),
-  )
+  return post<unknown>(VoteApi.Close(id))
 }
 
-/** 投票统计（进行中/已结束可看；未开始后端拒绝） */
+/** 投票统计（9.5：进行中/已结束可查；未开始后端 400「投票未开始」） */
 export function voteStats(id: number | string): Promise<VoteStats> {
-  return withMock(
-    () => get<VoteStats>(VoteApi.Stats(id)),
-    () => mockVoteStats(id),
-  )
+  return get<VoteStats>(VoteApi.Stats(id))
 }
 
-/** 导出投票统计 Excel：文件由后端生成（前端只触发下载；后端待实现，契约 3.7） */
+/** 导出投票统计 Excel（9.6：双 Sheet 定稿——统计含合计与最高票选项行 + 参与明细；文件名由前端拼接） */
 export function exportVoteStatsXlsx(id: number | string): Promise<Blob> {
   return download(VoteApi.StatsXlsx(id))
 }
