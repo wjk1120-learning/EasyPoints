@@ -1,13 +1,10 @@
 import axios from "axios";
 import type { AxiosError, AxiosRequestConfig } from "axios";
 
-/** 请求前缀：开发环境留空走 vite 代理（/admin、/uploads → localhost:3000），生产由 VITE_API_BASE 指定 */
+/** 请求前缀：开发环境留空走 vite 代理（/admin、/uploads → 后端），生产由 VITE_API_BASE 指定 */
 export const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 export const DEFAULT_TIMEOUT_MS = 10_000;
-
-/** 匿名接口白名单：无需令牌即可发起（当前仅管理端登录） */
-const ANON_URLS = ["/admin/auth/login"];
 
 export type RequestConfig = AxiosRequestConfig;
 
@@ -36,17 +33,17 @@ export function clearAuth(reason: "expired" | "unauthorized"): void {
   window.dispatchEvent(new CustomEvent("auth:logout", { detail: { reason } }));
 }
 
-/** 错误文案提取（导出仅供 tests 断言）：新后端 BaseResult 读 msg，旧 Node 读 message；下载接口失败时 body 是 Blob，尝试解析内嵌 JSON */
+/** 错误文案提取（导出仅供 tests 断言）：统一读 BaseResult.msg；下载接口失败时 body 是 Blob，尝试解析内嵌 JSON */
 export async function extractMsg(err: AxiosError): Promise<string> {
-  let data = err.response?.data as { message?: unknown; msg?: unknown } | Blob | undefined;
+  let data = err.response?.data as { msg?: unknown } | Blob | undefined;
   if (data instanceof Blob) {
     try {
-      data = JSON.parse(await data.text()) as { message?: unknown; msg?: unknown };
+      data = JSON.parse(await data.text()) as { msg?: unknown };
     } catch {
       data = undefined;
     }
   }
-  const raw = data?.msg ?? data?.message;
+  const raw = data?.msg;
   if (typeof raw === "string" && raw.trim()) return raw.trim();
   return err.message || "网络请求失败，请检查服务是否可达";
 }
@@ -60,15 +57,10 @@ request.interceptors.request.use((config) => {
   const token = localStorage.getItem("token") || "";
   if (token && isJwtExpired(token)) {
     clearAuth("expired");
-    return config; // 与旧 authFetch 行为一致：过期后不带令牌继续发，由 401 统一处理
+    return config; // 过期后不带令牌继续发，由 401 统一处理
   }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else if (!ANON_URLS.some((u) => (config.url ?? "").includes(u))) {
-    // 开发环境无 token 时保留 x-admin-id 冒充头（联调后端 mock 鉴权依赖）
-    if (!import.meta.env.PROD) {
-      config.headers["x-admin-id"] = localStorage.getItem("adminId") || "1";
-    }
   }
   return config;
 });
@@ -104,10 +96,9 @@ function pageOf<T>(
 }
 
 /**
- * 双后端兼容解包（导出仅供 tests 断言）：
- * - 新后端 BaseResult{code,msg,data}：code!==1 时抛出 msg（兜住 HTTP 200 + code=0 的实现偏差），
- *   data 为 PageResult{total,rows} 时转 Paged，其余直接返回 data；
- * - 旧 Node：带 meta 的分页响应原样返回，裸 {data} 解包，其余原样。
+ * 新后端统一解包（导出仅供 tests 断言）：BaseResult{code,msg,data}——
+ * code!==1 时抛出 msg（兜住 HTTP 200 + code=0 的实现偏差）；
+ * data 为 PageResult{total,rows} 时转 Paged，其余（对象/数组/null）直接返回。
  */
 export function unwrap<T>(body: unknown, params?: Record<string, unknown>): T {
   if (body && typeof body === "object" && "code" in body && "msg" in body && "data" in body) {
@@ -117,9 +108,7 @@ export function unwrap<T>(body: unknown, params?: Record<string, unknown>): T {
     }
     return (pageOf<T>(r.data, params) ?? r.data) as T;
   }
-  if (body && typeof body === "object" && "meta" in body) return body as T;
-  if (body && typeof body === "object" && "data" in body) return (body as { data: unknown }).data as T;
-  return body as T;
+  throw new Error("响应格式不合法（缺少 BaseResult 包装）");
 }
 
 /** 过滤空参数（undefined/null/""），与旧 buildQuery 行为一致 */

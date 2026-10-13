@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus";
 import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import type { AdminInfo } from "./api/auth/types";
-import { login } from "./api/auth/auth";
+import { badges as fetchBadges, login } from "./api/auth/auth";
 import { ordersPaged } from "./api/order/order";
 import { taskRecordsPaged } from "./api/task/task";
 import { applicationsPaged } from "./api/application/application";
@@ -39,6 +39,9 @@ function formatRole(role?: string) {
   if (value === "department_admin") return "部门管理员";
   return value || "管理员";
 }
+
+/** 内容管理权限（契约附录 A：礼品/任务/规则/投票仅超管与人事可见，department_admin 一律 403） */
+const isContentAdmin = computed(() => ["super_admin", "hr_admin"].includes(String(admin.value?.role || "")));
 
 function parseJwtPayload(value: string): { exp?: number } | null {
   try {
@@ -92,10 +95,21 @@ function handleLogoutEvent(event: Event) {
   }
 }
 
-/** 刷新侧边栏待办徽标：四类待审合计，与审核中心 Tab 计数同口径（契约 11.2）。
- * 后端聚合角标接口（11.2 badges）就绪后可换为单次请求。 */
+/** 刷新侧边栏待办徽标（契约 11.2）：优先走 badges 聚合接口一次拿四类待审合计；
+ * 聚合接口不可用时（旧后端/未部署）回退为四次列表查询拼装，保证演示环境可用。 */
 async function refreshBadges() {
   if (!token.value) return;
+  try {
+    const result = await fetchBadges();
+    badges.pending =
+      Number(result.exchangePending || 0) +
+      Number(result.taskPending || 0) +
+      Number(result.applicationPending || 0) +
+      Number(result.appealPending || 0);
+    return;
+  } catch {
+    /* 聚合接口不可用 → 回退四次查询 */
+  }
   const empty = { data: [], meta: { total: 0, page: 1, pageSize: 1 } };
   const [exchange, task, application, appeal] = await Promise.all([
     ordersPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
@@ -205,19 +219,19 @@ watch(
             <span>审核中心</span>
           </el-badge>
         </el-menu-item>
-        <el-menu-item index="/tasks">
+        <el-menu-item v-if="isContentAdmin" index="/tasks">
           <el-icon><Management /></el-icon>
           <span>任务管理</span>
         </el-menu-item>
-        <el-menu-item index="/votes">
+        <el-menu-item v-if="isContentAdmin" index="/votes">
           <el-icon><Stamp /></el-icon>
           <span>投票管理</span>
         </el-menu-item>
-        <el-menu-item index="/rules">
+        <el-menu-item v-if="isContentAdmin" index="/rules">
           <el-icon><Reading /></el-icon>
           <span>规则配置</span>
         </el-menu-item>
-        <el-menu-item index="/mall">
+        <el-menu-item v-if="isContentAdmin" index="/mall">
           <el-icon><Present /></el-icon>
           <span>商城礼品</span>
         </el-menu-item>

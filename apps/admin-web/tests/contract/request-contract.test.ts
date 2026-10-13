@@ -82,8 +82,8 @@ describe("契约：订单分页（文档 4.10/6.3 PageResult 示例形态）", (
   });
 });
 
-describe("契约：礼品列表（文档 4.1，2026-10-13 定稿 PageResult 包装；裸数组分支保留为防御兼容）", () => {
-  it("主契约：PageResult 包装（4.1 响应示例）→ 转 Paged", async () => {
+describe("契约：礼品列表（文档 4.1，恒 PageResult 包装）", () => {
+  it("PageResult 包装（4.1 响应示例）→ 转 Paged", async () => {
     setResponse({
       code: 1,
       msg: "成功",
@@ -97,17 +97,6 @@ describe("契约：礼品列表（文档 4.1，2026-10-13 定稿 PageResult 包�
     const res = await get<{ data: unknown[]; meta: { total: number } }>("/admin/mall/gifts");
     expect(res.meta.total).toBe(2);
     expect(res.data[0]).toMatchObject({ id: 1, name: "京东购物卡 100 元", stock: 20 });
-  });
-
-  it("防御兼容：裸数组（后端实现偏差时）→ 原样返回", async () => {
-    setResponse({
-      code: 1,
-      msg: "成功",
-      data: [{ id: 1, name: "京东购物卡 100 元", pointsCost: 1000, stock: 20, status: "active" }],
-    });
-    const res = await get<{ id: number; name: string }[]>("/admin/mall/gifts");
-    expect(Array.isArray(res)).toBe(true);
-    expect(res[0]).toMatchObject({ id: 1, name: "京东购物卡 100 元" });
   });
 });
 
@@ -129,6 +118,7 @@ describe("契约：鉴权与错误链路", () => {
   });
 
   it("请求头携带 Bearer token", async () => {
+    setResponse({ code: 1, msg: "成功", data: { total: 0, rows: [] } });
     await get("/admin/orders");
     expect((httpCalls[0].headers?.Authorization as string) || "").toBe("Bearer test-token");
   });

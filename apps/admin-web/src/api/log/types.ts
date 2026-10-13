@@ -19,7 +19,18 @@ export interface OperationLog {
 }
 
 /** 日志查询参数（时间/类型筛选待后端扩展，见阶段 6） */
+/** 日志查询参数（契约 11.4：type 六类、时间开区间、action 精确、actorId） */
 export interface LogQuery {
   page?: number
   pageSize?: number
+  /** 六类分类：points/review/appeal/gift_task/vote/system */
+  type?: string
+  /** 开始时间（yyyy-MM-dd HH:mm:ss） */
+  startTime?: string
+  /** 结束时间（yyyy-MM-dd HH:mm:ss） */
+  endTime?: string
+  /** 动作精确匹配（域.动作，如 order.status_changed） */
+  action?: string
+  /** 操作者 ID */
+  actorId?: string
 }

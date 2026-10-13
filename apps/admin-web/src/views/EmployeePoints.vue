@@ -116,14 +116,13 @@ function resetFilters() {
   loadEmployees();
 }
 
-/** 企微通讯录一键同步：后端拉取部门/成员落库（新员工入库、离职禁用），完成后刷新列表 */
+/** 企微通讯录一键同步（10.8）：后端拉取部门/成员落库（新员工入库、离职自动停用），完成后刷新列表 */
 async function handleSync() {
   if (!syncLock.acquire()) return;
   syncing.value = true;
   try {
     const result = await syncContacts();
-    const count = Array.isArray(result) ? result.length : 0;
-    ElMessage.success(`同步完成，本次同步 ${count} 名员工`);
+    ElMessage.success(`同步完成：新增 ${result.created} 人、更新 ${result.updated} 人、停用 ${result.disabled} 人（企微名单共 ${result.total} 人）`);
     await loadEmployees();
   } catch (error) {
     ElMessage.error(apiErrorMsg(error, "同步失败，请稍后重试"));

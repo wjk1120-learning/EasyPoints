@@ -12,13 +12,10 @@ export const MallApi = {
   Cover: (id: number | string) => `/admin/mall/gifts/${id}/cover`,
 } as const
 
-/**
- * 全量礼品列表（下架礼品后台可见可管理，用户端隐藏）。
- * 文档定稿：响应恒为 PageResult{total,rows} 包装；防御后端实现偏差（裸数组）双兼容。
- */
+/** 全量礼品列表（4.1：恒 PageResult 包装；下架礼品后台可见可管理，用户端隐藏） */
 export async function mallGifts(): Promise<Gift[]> {
-  const res = await get<Paged<Gift> | Gift[]>(MallApi.Gifts)
-  return Array.isArray(res) ? res : res.data
+  const res = await get<Paged<Gift>>(MallApi.Gifts)
+  return res.data
 }
 
 export function createGift(payload: GiftPayload): Promise<Gift> {

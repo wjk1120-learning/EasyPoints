@@ -33,10 +33,4 @@ describe("契约：员工列表（文档 11.1）", () => {
     expect(httpCalls[0].params).toEqual({ keyword: "张三", departmentId: 1, status: "active", page: 1, pageSize: 20 });
   });
 
-  it("防御兼容：裸数组（后端实现偏差时）原样返回", async () => {
-    setResponse(baseResult([...EMPLOYEES_FIXTURE]));
-    const list = await employees();
-    expect(Array.isArray(list)).toBe(true);
-    expect(list).toHaveLength(EMPLOYEES_FIXTURE.length);
-  });
 });

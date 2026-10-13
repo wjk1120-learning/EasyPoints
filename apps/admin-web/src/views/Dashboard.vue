@@ -13,6 +13,7 @@ import { orders as fetchOrders } from "../api/order/order";
 import { applicationsPaged } from "../api/application/application";
 import { taskRecordsPaged, tasksPaged } from "../api/task/task";
 import { getRule } from "../api/rule/rule";
+import { dashboardSummary } from "../api/auth/auth";
 import type { Application } from "../api/application/types";
 
 const router = useRouter();
@@ -47,15 +48,40 @@ function isPendingStatus(status: string) {
 async function loadDashboard() {
   ruleLoading.value = true;
   try {
-    const [employees, appeals, orders, gifts, applicationsResult, tasksResult, taskRecordsResult, rule] = await Promise.all([
+    // 11.3 聚合汇总优先（一次请求）；不可用（旧后端/未部署）时回退多请求拼装
+    const [summary, rule] = await Promise.all([
+      dashboardSummary().catch(() => null),
+      getRule().catch(() => null)
+    ]);
+
+    if (summary) {
+      employeesCount.value = Number(summary.employeeCount || 0);
+      giftsCount.value = Number(summary.giftCount || 0);
+      tasksCount.value = Number(summary.taskCount || 0);
+      pendingOrdersCount.value = Number(summary.pending?.orders || 0);
+      pendingTasksCount.value = Number(summary.pending?.taskClaims || 0);
+      pendingApplicationsCount.value = Number(summary.pending?.applications || 0);
+      pendingAppealsCount.value = Number(summary.pending?.appeals || 0);
+    } else {
+      await loadDashboardLegacy();
+    }
+    ruleHtml.value = rule?.content || "";
+  } finally {
+    ruleLoading.value = false;
+  }
+}
+
+/** 回退拼装（旧后端无 11.3 聚合接口时）：多请求 + 前端计数 */
+async function loadDashboardLegacy() {
+  try {
+    const [employees, appeals, orders, gifts, applicationsResult, tasksResult, taskRecordsResult] = await Promise.all([
       fetchEmployees(),
       fetchAppeals(),
       fetchOrders(),
       mallGifts(),
       applicationsPaged({ page: 1, pageSize: 200 }).catch(() => ({ data: [] as Application[], meta: { total: 0, page: 1, pageSize: 200 } })),
       tasksPaged({ page: 1, pageSize: 1 }).catch(() => ({ meta: { total: 0 } })),
-      taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } })),
-      getRule().catch(() => null)
+      taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } }))
     ]);
 
     employeesCount.value = employees.length;
@@ -65,11 +91,8 @@ async function loadDashboard() {
     pendingApplicationsCount.value = applicationsResult.data.filter((item) => item.status === "pending_review").length;
     tasksCount.value = tasksResult.meta.total;
     pendingTasksCount.value = taskRecordsResult.meta.total;
-    ruleHtml.value = rule?.content || "";
   } catch (error) {
     console.error("加载工作台数据失败", error);
-  } finally {
-    ruleLoading.value = false;
   }
 }
 

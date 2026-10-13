@@ -3,64 +3,60 @@
  * 操作日志（PRD 5.6）：全部操作留痕查询，含「投票操作日志」类型（PRD 5.9.3）。
  * 支持五类日志筛选 + 时间范围筛选（PRD 5.6）。
  * 日志禁止删除、禁止修改，永久留存，本页只读。
- * 说明：后端日志接口暂无类型/时间筛选参数，本页拉取近期日志后客户端筛选+分页；
+ * 说明：类型/时间筛选走服务端参数（契约 11.4 type/startTime/endTime），分页由后端保证；
  *      投票操作日志由后端 vote.* 动作提供（附录 D），随操作日志统一查询展示。
  */
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import { logsPaged } from "../api/log/log";
 import type { OperationLog } from "../api/log/types";
 import { formatTimeText } from "../utils/format";
 import { LOG_CATEGORY_OPTIONS, LOG_CATEGORY_TEXT, logCategory, logRemark, logTarget } from "../utils/log-category";
+import { apiErrorMsg } from "../utils/error";
 
 const rows = ref<OperationLog[]>([]);
 const loading = ref(false);
-/** 日志类型筛选：空=全部 */
+const total = ref(0);
+/** 日志类型筛选（11.4 六类：points/review/appeal/gift_task/vote/system）：空=全部 */
 const logType = ref("");
 /** 时间范围筛选（PRD 5.6 按时间筛选） */
 const dateRange = ref<[string, string] | "">("");
 const pageSize = ref(50);
 const page = ref(1);
 
-/** 推导操作对象/备注详情，按时间倒序（投票日志由后端 vote.* 动作提供，附录 D） */
-const mergedRows = computed(() =>
-  [...rows.value]
-    .map((row) => ({
-      ...row,
-      targetLabel: row.targetLabel ?? logTarget(row.action, (row.payload || {}) as Record<string, unknown>),
-      remark: row.remark ?? logRemark(row.action, (row.payload || {}) as Record<string, unknown>)
-    }))
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+/** 展示富化：targetLabel/remark 缺失时按 action+payload 推导（服务端已提供则直用） */
+const displayRows = computed(() =>
+  rows.value.map((row) => ({
+    ...row,
+    targetLabel: row.targetLabel ?? logTarget(row.action, (row.payload || {}) as Record<string, unknown>),
+    remark: row.remark ?? logRemark(row.action, (row.payload || {}) as Record<string, unknown>)
+  }))
 );
-
-/** 类型 + 时间范围筛选 */
-const filteredRows = computed(() =>
-  mergedRows.value.filter((row) => {
-    if (logType.value && logCategory(row.action) !== logType.value) return false;
-    if (dateRange.value) {
-      const [start, end] = dateRange.value;
-      const time = String(row.createdAt || "");
-      if (start && time.slice(0, 10) < start) return false;
-      if (end && time.slice(0, 10) > end) return false;
-    }
-    return true;
-  })
-);
-
-/** 客户端分页 */
-const pagedRows = computed(() => {
-  const start = (page.value - 1) * pageSize.value;
-  return filteredRows.value.slice(start, start + pageSize.value);
-});
 
 watch([logType, dateRange, pageSize], () => {
   page.value = 1;
+  load();
 });
+
+function dateBoundary(value: string, endOfDay = false): string {
+  return endOfDay ? `${value} 23:59:59` : `${value} 00:00:00`;
+}
 
 async function load() {
   loading.value = true;
   try {
-    const result = await logsPaged({ page: 1, pageSize: 500 });
+    const [start, end] = dateRange.value || ["", ""];
+    const result = await logsPaged({
+      page: page.value,
+      pageSize: pageSize.value,
+      type: logType.value || undefined,
+      startTime: start ? dateBoundary(start) : undefined,
+      endTime: end ? dateBoundary(end, true) : undefined
+    });
     rows.value = result.data;
+    total.value = result.meta.total;
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "加载操作日志失败"));
   } finally {
     loading.value = false;
   }
@@ -99,7 +95,7 @@ onMounted(load);
         </el-select>
       </div>
 
-      <el-table :data="pagedRows" border v-loading="loading">
+      <el-table :data="displayRows" border v-loading="loading">
         <el-table-column label="类型" width="130">
           <template #default="{ row }">
             <el-tag size="small" effect="plain">{{ LOG_CATEGORY_TEXT[logCategory(row.action)] }}</el-tag>
@@ -122,7 +118,7 @@ onMounted(load);
         <el-pagination
           background
           layout="total, prev, pager, next, jumper"
-          :total="filteredRows.length"
+          :total="total"
           :page-size="pageSize"
           :current-page="page"
           @current-change="(p: number) => { page = p; }"

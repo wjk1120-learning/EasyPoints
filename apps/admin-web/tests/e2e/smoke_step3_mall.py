@@ -55,7 +55,15 @@ with sync_playwright() as p:
         else:
             route.continue_()
 
+    # 兜底：未显式拦截的 /admin 请求返回空 PageResult（终态 BaseResult 口径；先注册=低优先级）
+    page.route("**/admin/**", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"code": 1, "msg": "成功", "data": {"total": 0, "rows": []}}, ensure_ascii=False)))
     page.route("**/admin/mall/**", handle_api)
+    # 登录接口 fixture（终态 unwrap 只认 BaseResult；接新后端后可移除）
+    page.route("**/admin/auth/login", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"code": 1, "msg": "成功", "data": {"token": "fake-token", "admin": {"id": 1, "username": "admin", "name": "系统管理员", "role": "super_admin", "departmentIds": []}}}, ensure_ascii=False)))
 
     page.goto(BASE)
     page.wait_for_load_state("networkidle")

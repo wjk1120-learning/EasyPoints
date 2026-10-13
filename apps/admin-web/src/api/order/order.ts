@@ -11,13 +11,10 @@ export const OrderApi = {
 
 export type { Order, OrderQuery, OrderStatusPayload } from "./types"
 
-/**
- * 全量订单（量级小的前端过滤场景：礼品维度兑换记录抽屉、工作台计数）。
- * 新后端恒为 PageResult 包装（4.10），防御后端实现偏差（裸数组）双兼容。
- */
+/** 全量订单（4.10：恒 PageResult 包装；量级小的前端过滤场景：兑换记录抽屉、工作台回退计数） */
 export async function orders(): Promise<Order[]> {
-  const res = await get<Paged<Order> | Order[]>(OrderApi.List)
-  return Array.isArray(res) ? res : res.data
+  const res = await get<Paged<Order>>(OrderApi.List)
+  return res.data
 }
 
 /** 分页订单列表（4.10：待审核置顶、同状态创建倒序由后端保证；支持状态/员工/创建时间筛选） */

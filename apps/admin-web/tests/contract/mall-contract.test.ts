@@ -24,12 +24,6 @@ describe("契约：礼品列表（文档 4.1）", () => {
     expect(list.some((g) => g.status === "inactive")).toBe(true);
   });
 
-  it("防御兼容：裸数组（后端实现偏差时）原样返回", async () => {
-    setResponse(baseResult([...GIFTS_FIXTURE]));
-    const list = await mallGifts();
-    expect(Array.isArray(list)).toBe(true);
-    expect(list).toHaveLength(2);
-  });
 });
 
 describe("契约：新增礼品（文档 4.2）", () => {

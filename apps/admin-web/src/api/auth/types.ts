@@ -21,3 +21,28 @@ export interface LoginResult {
   token: string
   admin: AdminInfo
 }
+
+/** 待办角标聚合（契约 11.2：四类待审合计，与审核中心各 Tab 待审数同口径；辖内裁剪） */
+export interface BadgesResult {
+  /** 礼品兑换待审核数 */
+  exchangePending: number
+  /** 任务成果待审核数 */
+  taskPending: number
+  /** 积分申请待审核数 */
+  applicationPending: number
+  /** 申诉待处理数 */
+  appealPending: number
+}
+
+/** 工作台汇总（契约 11.3：taskCount=published 任务数；辖内裁剪） */
+export interface DashboardSummary {
+  employeeCount: number
+  giftCount: number
+  taskCount: number
+  pending: {
+    orders: number
+    taskClaims: number
+    applications: number
+    appeals: number
+  }
+}
