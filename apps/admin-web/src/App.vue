@@ -9,6 +9,7 @@ import { ordersPaged } from "./api/order/order";
 import { taskRecordsPaged } from "./api/task/task";
 import { applicationsPaged } from "./api/application/application";
 import { appealsPaged } from "./api/appeal/appeal";
+import { apiErrorMsg } from "./utils/error";
 
 const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
@@ -67,7 +68,7 @@ async function submitLogin() {
     admin.value = result.admin;
     ElMessage.success("登录成功");
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "登录失败");
+    ElMessage.error(apiErrorMsg(error, "登录失败"));
   } finally {
     loading.value = false;
   }

@@ -10,6 +10,7 @@ import type { PointRecord } from "../api/report/types";
 import { syncContacts } from "../api/wecom/wecom";
 import { createSubmitLock } from "../utils/submit-lock";
 import { formatTimeText } from "../utils/format";
+import { apiErrorMsg } from "../utils/error";
 
 const employees = ref<Employee[]>([]);
 const loading = ref(false);
@@ -125,7 +126,7 @@ async function handleSync() {
     ElMessage.success(`同步完成，本次同步 ${count} 名员工`);
     await loadEmployees();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "同步失败，请稍后重试");
+    ElMessage.error(apiErrorMsg(error, "同步失败，请稍后重试"));
   } finally {
     syncing.value = false;
     syncLock.release();
@@ -138,7 +139,7 @@ async function loadEmployees() {
     employees.value = await fetchEmployees();
     if (employees.value.length && selectedEmployeeId.value == null) selectedEmployeeId.value = employees.value[0].id;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载员工列表失败");
+    ElMessage.error(apiErrorMsg(error, "加载员工列表失败"));
   } finally {
     loading.value = false;
   }
@@ -179,7 +180,7 @@ async function submitAdjust() {
     await loadEmployees();
     if (drawer.visible && drawer.employeeId === adjustDialog.employeeId) await loadRecords({ reset: true });
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "提交失败");
+    ElMessage.error(apiErrorMsg(error, "提交失败"));
   } finally {
     adjustDialog.submitting = false;
   }

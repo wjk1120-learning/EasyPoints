@@ -5,6 +5,7 @@ import { CirclePlus, RemoveFilled } from "@element-plus/icons-vue";
 import { employees as fetchEmployees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
 import { adjustment, monthlyBatch } from "../api/points/points";
+import { apiErrorMsg } from "../utils/error";
 
 const employees = ref<Employee[]>([]);
 const single = reactive({
@@ -125,7 +126,7 @@ onMounted(async () => {
   try {
     employees.value = await fetchEmployees();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载员工列表失败");
+    ElMessage.error(apiErrorMsg(error, "加载员工列表失败"));
     return;
   }
   if (employees.value.length && single.employeeId == null) {
@@ -145,7 +146,7 @@ async function submitSingle() {
     ElMessage.success("单笔积分已提交，备注已写入流水");
     single.remark = "";
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "提交失败");
+    ElMessage.error(apiErrorMsg(error, "提交失败"));
   }
 }
 
@@ -191,7 +192,7 @@ async function submitBatch() {
     scopeDepartmentIds.value = [];
     prevDeptIds = [];
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "提交失败");
+    ElMessage.error(apiErrorMsg(error, "提交失败"));
   }
 }
 </script>

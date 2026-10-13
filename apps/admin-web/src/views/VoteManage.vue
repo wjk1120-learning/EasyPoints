@@ -25,6 +25,7 @@ import { deriveVoteStatus, validateVotePayload } from "../utils/vote";
 import { fileTimestamp, formatTimeText } from "../utils/format";
 import { saveBlob } from "../utils/request";
 import { createSubmitLock } from "../utils/submit-lock";
+import { apiErrorMsg } from "../utils/error";
 
 const rows = ref<Vote[]>([]);
 const loading = ref(false);
@@ -42,7 +43,7 @@ async function load() {
     const result = await votesPaged({ page: 1, pageSize: 200, title: filter.title, status: filter.status });
     rows.value = result.data;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载投票列表失败");
+    ElMessage.error(apiErrorMsg(error, "加载投票列表失败"));
   } finally {
     loading.value = false;
   }
@@ -204,7 +205,7 @@ async function save() {
     dialog.visible = false;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "保存失败");
+    ElMessage.error(apiErrorMsg(error, "保存失败"));
   } finally {
     dialog.submitting = false;
     saveLock.release();
@@ -237,7 +238,7 @@ async function close(row: Vote) {
     ElMessage.success("投票已关闭");
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "关闭失败");
+    ElMessage.error(apiErrorMsg(error, "关闭失败"));
   } finally {
     actingId.value = null;
     actionLock.release();
@@ -260,7 +261,7 @@ async function openStats(row: Vote) {
   try {
     statsDrawer.stats = await voteStats(row.id);
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载统计失败");
+    ElMessage.error(apiErrorMsg(error, "加载统计失败"));
     statsDrawer.visible = false;
   } finally {
     statsDrawer.loading = false;

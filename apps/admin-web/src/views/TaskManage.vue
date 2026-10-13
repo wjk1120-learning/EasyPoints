@@ -18,6 +18,7 @@ import type { EmployeeTask, Task, TaskPayload } from "../api/task/task";
 import { TASK_RECORD_STATUS_MAP, TASK_STATUS_MAP, statusMeta } from "../utils/status";
 import { formatTimeText } from "../utils/format";
 import { createSubmitLock } from "../utils/submit-lock";
+import { apiErrorMsg } from "../utils/error";
 
 const rows = ref<Task[]>([]);
 const loading = ref(false);
@@ -49,7 +50,7 @@ async function load() {
     const result = await tasksPaged({ page: 1, pageSize: 200 });
     rows.value = result.data;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载任务失败");
+    ElMessage.error(apiErrorMsg(error, "加载任务失败"));
   } finally {
     loading.value = false;
   }
@@ -98,7 +99,7 @@ async function save() {
     dialog.visible = false;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "保存失败");
+    ElMessage.error(apiErrorMsg(error, "保存失败"));
   } finally {
     saving.value = false;
   }
@@ -125,7 +126,7 @@ async function toggleStatus(row: Task) {
     ElMessage.success(publishing ? "已上架" : "已下架");
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "操作失败");
+    ElMessage.error(apiErrorMsg(error, "操作失败"));
   } finally {
     actingId.value = null;
     actLock.release();
@@ -149,7 +150,7 @@ async function remove(row: Task) {
     ElMessage.success("任务已删除");
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "删除失败");
+    ElMessage.error(apiErrorMsg(error, "删除失败"));
   } finally {
     actingId.value = null;
     actLock.release();
@@ -165,7 +166,7 @@ async function openProgress(row: Task) {
     const result = await taskRecordsPaged({ page: 1, pageSize: 100, taskId: row.id });
     progressDrawer.rows = result.data;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载进度失败");
+    ElMessage.error(apiErrorMsg(error, "加载进度失败"));
   } finally {
     progressDrawer.loading = false;
   }

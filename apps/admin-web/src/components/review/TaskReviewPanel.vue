@@ -16,6 +16,7 @@ import { TASK_RECORD_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
 import { pendingFirst } from "../../utils/sort";
 import { createSubmitLock } from "../../utils/submit-lock";
+import { apiErrorMsg } from "../../utils/error";
 
 const rows = ref<EmployeeTask[]>([]);
 const loading = ref(false);
@@ -56,7 +57,7 @@ async function load() {
     );
     meta.total = result.meta.total;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载任务成果失败");
+    ElMessage.error(apiErrorMsg(error, "加载任务成果失败"));
   } finally {
     loading.value = false;
   }
@@ -104,7 +105,7 @@ async function setStatus(row: EmployeeTask, status: "approved" | "rejected", rem
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "审核操作失败");
+    ElMessage.error(apiErrorMsg(error, "审核操作失败"));
   } finally {
     actingId.value = null;
     actLock.release();

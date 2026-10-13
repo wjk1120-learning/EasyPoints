@@ -7,18 +7,8 @@ import type {
   TaskRecordReviewPayload,
 } from "./types"
 import { download, get, post, put } from "../../utils/request"
-import { withMock } from "../../mock"
-import {
-  mockCreateTask,
-  mockDeleteTask,
-  mockReviewTaskRecord,
-  mockSetTaskStatus,
-  mockTaskRecordsPaged,
-  mockTasksPaged,
-  mockUpdateTask,
-} from "../../mock/task"
 
-/** 任务管理 REST 路径（后端待开发，契约见 docs/admin-web-api-requirements.md 3.5） */
+/** 任务管理 REST 路径（契约见 docs/Easy-Points-API.md 5.5~5.9） */
 export const TaskApi = {
   List: "/admin/tasks",
   Task: (id: number | string) => `/admin/tasks/${id}`,
@@ -26,79 +16,56 @@ export const TaskApi = {
   Unpublish: (id: number | string) => `/admin/tasks/${id}/unpublish`,
 } as const
 
-/** 员工任务记录 REST 路径 */
+/** 员工任务记录 REST 路径（契约见 docs/Easy-Points-API.md 5.10/5.11/11.8） */
 export const TaskRecordApi = {
   List: "/admin/task-records",
   Review: (id: number | string) => `/admin/task-records/${id}/review`,
-  /** 任务审核记录表导出（后端待实现，契约见 docs/admin-web-api-requirements.md 3.9） */
   RecordsXlsx: "/admin/task-records.xlsx",
 } as const
 
 export type { Task, TaskPayload, EmployeeTask, TaskRecordQuery, TaskRecordReviewPayload } from "./types"
 
-/** 分页任务列表（当前 mock 先行，后端就绪后自动切换真实接口） */
-export function tasksPaged(params: { page?: number; pageSize?: number } = {}): Promise<Paged<Task>> {
-  return withMock(
-    () => get<Paged<Task>>(TaskApi.List, { ...params }),
-    () => mockTasksPaged(params),
-  )
+/** 分页任务列表（5.5：创建倒序；status 传 published/unpublished，缺省过滤已删除） */
+export function tasksPaged(params: { page?: number; pageSize?: number; status?: string } = {}): Promise<Paged<Task>> {
+  return get<Paged<Task>>(TaskApi.List, { ...params })
 }
 
-/** 新增任务：默认已下架，需手动上架 */
+/** 新增任务（5.6：默认已下架，需手动上架） */
 export function createTask(payload: TaskPayload): Promise<Task> {
-  return withMock(
-    () => post<Task>(TaskApi.List, payload),
-    () => mockCreateTask(payload),
-  )
+  return post<Task>(TaskApi.List, payload)
 }
 
+/** 编辑任务（5.7） */
 export function updateTask(id: number | string, payload: TaskPayload): Promise<Task> {
-  return withMock(
-    () => put<Task>(TaskApi.Task(id), payload),
-    () => mockUpdateTask(id, payload),
-  )
+  return put<Task>(TaskApi.Task(id), payload)
 }
 
-/** 上架/下架：下架对用户端隐藏，进行中记录保留 */
-export function publishTask(id: number | string): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(TaskApi.Publish(id)),
-    () => mockSetTaskStatus(id, "published"),
-  )
+/** 上架（5.8）：员工端任务大厅可见 */
+export function publishTask(id: number | string): Promise<Task> {
+  return post<Task>(TaskApi.Publish(id))
 }
 
-export function unpublishTask(id: number | string): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(TaskApi.Unpublish(id)),
-    () => mockSetTaskStatus(id, "unpublished"),
-  )
+/** 下架（5.8）：用户端隐藏，进行中记录保留 */
+export function unpublishTask(id: number | string): Promise<Task> {
+  return post<Task>(TaskApi.Unpublish(id))
 }
 
-/** 删除任务（员工领取记录保留） */
-export function deleteTask(id: number | string): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(`${TaskApi.Task(id)}/delete`),
-    () => mockDeleteTask(id),
-  )
+/** 删除任务（5.9：软删除，员工领取记录保留；页面二次确认） */
+export function deleteTask(id: number | string): Promise<Task> {
+  return post<Task>(`${TaskApi.Task(id)}/delete`)
 }
 
-/** 分页员工任务记录（审核中心任务 Tab / 任务管理进度抽屉共用） */
+/** 分页员工任务记录（5.10：待审核置顶；审核中心任务 Tab / 任务管理进度抽屉共用） */
 export function taskRecordsPaged(params: TaskRecordQuery): Promise<Paged<EmployeeTask>> {
-  return withMock(
-    () => get<Paged<EmployeeTask>>(TaskRecordApi.List, { ...params }),
-    () => mockTaskRecordsPaged(params),
-  )
+  return get<Paged<EmployeeTask>>(TaskRecordApi.List, { ...params })
 }
 
-/** 审核任务成果：通过→奖励积分双积分到账（后端职责）；驳回 remark 必填 */
+/** 审核任务成果（5.11：通过→奖励积分双积分入账；驳回 remark 必填，驳回后员工可申诉） */
 export function reviewTaskRecord(id: number | string, payload: TaskRecordReviewPayload): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(TaskRecordApi.Review(id), payload),
-    () => mockReviewTaskRecord(id, payload),
-  )
+  return post<unknown>(TaskRecordApi.Review(id), payload)
 }
 
-/** 导出任务审核记录表 Excel：文件由后端生成（前端只触发下载；后端待实现，契约 3.9） */
+/** 导出任务审核记录表 Excel（11.8：领取人/状态/任务名称/任务成果；文件名由前端拼接） */
 export function exportTaskRecordsXlsx(params: TaskRecordQuery = {}): Promise<Blob> {
   return download(TaskRecordApi.RecordsXlsx, { ...params })
 }

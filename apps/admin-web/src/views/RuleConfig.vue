@@ -11,6 +11,7 @@ import { getRule, saveRule } from "../api/rule/rule";
 import type { RuleContent } from "../api/rule/rule";
 import { formatTimeText } from "../utils/format";
 import { createSubmitLock } from "../utils/submit-lock";
+import { apiErrorMsg } from "../utils/error";
 
 const editorRef = shallowRef<IDomEditor>();
 const htmlValue = ref("");
@@ -39,7 +40,7 @@ async function load() {
     htmlValue.value = rule.content;
     lastSaved.value = rule;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载规则失败");
+    ElMessage.error(apiErrorMsg(error, "加载规则失败"));
   } finally {
     loading.value = false;
   }
@@ -58,7 +59,7 @@ async function save() {
     lastSaved.value = result;
     ElMessage.success("规则已保存并即时生效，用户端规则中心实时刷新");
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "保存失败");
+    ElMessage.error(apiErrorMsg(error, "保存失败"));
   } finally {
     saving.value = false;
     saveLock.release();

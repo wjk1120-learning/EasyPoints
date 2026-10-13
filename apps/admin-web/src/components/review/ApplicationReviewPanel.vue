@@ -104,7 +104,7 @@ async function setStatus(row: Application, status: "approved" | "rejected", rema
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "审核操作失败");
+    ElMessage.error(apiErrorMsg(error, "审核操作失败"));
   } finally {
     actingId.value = null;
     actLock.release();

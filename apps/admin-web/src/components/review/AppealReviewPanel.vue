@@ -14,6 +14,7 @@ import { formatTimeText } from "../../utils/format";
 import { pendingFirst } from "../../utils/sort";
 import WorkOrderDetail from "../WorkOrderDetail.vue";
 import type { WorkOrderField } from "../WorkOrderDetail.vue";
+import { apiErrorMsg } from "../../utils/error";
 
 const rows = ref<Appeal[]>([]);
 const loading = ref(false);
@@ -123,7 +124,7 @@ async function submitProcess() {
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "申诉处理失败");
+    ElMessage.error(apiErrorMsg(error, "申诉处理失败"));
   } finally {
     processing.value = false;
   }

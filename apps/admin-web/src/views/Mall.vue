@@ -17,6 +17,7 @@ import { orders as fetchOrders } from "../api/order/order";
 import type { Order } from "../api/order/types";
 import { ORDER_STATUS_MAP, statusMeta } from "../utils/status";
 import { formatTimeText } from "../utils/format";
+import { apiErrorMsg } from "../utils/error";
 
 const rows = ref<Gift[]>([]);
 const loading = ref(false);
@@ -74,7 +75,7 @@ async function load() {
   try {
     rows.value = await mallGifts();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载礼品列表失败");
+    ElMessage.error(apiErrorMsg(error, "加载礼品列表失败"));
   } finally {
     loading.value = false;
   }
@@ -112,7 +113,7 @@ async function adjustStock(row: Gift) {
     ElMessage.success(`已调整库存：${row.stock} → ${updated.stock ?? row.stock + delta}`);
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "调整库存失败");
+    ElMessage.error(apiErrorMsg(error, "调整库存失败"));
   }
 }
 
@@ -129,6 +130,59 @@ async function openRecords(row: Gift) {
   }
 }
 
+async function publish(row: Gift) {
+  try {
+    await ElMessageBox.confirm(`确认上架「${row.name}」？`, "确认操作", { type: "warning" });
+  } catch {
+    return;
+  }
+  try {
+    await publishGift(row.id);
+    ElMessage.success("已上架");
+    await load();
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "上架失败"));
+  }
+}
+
+async function unpublish(row: Gift) {
+  try {
+    await ElMessageBox.confirm(`确认下架「${row.name}」？`, "确认操作", { type: "warning" });
+  } catch {
+    return;
+  }
+  try {
+    await unpublishGift(row.id);
+    ElMessage.success("已下架");
+    await load();
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "下架失败"));
+  }
+}
+
+type UploadHookError = Parameters<UploadRequestOptions["onError"]>[0];
+
+function toUploadError(message: string): UploadHookError {
+  return new Error(message) as unknown as UploadHookError;
+}
+
+async function uploadCover(options: UploadRequestOptions) {
+  if (!editId.value) {
+    options.onError?.(toUploadError("请先保存礼品信息，再上传封面"));
+    return;
+  }
+  try {
+    const updated = await uploadGiftCover(editId.value, options.file);
+    coverImageUrl.value = updated.coverImageUrl || "";
+    options.onSuccess?.(updated);
+    ElMessage.success("封面已更新");
+    await load();
+  } catch (error) {
+    options.onError?.(toUploadError(apiErrorMsg(error, "上传失败")));
+    ElMessage.error(apiErrorMsg(error, "上传失败"));
+  }
+}
+
 async function save() {
   const name = String(form.name || "").trim();
   if (!name) return ElMessage.error("请填写礼品名称");
@@ -141,7 +195,7 @@ async function save() {
   saving.value = true;
   try {
     if (editId.value) {
-      // 4.3 编辑不覆盖库存：stock 传打开弹窗时的原值（输入框已禁用不可改），新后端忽略、旧后端覆盖为同值
+      // 4.3 编辑不覆盖库存：stock 传打开弹窗时的原值（输入框已禁用不可改），新后端忽略、旧后端覆盖为相同值
       await updateGift(editId.value, {
         name,
         pointsCost: form.pointsCost,
@@ -163,53 +217,10 @@ async function save() {
     dialogVisible.value = false;
     resetForm();
     await load();
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "保存失败"));
   } finally {
     saving.value = false;
-  }
-}
-
-async function publish(row: Gift) {
-  try {
-    await ElMessageBox.confirm(`确认上架「${row.name}」？`, "确认操作", { type: "warning" });
-  } catch {
-    return;
-  }
-  await publishGift(row.id);
-  ElMessage.success("已上架");
-  await load();
-}
-
-async function unpublish(row: Gift) {
-  try {
-    await ElMessageBox.confirm(`确认下架「${row.name}」？`, "确认操作", { type: "warning" });
-  } catch {
-    return;
-  }
-  await unpublishGift(row.id);
-  ElMessage.success("已下架");
-  await load();
-}
-
-type UploadHookError = Parameters<UploadRequestOptions["onError"]>[0];
-
-function toUploadError(message: string): UploadHookError {
-  return new Error(message) as unknown as UploadHookError;
-}
-
-async function uploadCover(options: UploadRequestOptions) {
-  if (!editId.value) {
-    options.onError?.(toUploadError("请先保存礼品信息，再上传封面"));
-    return;
-  }
-  try {
-    const updated = await uploadGiftCover(editId.value, options.file);
-    coverImageUrl.value = updated.coverImageUrl || "";
-    options.onSuccess?.(updated);
-    ElMessage.success("封面已更新");
-    await load();
-  } catch (error) {
-    options.onError?.(toUploadError((error as Error)?.message || "上传失败"));
-    ElMessage.error((error as Error)?.message || "上传失败");
   }
 }
 
