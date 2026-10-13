@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * 数据导出管理（PRD 5.7）：五类数据导出，文件一律由后端生成 Excel，前端只触发下载。
- * 导出列口径（2026-10-10 用户定稿，契约见接口清单 3.9）：
- * - 全员积分数据表：每人一行（姓名 + 可用积分 + 累计积分），契约接口待后端实现
- * - 个人积分明细：流水明细含备注（PRD 核心规则），员工/月份必选，走已上线接口
+ * 导出列口径（2026-10-10 定稿，契约见 docs/Easy-Points-API.md 3.5/9.6/11.5~11.8）：
+ * - 全员积分数据表：每人一行（姓名 + 可用积分 + 累计积分），累计倒序
+ * - 个人积分明细：流水明细含备注（PRD 核心规则），员工/月份必选
  * - 兑换记录表：姓名 + 兑换商品 + 兑换时间；任务审核记录表：领取人/状态/任务名称/任务成果
- * - 投票统计数据表：投票主题 + 选项票数 + 最高票选项 + 参与人员明细（PRD 3.4-7；最高票选项为 2026-10-10 用户补充）
+ * - 投票统计数据表：投票主题 + 选项票数 + 合计 + 最高票选项 + 参与人员明细（双 Sheet）
  */
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
@@ -33,10 +33,10 @@ const voteExport = reactive({ voteId: "" as number | "", exporting: false });
 
 const employeeOptions = computed(() => employees.value.map((item) => ({ id: item.id, name: item.name })));
 
-/** 后端导出接口未上线时的友好提示（契约见接口清单 3.9） */
+/** 导出失败提示：接口未部署（404「接口不存在」等）时给可理解的文案，其余透传后端 msg */
 function exportErrorMsg(error: unknown): string {
   const message = (error as Error)?.message || "导出失败";
-  return /404|Cannot|not found/i.test(message) ? "该导出接口后端尚未上线，已列入接口清单待实现" : message;
+  return /404|Cannot|not found|接口不存在/i.test(message) ? "导出接口暂不可用（当前后端未部署该接口，新后端接入后可用）" : message;
 }
 
 /** 1. 全员积分数据表（每人一行：姓名 + 可用积分 + 累计积分；后端待实现，契约 3.9） */
@@ -53,22 +53,18 @@ async function exportFull() {
   }
 }
 
-/** 2. 个人积分明细（后端真实 xlsx 接口；「个人」明细必须指定员工与月份） */
+/** 2. 个人积分明细（员工必选；月份可选——不选则导出该员工全部流水） */
 async function exportPersonal() {
   if (!personal.employeeId) {
     ElMessage.warning("请先选择员工");
     return;
   }
-  if (!personal.month) {
-    ElMessage.warning("请先选择月份");
-    return;
-  }
   personal.exporting = true;
   try {
-    const blob = await exportPointRecordsXlsx({ employeeId: personal.employeeId, month: personal.month });
+    const blob = await exportPointRecordsXlsx({ employeeId: personal.employeeId, month: personal.month || undefined });
     const who = employees.value.find((item) => String(item.id) === String(personal.employeeId))?.name || `员工(${personal.employeeId})`;
-    saveBlob(blob, `积分明细-${who}-${personal.month}-${fileTimestamp()}.xlsx`);
-    ElMessage.success("个人积分明细已导出");
+    saveBlob(blob, `积分明细-${who}-${personal.month || "全部"}-${fileTimestamp()}.xlsx`);
+    ElMessage.success(personal.month ? "个人积分明细已导出" : "个人积分明细（全部月份）已导出");
   } catch (error) {
     ElMessage.error(exportErrorMsg(error));
   } finally {
@@ -161,14 +157,14 @@ onMounted(async () => {
             <el-icon :size="20" color="var(--color-primary)"><Files /></el-icon>
             <div>
               <div class="export-name">个人积分明细</div>
-              <div class="export-desc">按员工 / 月份筛选积分流水明细，含备注</div>
+              <div class="export-desc">按员工筛选积分流水明细（月份可选，不选导出全部），含备注</div>
             </div>
           </div>
           <div class="export-filters">
-            <el-select v-model="personal.employeeId" clearable filterable placeholder="请选择员工" style="width: 150px">
+            <el-select v-model="personal.employeeId" clearable filterable placeholder="请选择员工（必选）" style="width: 170px">
               <el-option v-for="item in employeeOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
             </el-select>
-            <el-date-picker v-model="personal.month" type="month" value-format="YYYY-MM" placeholder="请选择月份" style="width: 140px" />
+            <el-date-picker v-model="personal.month" type="month" value-format="YYYY-MM" placeholder="选择月份（可选）" style="width: 150px" />
           </div>
           <el-button type="primary" plain :icon="Download" :loading="personal.exporting" @click="exportPersonal">导出 Excel</el-button>
         </div>

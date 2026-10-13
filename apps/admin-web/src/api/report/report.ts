@@ -2,30 +2,31 @@ import type { Paged } from "../types"
 import type { PointRecord, RecordQuery } from "./types"
 import { download, get } from "../../utils/request"
 
-/** 积分明细报表 REST 路径（apps/api/src/app.js） */
+/** 积分报表 REST 路径（契约见 docs/Easy-Points-API.md 3.4/3.5/11.5） */
 export const ReportApi = {
   Records: "/admin/reports/point-records",
   RecordsXlsx: "/admin/reports/point-records.xlsx",
-  /** 全员积分汇总导出（每人一行：姓名/可用积分/累计积分），后端待实现（契约 3.9） */
+  /** 全员积分汇总导出（每人一行：姓名/可用积分/累计积分，累计倒序） */
   PointsSummaryXlsx: "/admin/reports/points-summary.xlsx",
 } as const
 
-/** 全量流水（旧接口，工作台计数用） */
-export function reports(): Promise<PointRecord[]> {
-  return get<PointRecord[]>(ReportApi.Records)
-}
+export type { PointRecord, RecordQuery } from "./types"
 
-/** 分页流水（支持员工/月份筛选） */
+/** 分页流水（3.4：支持月份/员工筛选） */
 export function reportsPaged(params: RecordQuery): Promise<Paged<PointRecord>> {
   return get<Paged<PointRecord>>(ReportApi.Records, { ...params })
 }
 
-/** 导出积分明细 Excel（含备注列；文件名带日期戳） */
-export async function exportPointRecordsXlsx(params: RecordQuery = {}): Promise<Blob> {
+/**
+ * 个人积分明细导出（3.5 前端口径调整 2026-10-13：employeeId 必填；month 可选——
+ * 不传时导出该员工全部流水，已列入后端反馈待契约同步）。
+ * 列含可用/累计积分变动与完整备注，文件名由前端拼接。
+ */
+export function exportPointRecordsXlsx(params: RecordQuery & { employeeId: number | string; month?: string }): Promise<Blob> {
   return download(ReportApi.RecordsXlsx, { ...params })
 }
 
-/** 导出全员积分汇总 Excel（每人一行：姓名 + 可用积分 + 累计积分；契约 3.9） */
+/** 全员积分汇总导出（11.5：无筛选参数） */
 export function exportPointsSummaryXlsx(): Promise<Blob> {
   return download(ReportApi.PointsSummaryXlsx)
 }
