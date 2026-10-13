@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { h, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { UploadRequestOptions } from "element-plus";
 import { API_BASE } from "../utils/request";
 import {
+  adjustGiftStock,
   createGift,
   mallGifts,
   publishGift,
@@ -72,8 +73,46 @@ async function load() {
   loading.value = true;
   try {
     rows.value = await mallGifts();
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "加载礼品列表失败");
   } finally {
     loading.value = false;
+  }
+}
+
+/** 行内调库存（4.4：相对增减，正=补货、负=减库存；编辑礼品不改动库存） */
+async function adjustStock(row: Gift) {
+  let input: string;
+  try {
+    const result = await ElMessageBox.prompt(
+      h("div", { class: "stock-adjust-message" }, [
+        h("p", { class: "stock-adjust-current" }, ["当前库存：", h("strong", null, String(row.stock))]),
+        h("p", { class: "stock-adjust-tip" }, "输入变化量：正数补货、负数减库存，如 +10 / -3")
+      ]),
+      `调整库存 · ${row.name}`,
+      {
+        confirmButtonText: "确认调整",
+        cancelButtonText: "取消",
+        inputPlaceholder: "例如：10 或 -3",
+        inputValidator: (value: string) => {
+          const delta = Number(String(value ?? "").trim());
+          if (!Number.isInteger(delta) || delta === 0) return "请输入非零整数（正=补货，负=减库存）";
+          if (row.stock + delta < 0) return `调整后库存不能为负（当前 ${row.stock}）`;
+          return true;
+        }
+      }
+    );
+    input = String(result.value ?? "").trim();
+  } catch {
+    return; // 取消
+  }
+  const delta = Number(input);
+  try {
+    const updated = await adjustGiftStock(row.id, delta);
+    ElMessage.success(`已调整库存：${row.stock} → ${updated.stock ?? row.stock + delta}`);
+    await load();
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "调整库存失败");
   }
 }
 
@@ -102,6 +141,7 @@ async function save() {
   saving.value = true;
   try {
     if (editId.value) {
+      // 4.3 编辑不覆盖库存：stock 传打开弹窗时的原值（输入框已禁用不可改），新后端忽略、旧后端覆盖为同值
       await updateGift(editId.value, {
         name,
         pointsCost: form.pointsCost,
@@ -214,11 +254,12 @@ onMounted(load);
             <el-tag :type="row.status === 'active' ? 'success' : 'warning'">{{ formatStatus(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="330" fixed="right">
+        <el-table-column label="操作" width="400" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status !== 'active'" size="small" type="success" @click="publish(row)">上架</el-button>
             <el-button v-else size="small" type="warning" @click="unpublish(row)">下架</el-button>
             <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" @click="adjustStock(row)">调库存</el-button>
             <el-button size="small" @click="openRecords(row)">兑换记录</el-button>
           </template>
         </el-table-column>
@@ -262,7 +303,8 @@ onMounted(load);
         <el-input-number v-model="form.pointsCost" :min="1" :max="999999" style="width: 100%" />
       </el-form-item>
       <el-form-item label="库存">
-        <el-input-number v-model="form.stock" :min="0" :max="999999" style="width: 100%" />
+        <el-input-number v-model="form.stock" :min="0" :max="999999" style="width: 100%" :disabled="!!editId" />
+        <span v-if="editId" class="stock-hint">编辑礼品不改动库存，请使用列表中的「调库存」</span>
       </el-form-item>
       <el-form-item label="限购">
         <el-input-number v-model="form.limitPerUser" :min="1" :max="999999" style="width: 100%" placeholder="为空表示不限购" />
@@ -366,5 +408,35 @@ onMounted(load);
 // ==============================
 .panel-body {
   padding: 20px;
+}
+
+// 编辑弹窗：库存禁用提示
+.stock-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-placeholder);
+}
+</style>
+
+<style lang="scss">
+// 调库存弹窗提示（ElMessageBox 渲染在 body 下，需全局样式）：标题/当前库存/规则分行展示
+.stock-adjust-message {
+  .stock-adjust-current {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+
+    strong {
+      color: var(--color-primary);
+      font-size: 15px;
+    }
+  }
+
+  .stock-adjust-tip {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-placeholder);
+  }
 }
 </style>

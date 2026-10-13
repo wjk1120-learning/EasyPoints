@@ -1,4 +1,4 @@
-/** 礼品与兑换订单类型（订单在 ../order 域） */
+/** 礼品与兑换订单类型（订单在 ../order 域；契约见 docs/Easy-Points-API.md 4.1） */
 
 export interface Gift {
   id: number
@@ -18,7 +18,8 @@ export interface Gift {
 export interface GiftPayload {
   name: string
   pointsCost: number
-  stock: number
+  /** 库存（4.2/4.3：新建可空默认 0；编辑不覆盖库存——新后端忽略本字段，传原值兼容旧后端全字段覆盖） */
+  stock?: number
   limitPerUser: number | null
   status: "active" | "inactive" | string
 }
