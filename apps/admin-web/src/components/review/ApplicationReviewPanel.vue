@@ -16,6 +16,7 @@ import { REVIEW_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
 import { pendingFirst } from "../../utils/sort";
 import { createSubmitLock } from "../../utils/submit-lock";
+import { apiErrorMsg } from "../../utils/error";
 
 const rows = ref<Application[]>([]);
 const loading = ref(false);
@@ -56,7 +57,7 @@ async function load() {
     );
     meta.total = result.meta.total;
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "加载积分申请失败");
+    ElMessage.error(apiErrorMsg(error, "加载积分申请失败"));
   } finally {
     loading.value = false;
   }
@@ -83,7 +84,7 @@ function openDetail(row: Application) {
 async function approve(row: Application) {
   try {
     await ElMessageBox.confirm(
-      `确认通过「${employeeLabel(row)}」的积分申请（+${row.points} 积分，双积分同步到账）？`,
+      `确认通过「${employeeLabel(row)}」的积分申请（+${row.points} 积分）？`,
       "审核通过",
       { type: "warning", confirmButtonText: "确认通过", cancelButtonText: "取消" }
     );

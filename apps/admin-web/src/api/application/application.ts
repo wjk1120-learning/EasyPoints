@@ -1,10 +1,8 @@
 import type { Paged } from "../types"
 import type { Application, ApplicationQuery, ApplicationReviewPayload } from "./types"
 import { get, post } from "../../utils/request"
-import { withMock } from "../../mock"
-import { mockApplicationsPaged, mockReviewApplication } from "../../mock/application"
 
-/** 积分申请 REST 路径（后端待开发，契约见 docs/admin-web-api-requirements.md 3.3） */
+/** 积分申请 REST 路径（契约见 docs/Easy-Points-API.md 6.3/6.4） */
 export const ApplicationApi = {
   List: "/admin/applications",
   Review: (id: number | string) => `/admin/applications/${id}/review`,
@@ -12,18 +10,12 @@ export const ApplicationApi = {
 
 export type { Application, ApplicationQuery, ApplicationReviewPayload } from "./types"
 
-/** 分页积分申请列表（当前 mock 先行，后端就绪后自动切换真实接口） */
+/** 分页申请列表（6.3：待审核置顶；支持状态/员工/提交时间筛选） */
 export function applicationsPaged(params: ApplicationQuery): Promise<Paged<Application>> {
-  return withMock(
-    () => get<Paged<Application>>(ApplicationApi.List, { ...params }),
-    () => mockApplicationsPaged(params),
-  )
+  return get<Paged<Application>>(ApplicationApi.List, { ...params })
 }
 
-/** 审核积分申请：通过后双积分到账（后端职责），驳回意见必填 */
+/** 审核积分申请（6.4：通过后 type=application 流水双积分入账；驳回后员工可申诉） */
 export function reviewApplication(id: number | string, payload: ApplicationReviewPayload): Promise<unknown> {
-  return withMock(
-    () => post<unknown>(ApplicationApi.Review(id), payload),
-    () => mockReviewApplication(id, payload),
-  )
+  return post<unknown>(ApplicationApi.Review(id), payload)
 }

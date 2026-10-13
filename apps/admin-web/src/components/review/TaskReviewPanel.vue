@@ -84,7 +84,7 @@ function openDetail(row: EmployeeTask) {
 async function approve(row: EmployeeTask) {
   try {
     await ElMessageBox.confirm(
-      `确认通过「${employeeLabel(row)}」的任务成果（奖励积分双积分同步到账）？`,
+      `确认通过「${employeeLabel(row)}」的任务成果（奖励 ${row.rewardPoints} 积分）？`,
       "审核通过",
       { type: "warning", confirmButtonText: "确认通过", cancelButtonText: "取消" }
     );
