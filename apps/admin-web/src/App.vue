@@ -92,8 +92,8 @@ function handleLogoutEvent(event: Event) {
   }
 }
 
-/** 刷新侧边栏待办徽标：四类待审合计，与审核中心 Tab 计数同口径（申诉过渡期用旧状态值）。
- * 后端聚合角标接口（接口清单 3.1 badges 扩展）就绪后可换为单次请求。 */
+/** 刷新侧边栏待办徽标：四类待审合计，与审核中心 Tab 计数同口径（契约 11.2）。
+ * 后端聚合角标接口（11.2 badges）就绪后可换为单次请求。 */
 async function refreshBadges() {
   if (!token.value) return;
   const empty = { data: [], meta: { total: 0, page: 1, pageSize: 1 } };
@@ -101,7 +101,7 @@ async function refreshBadges() {
     ordersPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
     taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
     applicationsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
-    appealsPaged({ page: 1, pageSize: 1, status: "pending_department_review" }).catch(() => empty),
+    appealsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
   ]);
   badges.pending =
     Number(exchange.meta.total || 0) +

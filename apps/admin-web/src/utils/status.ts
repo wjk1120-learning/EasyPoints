@@ -25,14 +25,16 @@ export const ORDER_STATUS_MAP: Record<string, StatusMeta> = {
   rejected: { text: "已驳回", tag: "danger" },
 }
 
-/** 申诉状态：PRD 三态闭环（待审核/审核通过/已驳回）。存量五值（部门/人事两级遗留）归一映射为同一展示 */
+/** 申诉状态（契约 7.3 一级三态：pending_review/approved/rejected）。旧两级五值仅作过渡期只读归一展示 */
 export const APPEAL_STATUS_MAP: Record<string, StatusMeta> = {
+  pending_review: { text: "待审核", tag: "warning" },
+  approved: { text: "审核通过", tag: "success" },
+  rejected: { text: "已驳回", tag: "danger" },
+  // 旧两级状态（部门/人事）遗留值 → 归一映射，新后端不会产生
   pending_department_review: { text: "待审核", tag: "warning" },
   pending_hr_review: { text: "待审核", tag: "warning" },
-  approved: { text: "审核通过", tag: "success" },
   department_approved: { text: "审核通过", tag: "success" },
   hr_approved: { text: "审核通过", tag: "success" },
-  rejected: { text: "已驳回", tag: "danger" },
 }
 
 /** 礼品上下架状态 */

@@ -25,7 +25,7 @@ const query = reactive({ status: "", employeeId: "" });
 const processing = ref(false);
 const dialogVisible = ref(false);
 const selectedRow = ref<Appeal | null>(null);
-const form = reactive({ decision: "department_approved" as "department_approved" | "rejected", remark: "" });
+const form = reactive({ decision: "approved" as "approved" | "rejected", remark: "" });
 const detailDialog = reactive({ visible: false, fields: [] as WorkOrderField[] });
 
 const employeeNameMap = computed(() => {
@@ -42,17 +42,34 @@ function formatEmployee(row: Appeal) {
 
 const statusText = (value: string) => statusMeta(APPEAL_STATUS_MAP, value).text;
 const statusTag = (value: string) => statusMeta(APPEAL_STATUS_MAP, value).tag;
-/** 仅待审核可处理（PRD 3.3：处理后工单闭环，不可重复申诉） */
+/** 仅待审核可处理（7.4 一级审核：处理后工单闭环；兼容旧 pending_ 前缀值） */
 const isPending = (value: string) => String(value || "").startsWith("pending_");
 
+/** 佐证图解析（7.3：JSON 字符串原样输出；已为数组时直用，解析失败按空处理） */
+function evidenceImagesOf(row: Appeal): string[] {
+  const raw = row?.evidenceImages;
+  if (Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(String(raw || "[]"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 被申诉事件摘要：流水目标用流水备注+分值，其余目标用 targetSummary（7.3 审核上下文） */
 function formatEvent(row: Appeal) {
   const record = row?.pointRecord;
-  if (!record) return row?.pointRecordId != null ? String(row.pointRecordId) : "";
-  const delta = Number(record.pointsDelta || 0);
-  const deltaText = `${delta > 0 ? "+" : ""}${delta}`;
-  const remark = String(record.remark || "").trim();
-  if (!remark) return deltaText;
-  return `${remark}（${deltaText}）`;
+  if (record) {
+    const delta = Number(record.pointsDelta || 0);
+    const deltaText = `${delta > 0 ? "+" : ""}${delta}`;
+    const remark = String(record.remark || "").trim();
+    if (!remark) return deltaText;
+    return `${remark}（${deltaText}）`;
+  }
+  const summary = row?.targetSummary;
+  if (summary?.title) return summary.content ? `${summary.title} · ${summary.content}` : summary.title;
+  return row?.pointRecordId != null ? String(row.pointRecordId) : "";
 }
 
 async function load() {
@@ -68,6 +85,8 @@ async function load() {
       new Date(row.updatedAt || row.createdAt || 0).getTime()
     );
     meta.total = result.meta.total;
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "加载申诉列表失败"));
   } finally {
     loading.value = false;
   }
@@ -75,21 +94,32 @@ async function load() {
 
 function openProcess(row: Appeal) {
   selectedRow.value = row;
-  form.decision = "department_approved";
+  form.decision = "approved";
   form.remark = "";
   dialogVisible.value = true;
 }
 
-/** 只读详情：全程留痕信息展示（PRD 3.3 申诉全程留痕） */
+/** 只读详情：全程留痕 + 被申诉原记录上下文（7.3 targetSummary，任务/申请/订单类申诉不再盲审） */
 function openDetail(row: Appeal) {
+  const summary = row.targetSummary;
   detailDialog.fields = [
     { label: "申诉人", value: formatEmployee(row) },
+    { label: "申诉目标", value: summary?.title || (row.pointRecordId != null ? `积分流水 #${row.pointRecordId}` : "—") },
+    { label: "原记录内容", value: summary?.content || row.pointRecord?.remark || "—" },
+    // 当时审核备注：仅任务/申请/订单类申诉有（流水类契约即为 null）；过渡期旧后端不返回 targetSummary 时给占位说明
+    ...(summary
+      ? summary.reviewRemark
+        ? [{ label: "当时审核备注", value: summary.reviewRemark }]
+        : []
+      : row.targetType && row.targetType !== "point_record"
+        ? [{ label: "当时审核备注", value: "当前后端未返回（新后端接入后可见）" }]
+        : []),
     { label: "申诉原因", value: row.reason },
-    { label: "关联流水分值", value: row.pointRecord?.pointsDelta, type: "delta" },
-    { label: "关联流水备注", value: row.pointRecord?.remark || "—" },
+    ...(row.pointRecord ? [{ label: "关联流水分值", value: row.pointRecord.pointsDelta, type: "delta" as const }] : []),
+    { label: "佐证材料", type: "images" as const, images: evidenceImagesOf(row) },
     { label: "申诉时间", value: row.createdAt, type: "time" },
-    { label: "当前状态", value: statusText(row.status) },
-    { label: "处理备注", value: row.resultRemark || "—" },
+    { label: "当前状态", value: row.statusText || statusText(row.status) },
+    { label: "处理备注", value: row.resultRemark || row.resolution || "—" },
     { label: "更新时间", value: row.updatedAt, type: "time" }
   ];
   detailDialog.visible = true;
@@ -98,7 +128,7 @@ function openDetail(row: Appeal) {
 function closeDialog() {
   dialogVisible.value = false;
   selectedRow.value = null;
-  form.decision = "department_approved";
+  form.decision = "approved";
   form.remark = "";
 }
 
@@ -111,10 +141,9 @@ async function submitProcess() {
   if (!selectedRow.value) return;
   processing.value = true;
   try {
-    // PRD 三态闭环：通过/驳回，一级审核。wire 值沿用存量后端枚举，展示层已归一（utils/status.ts）
+    // 7.4 一级三态审核（无 stage）：通过且目标为未冲正扣分流水时后端同事务自动补分
     await reviewAppeal(selectedRow.value.id, {
       status: form.decision,
-      stage: "department",
       resultRemark: remark
     });
     ElMessage.success(form.decision === "rejected" ? "申诉审核已驳回，结果将推送员工" : "申诉审核已通过");
@@ -149,8 +178,8 @@ watch(
     <div class="filter-bar">
       <el-select v-model="query.status" clearable placeholder="状态" class="filter-item">
         <el-option value="" label="全部" />
-        <el-option value="pending_department_review" label="待审核" />
-        <el-option value="department_approved" label="审核通过" />
+        <el-option value="pending_review" label="待审核" />
+        <el-option value="approved" label="审核通过" />
         <el-option value="rejected" label="已驳回" />
       </el-select>
       <el-select v-model="query.employeeId" clearable placeholder="员工" class="filter-item">
@@ -211,7 +240,7 @@ watch(
     <el-form label-width="90px">
       <el-form-item label="处理结果">
         <el-radio-group v-model="form.decision">
-          <el-radio label="department_approved">通过</el-radio>
+          <el-radio label="approved">通过</el-radio>
           <el-radio label="rejected">驳回</el-radio>
         </el-radio-group>
       </el-form-item>

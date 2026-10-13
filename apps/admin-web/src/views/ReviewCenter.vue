@@ -39,7 +39,7 @@ async function refreshCounts() {
     ordersPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } })),
     taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } })),
     applicationsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } })),
-    appealsPaged({ page: 1, pageSize: 1, status: "pending_department_review" }).catch(() => ({ meta: { total: 0 } }))
+    appealsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => ({ meta: { total: 0 } }))
   ]);
   counts.value = {
     exchange: exchange.meta.total,
