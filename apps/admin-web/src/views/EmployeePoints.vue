@@ -89,6 +89,15 @@ function formatStatus(value: unknown) {
   return status || "";
 }
 
+/** 列头排序：兜底旧后端无双积分字段时退回 pointsBalance 比较 */
+function sortByAvailable(a: Employee, b: Employee): number {
+  return Number(a.availablePoints ?? a.pointsBalance ?? 0) - Number(b.availablePoints ?? b.pointsBalance ?? 0);
+}
+
+function sortByCumulative(a: Employee, b: Employee): number {
+  return Number(a.cumulativePoints ?? a.pointsBalance ?? 0) - Number(b.cumulativePoints ?? b.pointsBalance ?? 0);
+}
+
 function formatType(value: unknown) {
   const type = String(value || "");
   if (type === "reward") return "加分";
@@ -128,6 +137,8 @@ async function loadEmployees() {
   try {
     employees.value = await fetchEmployees();
     if (employees.value.length && selectedEmployeeId.value == null) selectedEmployeeId.value = employees.value[0].id;
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "加载员工列表失败");
   } finally {
     loading.value = false;
   }
@@ -248,12 +259,12 @@ onMounted(async () => {
           <el-table-column label="部门" min-width="100">
             <template #default="{ row }">{{ row.departmentName || `部门(${row.departmentId})` }}</template>
           </el-table-column>
-          <el-table-column label="可用积分" min-width="110" sortable>
+          <el-table-column label="可用积分" min-width="110" sortable :sort-method="sortByAvailable">
             <template #default="{ row }">
               <span class="balance-text balance-available">{{ row.availablePoints ?? row.pointsBalance }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="累计积分" min-width="110" sortable>
+          <el-table-column label="累计积分" min-width="110" sortable :sort-method="sortByCumulative">
             <template #default="{ row }">
               <span class="balance-text balance-cumulative">{{ row.cumulativePoints ?? row.pointsBalance }}</span>
             </template>
