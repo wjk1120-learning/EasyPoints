@@ -36,10 +36,18 @@ export function clearAuth(reason: "expired" | "unauthorized"): void {
   window.dispatchEvent(new CustomEvent("auth:logout", { detail: { reason } }));
 }
 
-/** 后端错误体形如 { message: "..." }；提取可读文案，网络层失败给固定兜底 */
-function extractMsg(err: AxiosError): string {
-  const data = err.response?.data as { message?: unknown } | undefined;
-  if (data && typeof data.message === "string" && data.message.trim()) return data.message.trim();
+/** 错误文案提取（导出仅供 tests 断言）：新后端 BaseResult 读 msg，旧 Node 读 message；下载接口失败时 body 是 Blob，尝试解析内嵌 JSON */
+export async function extractMsg(err: AxiosError): Promise<string> {
+  let data = err.response?.data as { message?: unknown; msg?: unknown } | Blob | undefined;
+  if (data instanceof Blob) {
+    try {
+      data = JSON.parse(await data.text()) as { message?: unknown; msg?: unknown };
+    } catch {
+      data = undefined;
+    }
+  }
+  const raw = data?.msg ?? data?.message;
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
   return err.message || "网络请求失败，请检查服务是否可达";
 }
 
@@ -67,22 +75,51 @@ request.interceptors.request.use((config) => {
 
 request.interceptors.response.use(
   (res) => res,
-  (err: AxiosError) => {
+  async (err: AxiosError) => {
     if (err.response?.status === 401) {
       clearAuth("unauthorized");
       return Promise.reject(new Error("登录已失效，请重新登录"));
     }
-    return Promise.reject(new Error(extractMsg(err)));
+    return Promise.reject(new Error(await extractMsg(err)));
   },
 );
 
-/** 与旧 request() 解包规则一致：带 meta 的分页响应原样返回，其余取 body.data ?? body */
-function unwrap<T>(body: unknown): T {
-  if (body && typeof body === "object" && "meta" in (body as Record<string, unknown>)) {
-    return body as T;
+/** 新后端分页 PageResult{total,rows} 转成前端 Paged{data,meta}，page/pageSize 由请求参数回填；非该结构返回 null */
+function pageOf<T>(
+  payload: unknown,
+  params?: Record<string, unknown>,
+): { data: T[]; meta: { total: number; page: number; pageSize: number } } | null {
+  if (!payload || typeof payload !== "object") return null;
+  if (!("rows" in payload) || !("total" in payload)) return null;
+  const p = payload as { total: unknown; rows: unknown };
+  if (!Array.isArray(p.rows)) return null;
+  return {
+    data: p.rows as T[],
+    meta: {
+      total: Number(p.total) || 0,
+      page: Number(params?.page) || 1,
+      pageSize: Number(params?.pageSize) || 50,
+    },
+  };
+}
+
+/**
+ * 双后端兼容解包（导出仅供 tests 断言）：
+ * - 新后端 BaseResult{code,msg,data}：code!==1 时抛出 msg（兜住 HTTP 200 + code=0 的实现偏差），
+ *   data 为 PageResult{total,rows} 时转 Paged，其余直接返回 data；
+ * - 旧 Node：带 meta 的分页响应原样返回，裸 {data} 解包，其余原样。
+ */
+export function unwrap<T>(body: unknown, params?: Record<string, unknown>): T {
+  if (body && typeof body === "object" && "code" in body && "msg" in body && "data" in body) {
+    const r = body as { code: unknown; msg: unknown; data: unknown };
+    if (r.code !== 1) {
+      throw new Error(typeof r.msg === "string" && r.msg.trim() ? r.msg.trim() : "请求失败");
+    }
+    return (pageOf<T>(r.data, params) ?? r.data) as T;
   }
-  const data = (body as { data?: unknown } | null)?.data;
-  return (data === undefined ? body : data) as T;
+  if (body && typeof body === "object" && "meta" in body) return body as T;
+  if (body && typeof body === "object" && "data" in body) return (body as { data: unknown }).data as T;
+  return body as T;
 }
 
 /** 过滤空参数（undefined/null/""），与旧 buildQuery 行为一致 */
@@ -97,9 +134,10 @@ function cleanParams(params?: Record<string, unknown>): Record<string, unknown> 
 }
 
 export function get<T>(url: string, params?: Record<string, unknown>, config?: RequestConfig): Promise<T> {
+  const cleaned = cleanParams(params);
   return request
-    .get(url, { ...config, ...(cleanParams(params) ? { params: cleanParams(params) } : undefined) })
-    .then((res) => unwrap<T>(res.data));
+    .get(url, cleaned ? { ...config, params: cleaned } : config)
+    .then((res) => unwrap<T>(res.data, cleaned));
 }
 
 export function post<T>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {

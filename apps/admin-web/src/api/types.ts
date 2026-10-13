@@ -3,7 +3,7 @@
  * 各业务域的请求参数/响应数据类型一律写在各自域目录的 types.ts 里，如 src/api/auth/types.ts。
  */
 
-/** 分页响应包装：后端所有 ?page=&pageSize= 接口统一返回 { data, meta } */
+/** 分页响应包装：新后端 PageResult{total,rows} 由 request 层 unwrap 统一转换为本结构（page/pageSize 从请求参数回填），页面层无感知 */
 export interface Paged<T> {
   data: T[]
   meta: {
