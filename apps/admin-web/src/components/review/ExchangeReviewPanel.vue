@@ -56,6 +56,8 @@ async function load() {
       new Date(row.updatedAt || row.createdAt || 0).getTime()
     );
     meta.total = result.meta.total;
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "加载订单列表失败");
   } finally {
     loading.value = false;
   }
@@ -83,12 +85,12 @@ async function setStatus(row: Order, status: string, remark: string) {
   actingId.value = row.id;
   try {
     await updateOrder(row.id, { status, remark });
-    ElMessage.success(status === "rejected" ? "已驳回，积分已退回员工账户" : "订单状态已更新");
+    ElMessage.success(status === "rejected" ? "兑换申请已驳回，积分已退回员工账户" : "兑换审核已通过");
     notifyRefreshed();
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "操作失败");
+    ElMessage.error((error as Error)?.message || "审核操作失败");
   } finally {
     actingId.value = null;
     actLock.release();

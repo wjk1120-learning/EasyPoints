@@ -8,8 +8,10 @@ export const AppealApi = {
   Review: (id: number | string) => `/admin/appeals/${id}/review`,
 } as const
 
-export function appeals(): Promise<Appeal[]> {
-  return get<Appeal[]>(AppealApi.List)
+/** 全量申诉（工作台计数用；新后端恒 PageResult 包装，防御裸数组偏差双兼容） */
+export async function appeals(): Promise<Appeal[]> {
+  const res = await get<Paged<Appeal> | Appeal[]>(AppealApi.List)
+  return Array.isArray(res) ? res : res.data
 }
 
 export function appealsPaged(params: AppealQuery): Promise<Paged<Appeal>> {

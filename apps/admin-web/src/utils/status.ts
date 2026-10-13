@@ -18,14 +18,11 @@ export const REVIEW_STATUS_MAP: Record<string, StatusMeta> = {
   rejected: { text: "已驳回", tag: "danger" },
 }
 
-/** 订单状态映射：UI 仅提供 通过/驳回 操作（PRD 5.2，审核通过即终点）；shipped/completed 仅为历史数据只读展示 */
+/** 订单状态映射（契约 4.10/4.11 三态状态机：审核通过即闭环终点，无发货/取消） */
 export const ORDER_STATUS_MAP: Record<string, StatusMeta> = {
   pending_review: { text: "待审核", tag: "warning" },
   approved: { text: "审核通过", tag: "success" },
-  shipped: { text: "已发货", tag: "primary" },
-  completed: { text: "已完成", tag: "success" },
   rejected: { text: "已驳回", tag: "danger" },
-  cancelled: { text: "已取消", tag: "info" },
 }
 
 /** 申诉状态：PRD 三态闭环（待审核/审核通过/已驳回）。存量五值（部门/人事两级遗留）归一映射为同一展示 */

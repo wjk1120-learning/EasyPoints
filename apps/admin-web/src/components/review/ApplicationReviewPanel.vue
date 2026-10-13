@@ -98,12 +98,12 @@ async function setStatus(row: Application, status: "approved" | "rejected", rema
   actingId.value = row.id;
   try {
     await reviewApplication(row.id, { status, remark });
-    ElMessage.success(status === "approved" ? "已通过，积分将同步至员工双积分账户" : "已驳回，原因将推送员工");
+    ElMessage.success(status === "approved" ? "积分申请已通过，积分已发放" : "积分申请已驳回，原因将推送员工");
     notifyRefreshed();
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "操作失败");
+    ElMessage.error((error as Error)?.message || "审核操作失败");
   } finally {
     actingId.value = null;
     actLock.release();

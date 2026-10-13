@@ -116,14 +116,14 @@ async function submitProcess() {
       stage: "department",
       resultRemark: remark
     });
-    ElMessage.success("已处理，结果将推送员工通知");
+    ElMessage.success(form.decision === "rejected" ? "申诉审核已驳回，结果将推送员工" : "申诉审核已通过");
     window.dispatchEvent(new CustomEvent("review:refresh"));
     window.dispatchEvent(new CustomEvent("badges:refresh"));
     closeDialog();
     if (meta.page > 1 && rows.value.length <= 1) meta.page = 1;
     await load();
   } catch (error) {
-    ElMessage.error((error as Error)?.message || "处理失败");
+    ElMessage.error((error as Error)?.message || "申诉处理失败");
   } finally {
     processing.value = false;
   }
