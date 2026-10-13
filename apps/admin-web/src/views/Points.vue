@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, h, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { CirclePlus, RemoveFilled } from "@element-plus/icons-vue";
 import { employees as fetchEmployees } from "../api/employee/employee";
@@ -122,7 +122,12 @@ function formatEmployee(value: number | string | null | undefined) {
 }
 
 onMounted(async () => {
-  employees.value = await fetchEmployees();
+  try {
+    employees.value = await fetchEmployees();
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "加载员工列表失败");
+    return;
+  }
   if (employees.value.length && single.employeeId == null) {
     const firstActive = employees.value.find((item) => item.status === "active");
     if (firstActive) single.employeeId = firstActive.id;
@@ -130,11 +135,18 @@ onMounted(async () => {
 });
 
 async function submitSingle() {
+  if (!single.employeeId) return ElMessage.warning("请选择员工");
+  const remark = String(single.remark || "").trim();
+  if (!remark) return ElMessage.warning("请填写变动原因备注（积分流水必须绑定备注）");
   const points = Number(single.pointsDelta);
   const normalizedPointsDelta = single.type === "penalty" ? -Math.abs(points) : Math.abs(points);
-  await adjustment({ ...single, employeeId: single.employeeId as number, pointsDelta: normalizedPointsDelta });
-  ElMessage.success("单笔积分已提交，备注已写入流水");
-  single.remark = "";
+  try {
+    await adjustment({ employeeId: single.employeeId, type: single.type, pointsDelta: normalizedPointsDelta, remark });
+    ElMessage.success("单笔积分已提交，备注已写入流水");
+    single.remark = "";
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "提交失败");
+  }
 }
 
 async function submitBatch() {
@@ -147,26 +159,40 @@ async function submitBatch() {
     ElMessage.warning(`还有 ${blank.length} 人未填写积分（积分不能为空或 0，不给的人请移除）`);
     return;
   }
+  const batchRemark = String(batch.batchRemark || "").trim();
+  const missingRemark = batch.items.filter((row) => !String(row.remark || "").trim());
+  if (!batchRemark && missingRemark.length) {
+    ElMessage.warning(`请填写统一备注，或为 ${missingRemark.length} 名未填写单人备注的员工补充备注（积分流水必须绑定备注）`);
+    return;
+  }
   const monthLabel = monthOptions.value.find((item) => item.value === batch.month)?.label || batch.month;
   try {
     await ElMessageBox.confirm(
-      `即将为 ${batch.items.length} 名员工录入 ${monthLabel} 积分，统一备注：${batch.batchRemark || "（未设置）"}。提交后将生成不可修改的积分流水，请确认无误。`,
+      h("div", { class: "batch-confirm-message" }, [
+        h("p", { class: "batch-confirm-main" }, `即将为 ${batch.items.length} 名员工录入 ${monthLabel} 积分`),
+        h("p", { class: "batch-confirm-remark" }, ["统一备注：", h("strong", null, batchRemark || "（未设置，将使用单人备注）")]),
+        h("p", { class: "batch-confirm-tip" }, "提交后将生成不可修改的积分流水，请确认无误")
+      ]),
       "高危操作确认",
       { type: "warning", confirmButtonText: "确认提交", cancelButtonText: "再检查一下" }
     );
   } catch {
     return;
   }
-  await monthlyBatch({
-    month: batch.month,
-    batchRemark: batch.batchRemark,
-    items: batch.items.map((row) => ({ employeeId: row.employeeId, pointsDelta: Number(row.pointsDelta), remark: row.remark }))
-  });
-  ElMessage.success(`月度批量录分已提交（${batch.items.length} 名员工）`);
-  batch.items = [];
-  batch.batchRemark = "";
-  scopeDepartmentIds.value = [];
-  prevDeptIds = [];
+  try {
+    await monthlyBatch({
+      month: batch.month,
+      batchRemark,
+      items: batch.items.map((row) => ({ employeeId: row.employeeId, pointsDelta: Number(row.pointsDelta), remark: row.remark }))
+    });
+    ElMessage.success(`月度批量录分已提交（${batch.items.length} 名员工）`);
+    batch.items = [];
+    batch.batchRemark = "";
+    scopeDepartmentIds.value = [];
+    prevDeptIds = [];
+  } catch (error) {
+    ElMessage.error((error as Error)?.message || "提交失败");
+  }
 }
 </script>
 
@@ -606,5 +632,33 @@ async function submitBatch() {
 .panel-right .btn-primary {
   width: auto;
   min-width: 160px;
+}
+</style>
+
+<style lang="scss">
+// 批量录分高危确认弹窗（ElMessageBox 渲染在 body 下，需全局样式）：录入信息/统一备注/警示分行展示
+.batch-confirm-message {
+  .batch-confirm-main {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .batch-confirm-remark {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+
+    strong {
+      color: var(--color-primary);
+    }
+  }
+
+  .batch-confirm-tip {
+    margin: 0;
+    font-size: 12px;
+    color: var(--el-color-warning);
+  }
 }
 </style>

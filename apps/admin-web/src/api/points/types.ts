@@ -1,4 +1,4 @@
-/** points 域类型：积分录入请求参数 */
+/** points 域类型：积分录入请求参数（契约见 docs/Easy-Points-API.md 3.1/3.2；流水类型在 ../report 域） */
 
 /** 单笔人工加减分：type=reward/penalty，pointsDelta 统一正数由后端按 type 定符号 */
 export interface AdjustmentPayload {
@@ -14,5 +14,5 @@ export interface MonthlyBatchPayload {
   /** 月份 YYYY-MM */
   month: string
   batchRemark: string
-  items: { employeeId: number; pointsDelta: number; remark: string }[]
+  items: { employeeId: number; pointsDelta: number; remark?: string }[]
 }
