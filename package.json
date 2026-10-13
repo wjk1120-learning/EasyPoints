@@ -13,6 +13,7 @@
     "test": "node --test apps/api/tests/*.test.js"
   },
   "devDependencies": {
+    "sass": "^1.105.1",
     "unplugin-auto-import": "^21.0.0"
   },
   "dependencies": {
