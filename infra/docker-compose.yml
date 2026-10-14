@@ -13,8 +13,8 @@ services:
       --collation-server=utf8mb4_0900_ai_ci
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./mysql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ../apps/Easy-Points/src/main/resources/db/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../apps/Easy-Points/src/main/resources/db/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     ports:
       - "3307:3306"
 
