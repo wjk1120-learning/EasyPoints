@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
@@ -173,7 +172,6 @@ function formatTime(value) {
     </view>
     <view v-if="!loading && rows.length === 0" class="card card-empty"><EmptyState icon="inbox" title="暂无符合条件的积分流水" /></view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

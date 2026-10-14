@@ -4,7 +4,6 @@ import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
 const pointRecordId = ref('')
@@ -134,7 +133,6 @@ async function submit() {
 
     <view class="button submit-button" @tap="submit">提交申诉</view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

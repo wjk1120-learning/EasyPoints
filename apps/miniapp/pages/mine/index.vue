@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
 const home = ref({ pointsBalance: 0, monthDelta: 0, employee: {} })
@@ -112,7 +111,6 @@ function formatPoints(value) {
       <text class="safe-body">积分数据与业务身份实时同步，如信息有误请联系系统积分管理员。</text>
     </view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
 const message = ref({ title: '', summary: '', type: '', createdAt: '' })
@@ -84,7 +83,6 @@ function goAppeal() {
 
     <view v-if="isVote()" class="button ghost" @tap="uni.navigateTo({ url: '/pages/votes/index' })">查看投票</view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

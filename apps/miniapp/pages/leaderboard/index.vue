@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -139,7 +138,6 @@ function formatPoints(value) {
       </view>
     </view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

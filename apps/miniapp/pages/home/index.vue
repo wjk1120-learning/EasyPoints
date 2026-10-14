@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } from '../../api'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -324,7 +323,6 @@ function friendlyTime(value) {
         <view class="button ghost" @tap="relogin">保存并登录</view>
       </view>
     </view>
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

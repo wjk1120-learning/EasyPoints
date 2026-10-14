@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
 const tab = ref('pending')
@@ -99,7 +98,6 @@ function multipleOf(item) {
       </view>
     </template>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

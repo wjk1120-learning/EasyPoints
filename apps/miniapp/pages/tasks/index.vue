@@ -4,7 +4,6 @@ import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
@@ -294,7 +293,6 @@ function describe(task) {
       <view class="button submit-button" @tap="submit">提交审核</view>
     </template>
 
-    <AiFloatBall />
     <AppTabBar />
 
     <view v-if="detailFor" class="mask" @tap="detailFor = null">

@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
@@ -112,7 +111,6 @@ function titleOf(item) {
 
     <view class="footer-link" @tap="uni.switchTab({ url: '/pages/points/index' })">从积分明细发起新申诉 ›</view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

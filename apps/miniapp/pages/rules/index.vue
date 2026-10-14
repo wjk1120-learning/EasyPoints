@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { isMissingApi, request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
@@ -84,7 +83,6 @@ function iconOf(index) {
     <view v-if="!missing && sections.length === 0" class="card card-empty"><EmptyState icon="book-open" title="暂无规则" /></view>
     <view v-if="sections.length > 0" class="list-footer">如对规则有疑问，请联系系统积分管理员</view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>

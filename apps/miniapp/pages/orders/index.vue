@@ -4,7 +4,6 @@ import { onShow } from '@dcloudio/uni-app'
 import { request } from '../../api'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
-import AiFloatBall from '../../components/AiFloatBall.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
@@ -102,7 +101,6 @@ function formatPoints(value) {
     <view v-if="visibleOrders.length === 0" class="card card-empty"><EmptyState icon="shopping-bag" title="暂无兑换记录" /></view>
     <view v-if="visibleOrders.length > 0" class="list-footer">已展示全部兑换记录</view>
 
-    <AiFloatBall />
     <AppTabBar />
   </view>
 </template>
