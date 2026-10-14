@@ -18,8 +18,7 @@ export function reportsPaged(params: RecordQuery): Promise<Paged<PointRecord>> {
 }
 
 /**
- * 个人积分明细导出（3.5 前端口径调整 2026-10-13：employeeId 必填；month 可选——
- * 不传时导出该员工全部流水，已列入后端反馈待契约同步）。
+ * 个人积分明细导出（3.5，v4.3 定稿：employeeId 必填；month 选填——缺省导出该员工全部月份流水）。
  * 列含可用/累计积分变动与完整备注，文件名由前端拼接。
  */
 export function exportPointRecordsXlsx(params: RecordQuery & { employeeId: number | string; month?: string }): Promise<Blob> {

@@ -18,10 +18,7 @@ export function votesPaged(params: VoteQuery = {}): Promise<Paged<Vote>> {
   return get<Paged<Vote>>(VoteApi.List, { ...params })
 }
 
-/**
- * 新建投票（9.2：options 传纯字符串数组，ID 服务端生成；到开始时间自动推送参与员工通知）。
- * 契约缺口：前端携带 description（选填补充说明），文档 9.2 payload 表未列，已记入后端反馈。
- */
+/** 新建投票（9.2，v4.3：options 传纯字符串数组，ID 服务端生成；description 选填；到开始时间自动推送参与员工通知） */
 export function createVote(payload: VotePayload): Promise<Vote> {
   return post<Vote>(VoteApi.List, payload)
 }

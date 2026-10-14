@@ -45,7 +45,7 @@ export interface Vote {
 /** 新建/编辑投票参数（9.2/9.3：options 传纯文本数组，ID 服务端生成；participantNames/relatedLabel 由服务端派生，不回传） */
 export interface VotePayload {
   title: string
-  /** 补充说明（选填；文档 9.2 payload 表未列本字段，前端按 PRD 保留，已记入后端反馈） */
+  /** 补充说明（选填；v4.3 已补录 9.2/9.3 payload 契约，编辑整体覆盖） */
   description: string
   relatedType: VoteRelatedType
   relatedId?: number
