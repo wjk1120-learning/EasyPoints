@@ -2,7 +2,7 @@ import type { Paged } from "../types"
 import type { Appeal, AppealQuery, AppealReviewPayload } from "./types"
 import { get, post } from "../../utils/request"
 
-/** 申诉工单 REST 路径（apps/api/src/app.js；两级审核：部门初审 → 人事复核） */
+/** 申诉工单 REST 路径（后端契约见 Easy-Points-API.md；一级三态审核） */
 export const AppealApi = {
   List: "/admin/appeals",
   Review: (id: number | string) => `/admin/appeals/${id}/review`,
