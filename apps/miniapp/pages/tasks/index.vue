@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../api'
+import { isMissingApi, request } from '../../utils/request'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'

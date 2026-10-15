@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../api'
+import { request } from '../../utils/request'
+import { formatPoints } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -65,11 +66,6 @@ function nameInitial(name) {
 
 function pastel(index) {
   return PASTELS[index % PASTELS.length]
-}
-
-function formatPoints(value) {
-  const num = Number(value || 0)
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 </script>
 

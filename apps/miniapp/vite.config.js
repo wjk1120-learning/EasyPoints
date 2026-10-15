@@ -30,7 +30,8 @@ export default defineConfig({
     host: "0.0.0.0",
     proxy: {
       "/miniapp": { target: "http://localhost:3000", changeOrigin: true },
-      "/admin": { target: "http://localhost:3000", changeOrigin: true }
+      "/admin": { target: "http://localhost:3000", changeOrigin: true },
+      "/uploads": { target: "http://localhost:3000", changeOrigin: true }
     }
   }
 });

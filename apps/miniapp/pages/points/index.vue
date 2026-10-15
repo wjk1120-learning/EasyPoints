@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../api'
+import { request } from '../../utils/request'
+import { formatPoints, signedPoints, formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -91,28 +92,6 @@ function appeal(record) {
     `time=${encodeURIComponent(record.occurredAt || record.createdAt || '')}`
   ].join('&')
   uni.navigateTo({ url: `/pages/appeal/index?${query}` })
-}
-
-function formatPoints(value) {
-  const num = Number(value || 0)
-  const abs = String(Math.abs(num)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  return num < 0 ? `-${abs}` : abs
-}
-
-function signedPoints(value) {
-  const num = Number(value || 0)
-  return `${num > 0 ? '+' : ''}${formatPoints(num)}`
-}
-
-function formatTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
 }
 </script>
 

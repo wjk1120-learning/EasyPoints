@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getApiBase, request } from '../../api'
+import { getApiBase, request } from '../../utils/request'
+import { formatPoints } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -61,11 +62,6 @@ function isSoldOut(gift) {
 
 function isElectronic(gift) {
   return gift.deliveryType === 'electronic' || gift.type === 'electronic' || gift.electronic === true
-}
-
-function formatPoints(value) {
-  const num = Number(value || 0)
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 </script>
 

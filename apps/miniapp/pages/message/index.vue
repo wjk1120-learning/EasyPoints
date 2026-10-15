@@ -4,6 +4,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { formatTime } from '../../utils/format'
 
 const message = ref({ title: '', summary: '', type: '', createdAt: '' })
 
@@ -42,17 +43,6 @@ function canAppeal() {
 
 function isVote() {
   return typeMeta().label === '投票'
-}
-
-function formatTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
 }
 
 function goAppeal() {

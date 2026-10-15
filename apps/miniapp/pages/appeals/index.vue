@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../api'
+import { isMissingApi, request } from '../../utils/request'
+import { formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -61,17 +62,6 @@ function bannerOf(item) {
   return { cls: 'banner-amber', icon: 'clock', text: '预计 3 个工作日内完成处理' }
 }
 
-function formatDate(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
-}
-
 function titleOf(item) {
   return item.reason || item.remark || `申诉 #${item.pointRecordId ?? item.id}`
 }
@@ -95,7 +85,7 @@ function titleOf(item) {
           <text class="appeal-title">{{ titleOf(item) }}</text>
           <text class="pill" :class="statusPill(item).cls">{{ statusPill(item).label }}</text>
         </view>
-        <text class="muted appeal-sub">申诉 · {{ formatDate(item.createdAt) }}</text>
+        <text class="muted appeal-sub">申诉 · {{ formatTime(item.createdAt) }}</text>
         <view class="banner" :class="bannerOf(item).cls">
           <AppIcon
             :name="bannerOf(item).icon"

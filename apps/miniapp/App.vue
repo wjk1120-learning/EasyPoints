@@ -1,5 +1,5 @@
 <script>
-import { loginEmployee } from "./api";
+import { loginEmployee } from "./api/auth/auth";
 
 export default {
   onLaunch() {

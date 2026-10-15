@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../api'
+import { request } from '../../utils/request'
+import { formatPoints, formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -41,17 +42,6 @@ function statusPill(order) {
   return { label: status || '未知', cls: '', icon: 'refresh', tile: '' }
 }
 
-function formatTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
-}
-
 function appealHint() {
   uni.showModal({
     title: '发起申诉',
@@ -61,11 +51,6 @@ function appealHint() {
       if (res.confirm) uni.switchTab({ url: '/pages/points/index' })
     }
   })
-}
-
-function formatPoints(value) {
-  const num = Number(value || 0)
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 </script>
 

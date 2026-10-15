@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
-import { getApiBase, getCachedData, isNetworkError, loginEmployee, request } from '../../api'
+import { getApiBase, getCachedData, isNetworkError, request } from '../../utils/request'
+import { loginEmployee } from '../../api/auth/auth'
+import { formatPoints, friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -177,27 +179,6 @@ function toggleSettings() {
     debugTapCount = 0
     uni.showToast({ title: '调试设置已开启', icon: 'none' })
   }
-}
-
-function formatPoints(value) {
-  const num = Number(value || 0)
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
-
-function friendlyTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 16)
-  const now = new Date()
-  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000)
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  if (diffDays === 0) return `今天 ${hh}:${mm}`
-  if (diffDays === 1) return `昨天 ${hh}:${mm}`
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
 }
 </script>
 

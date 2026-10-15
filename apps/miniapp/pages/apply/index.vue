@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../api'
+import { isMissingApi, request } from '../../utils/request'
+import { formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -111,7 +112,7 @@ function statusPill(item) {
 
 function statusLine(item) {
   const text = `${item.status || ''}${item.statusText || ''}`
-  if (/approved|通过/.test(text)) return `积分已于 ${formatDate(item.updatedAt || item.createdAt)} 入账`
+  if (/approved|通过/.test(text)) return `积分已于 ${formatTime(item.updatedAt || item.createdAt)} 入账`
   if (/rejected|驳回/.test(text)) return ''
   return '预计 3 个工作日内完成审核'
 }
@@ -129,17 +130,6 @@ function appealHint() {
       if (res.confirm) uni.switchTab({ url: '/pages/points/index' })
     }
   })
-}
-
-function formatDate(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
 }
 
 const filters = [
@@ -252,7 +242,7 @@ const filters = [
             <text class="pill" :class="statusPill(item).cls">{{ statusPill(item).label }}</text>
           </view>
           <view class="row between apply-meta">
-            <text class="muted">{{ formatDate(item.createdAt) }}</text>
+            <text class="muted">{{ formatTime(item.createdAt) }}</text>
             <text class="apply-points">+{{ item.points }}</text>
           </view>
           <text v-if="statusLine(item)" class="muted apply-status">{{ statusLine(item) }}</text>

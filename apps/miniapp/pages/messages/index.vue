@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
-import { request } from '../../api'
+import { request } from '../../utils/request'
+import { friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -112,22 +113,6 @@ function pickType() {
   })
 }
 
-function friendlyTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const now = new Date()
-  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000)
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  if (diffDays === 0) return `今天 ${hh}:${mm}`
-  if (diffDays === 1) return `昨天 ${hh}:${mm}`
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  return `${m}月${d}日`
-}
-
 function displayTitle(item) {
   if (isVote(item) && (!item.title || item.title === '系统通知')) return '有新的投票待你参与'
   return item.title
@@ -174,7 +159,7 @@ function displayTitle(item) {
       <view class="msg-main">
         <view class="row between">
           <text class="msg-title" :class="{ 'msg-title-read': item.isRead }">{{ displayTitle(item) }}</text>
-          <text class="msg-time">{{ friendlyTime(item.createdAt) }}</text>
+          <text class="msg-time">{{ friendlyTime(item.createdAt, 'date') }}</text>
         </view>
         <text class="msg-summary" :class="{ 'msg-summary-read': item.isRead }">{{ item.summary }}</text>
         <text class="msg-tag" :class="`tag-${typeMeta(item).tile}`">{{ typeMeta(item).label }}</text>
