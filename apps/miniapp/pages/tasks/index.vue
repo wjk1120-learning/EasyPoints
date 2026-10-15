@@ -1,22 +1,27 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../utils/request'
+import { fetchTasks, claimTask, submitTask, fetchTaskClaims } from '../../api/task/task'
+import type { Task } from '../../api/task/types'
+import { uploadImage } from '../../api/upload/upload'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const tab = ref('all')
-const view = ref('list')
-const rows = ref([])
+type ScopeKey = 'all' | 'mine'
+
+const tab = ref<ScopeKey>('all')
+const view = ref<'list' | 'submit'>('list')
+const rows = ref<Task[]>([])
 const missing = ref('')
 const loading = ref(false)
 const sortByReward = ref(true)
-const submitFor = ref(null)
+const submitFor = ref<Task | null>(null)
 const resultText = ref('')
-const resultImages = ref([])
-const detailFor = ref(null)
+const resultImages = ref<string[]>([])
+const submitting = ref(false)
+const detailFor = ref<Task | null>(null)
 
 const claimableCount = computed(() => rows.value.filter((task) => isClaimable(task)).length)
 const sortedRows = computed(() => {
@@ -39,20 +44,17 @@ async function load() {
   loading.value = true
   missing.value = ''
   try {
-    const path = tab.value === 'mine' ? '/miniapp/tasks?scope=mine' : '/miniapp/tasks?scope=all'
-    const data = await request(path)
-    rows.value = Array.isArray(data) ? data : []
+    const page = await fetchTasks(tab.value, { page: 1, pageSize: 50 })
+    rows.value = page.data
   } catch (error) {
     rows.value = []
-    missing.value = isMissingApi(error)
-      ? '任务接口尚未提供。约定：GET /miniapp/tasks?scope=all|mine，POST /miniapp/tasks/{id}/claim，POST /miniapp/tasks/{id}/submit { content }。'
-      : (error?.message || '加载失败')
+    missing.value = (error as Error)?.message || '加载失败'
   } finally {
     loading.value = false
   }
 }
 
-function switchTab(next) {
+function switchTab(next: ScopeKey) {
   tab.value = next
   view.value = 'list'
   submitFor.value = null
@@ -63,31 +65,31 @@ function toggleSort() {
   sortByReward.value = !sortByReward.value
 }
 
-function isClaimable(task) {
+function isClaimable(task: Task) {
   return task.status === 'open' || Boolean(task.claimable)
 }
 
-function isRunning(task) {
+function isRunning(task: Task) {
   return task.status === 'in_progress' || Boolean(task.canSubmit)
 }
 
-function isReviewing(task) {
+function isReviewing(task: Task) {
   return ['pending_review', 'submitted', 'reviewing'].includes(String(task.status || ''))
 }
 
-function isApproved(task) {
+function isApproved(task: Task) {
   return ['approved', 'passed', 'completed'].includes(String(task.status || ''))
 }
 
-function isRejected(task) {
+function isRejected(task: Task) {
   return ['rejected', 'refused'].includes(String(task.status || ''))
 }
 
-function isHistory(task) {
+function isHistory(task: Task) {
   return ['history', 'archived', 'expired', 'closed'].includes(String(task.status || ''))
 }
 
-function statusPill(task) {
+function statusPill(task: Task) {
   if (isClaimable(task)) return { text: '可领取', cls: 'blue' }
   if (isRunning(task)) return { text: '进行中', cls: 'blue' }
   if (isReviewing(task)) return { text: '待审核', cls: 'amber' }
@@ -97,12 +99,12 @@ function statusPill(task) {
   return { text: task.statusText || task.status || '进行中', cls: '' }
 }
 
-function rewardOf(task) {
+function rewardOf(task: Task): number {
   const value = task.rewardPoints ?? task.points
-  return value == null ? '-' : Number(value)
+  return value == null ? 0 : Number(value)
 }
 
-function deadlineOf(task) {
+function deadlineOf(task: Task) {
   const value = task.deadline || task.dueAt || task.deadlineAt
   if (!value) return ''
   const date = new Date(value)
@@ -112,17 +114,17 @@ function deadlineOf(task) {
   return `${m}-${d}`
 }
 
-async function claim(task) {
+async function claim(task: Task) {
   try {
-    await request(`/miniapp/tasks/${task.id}/claim`, { method: 'POST' })
+    await claimTask(task.id)
     uni.showToast({ title: '已领取' })
     await load()
   } catch (error) {
-    uni.showToast({ title: error?.message || '领取失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '领取失败', icon: 'none' })
   }
 }
 
-function openSubmit(task) {
+function openSubmit(task: Task) {
   submitFor.value = task
   resultText.value = String(uni.getStorageSync(`taskDraft:${task.id}`) || '')
   resultImages.value = []
@@ -136,32 +138,40 @@ function saveDraft() {
 }
 
 function chooseImage() {
-  const left = 6 - resultImages.value.length
+  const left = 9 - resultImages.value.length
   if (left <= 0) {
-    uni.showToast({ title: '最多上传 6 张', icon: 'none' })
+    uni.showToast({ title: '最多上传 9 张', icon: 'none' })
     return
   }
   uni.chooseImage({
     count: left,
     success(res) {
-      resultImages.value = resultImages.value.concat(res.tempFilePaths || []).slice(0, 6)
+      resultImages.value = resultImages.value.concat(res.tempFilePaths || []).slice(0, 9)
     }
   })
 }
 
-function removeImage(index) {
+function removeImage(index: number) {
   resultImages.value = resultImages.value.filter((item, i) => i !== index)
 }
 
 async function submit() {
+  const task = submitFor.value
+  if (!task || submitting.value) return
   const content = resultText.value.trim()
   if (!content) {
     uni.showToast({ title: '请填写成果说明', icon: 'none' })
     return
   }
+  submitting.value = true
   try {
-    await request(`/miniapp/tasks/${submitFor.value.id}/submit`, { method: 'POST', data: { content } })
-    uni.removeStorageSync(`taskDraft:${submitFor.value.id}`)
+    // 佐证图先上传（契约 11.9）得到相对路径，再随成果提交（5.2b evidenceImages ≤9）
+    const urls: string[] = []
+    for (const path of resultImages.value) {
+      urls.push(await uploadImage(path))
+    }
+    await submitTask(task.id, content, urls)
+    uni.removeStorageSync(`taskDraft:${task.id}`)
     submitFor.value = null
     resultText.value = ''
     resultImages.value = []
@@ -169,26 +179,43 @@ async function submit() {
     uni.showToast({ title: '已提交，等待审核' })
     await load()
   } catch (error) {
-    uni.showToast({ title: error?.message || '提交失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '提交失败', icon: 'none' })
+  } finally {
+    submitting.value = false
   }
 }
 
-function openDetail(task) {
+function openDetail(task: Task) {
   detailFor.value = task
 }
 
-function appealHint() {
-  uni.showModal({
-    title: '发起申诉',
-    content: '申诉需绑定本人积分流水，请在「积分明细」中选择对应记录后发起。',
-    confirmText: '去明细',
-    success(res) {
-      if (res.confirm) uni.switchTab({ url: '/pages/points/index' })
+/**
+ * 被驳回任务直达申诉页（PRD 4.3；targetType=task_claim，契约 7.1）。
+ * targetId 必须是领取记录主键（后端按 task_claims.id 校验本人+已驳回），任务行不带该 ID，
+ * 先查本人被驳回领取记录按 taskId 匹配换算（一人一任务仅一条记录）。
+ */
+async function appealTask(task: Task) {
+  try {
+    const claims = await fetchTaskClaims('rejected', { page: 1, pageSize: 50 })
+    const claim = claims.data.find((item) => String(item.taskId) === String(task.id))
+    if (!claim) {
+      uni.showToast({ title: '未找到可申诉的任务记录', icon: 'none' })
+      return
     }
-  })
+    const query = [
+      'targetType=task_claim',
+      `targetId=${claim.id}`,
+      `remark=${encodeURIComponent(String(task.title || task.name || claim.taskName || '任务'))}`,
+      `points=${-rewardOf(task)}`,
+      `time=${encodeURIComponent(claim.updatedAt || task.updatedAt || '')}`
+    ].join('&')
+    uni.navigateTo({ url: `/pages/appeal/index?${query}` })
+  } catch (error) {
+    uni.showToast({ title: (error as Error)?.message || '发起申诉失败', icon: 'none' })
+  }
 }
 
-function describe(task) {
+function describe(task: Task) {
   return task.description || task.summary || ''
 }
 </script>
@@ -240,7 +267,7 @@ function describe(task) {
               <view v-if="isRunning(task)" class="small-button" @tap="openSubmit(task)">提交成果</view>
               <view v-if="isReviewing(task)" class="small-button ghost press" @tap="openDetail(task)">查看成果</view>
               <view v-if="isApproved(task) || isHistory(task)" class="small-button ghost press" @tap="openDetail(task)">查看详情</view>
-              <view v-if="isRejected(task)" class="small-button danger" @tap="appealHint">发起申诉</view>
+              <view v-if="isRejected(task)" class="small-button danger" @tap="appealTask(task)">发起申诉</view>
             </view>
           </template>
         </view>
@@ -269,7 +296,7 @@ function describe(task) {
           placeholder="请说明完成情况、成果与影响…"
           placeholder-class="placeholder-gray"
         />
-        <view class="field-label image-label">佐证图片 <text class="field-optional">（最多 6 张）</text></view>
+        <view class="field-label image-label">佐证图片 <text class="field-optional">（最多 9 张，随成果一起提交）</text></view>
         <view class="image-grid">
           <view v-for="(img, index) in resultImages" :key="img" class="image-item">
             <image class="image-preview" :src="img" mode="aspectFill" @tap="removeImage(index)" />
@@ -279,7 +306,7 @@ function describe(task) {
             <text class="image-add-text">继续上传</text>
           </view>
         </view>
-        <text class="muted image-note">附件暂不随成果提交，待后端上传接口就绪后开放。</text>
+        <text class="muted image-note">佐证图将先上传再随成果提交给管理员审核。</text>
         <view class="draft-row">
           <view class="draft-link" @tap="saveDraft"><AppIcon name="save" :size="24" color="muted" /><text>保存草稿</text></view>
         </view>
@@ -290,7 +317,7 @@ function describe(task) {
         <text>提交后进入审核，审核期间不可修改。</text>
       </view>
 
-      <view class="button submit-button" @tap="submit">提交审核</view>
+      <view class="button submit-button" :class="{ disabled: submitting }" @tap="submit">{{ submitting ? '提交中…' : '提交审核' }}</view>
     </template>
 
     <AppTabBar />

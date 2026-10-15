@@ -20,4 +20,28 @@ export interface Task {
   canSubmit?: boolean
   result?: string
   submitContent?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** 领取记录行（契约 5.3：GET /miniapp/task-claims，含任务快照；id 即申诉 task_claim 的 targetId） */
+export interface TaskClaim {
+  /** 领取记录 ID（task_claims 主键） */
+  id: number | string
+  /** 所属任务 ID */
+  taskId: number | string
+  employeeId?: number | string
+  status?: string
+  statusText?: string
+  taskName?: string
+  employeeName?: string
+  rewardPoints?: number
+  submittedText?: string
+  evidenceImages?: string[] | string
+  /** 审核备注（驳回原因） */
+  reviewRemark?: string
+  reviewedAt?: string
+  submittedAt?: string
+  createdAt?: string
+  updatedAt?: string
 }

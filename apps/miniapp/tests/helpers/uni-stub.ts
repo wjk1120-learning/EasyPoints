@@ -54,6 +54,16 @@ export function createUniStub() {
     chooseImage: (options: { success?: (res: unknown) => void; fail?: (err: { errMsg: string }) => void } = {}) => {
       options.fail?.({ errMsg: "chooseImage:fail cancel" });
     },
+    uploadFile: (options: { url: string; filePath?: string; name?: string; success?: (res: { statusCode: number; data: string }) => void; fail?: (err: { errMsg: string }) => void; complete?: () => void }) => {
+      calls.push({ url: options.url, options });
+      const responder = responders.shift();
+      if (!responder) throw new Error(`uni.uploadFile 无预设响应：${options.url}`);
+      setTimeout(() => {
+        if ("fail" in responder) options.fail?.({ errMsg: responder.fail });
+        else options.success?.({ statusCode: responder.statusCode, data: JSON.stringify(responder.data) });
+        options.complete?.();
+      }, 0);
+    },
     request(options: {
       url: string;
       method?: string;
