@@ -13,6 +13,7 @@ import { APPEAL_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
 import { pendingFirst } from "../../utils/sort";
 import WorkOrderDetail from "../WorkOrderDetail.vue";
+import { signedPoints } from "../../utils/points";
 import type { WorkOrderField } from "../WorkOrderDetail.vue";
 import { apiErrorMsg } from "../../utils/error";
 
@@ -115,7 +116,7 @@ function openDetail(row: Appeal) {
         ? [{ label: "当时审核备注", value: "当前后端未返回（新后端接入后可见）" }]
         : []),
     { label: "申诉原因", value: row.reason },
-    ...(row.pointRecord ? [{ label: "关联流水分值", value: row.pointRecord.pointsDelta, type: "delta" as const }] : []),
+    ...(row.pointRecord ? [{ label: "关联流水分值", value: signedPoints(row.pointRecord.pointsDelta), type: "delta" as const }] : []),
     { label: "佐证材料", type: "images" as const, images: evidenceImagesOf(row) },
     { label: "申诉时间", value: row.createdAt, type: "time" },
     { label: "当前状态", value: row.statusText || statusText(row.status) },

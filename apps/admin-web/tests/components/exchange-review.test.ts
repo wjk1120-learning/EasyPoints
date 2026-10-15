@@ -24,7 +24,8 @@ function fixtureOrders(): Order[] {
 }
 
 function mountPanel() {
-  return mount(ExchangeReviewPanel, { global: { plugins: [ElementPlus] } });
+  // attachTo: 详情弹窗 teleport 到 body，需真实挂载才能被 document.querySelector 查到
+  return mount(ExchangeReviewPanel, { global: { plugins: [ElementPlus] }, attachTo: document.body });
 }
 
 beforeEach(() => {
@@ -87,6 +88,26 @@ describe("兑换审核面板", () => {
 
     expect(wrapper.text()).toContain("驳回兑换申请");
     expect(mockedUpdateOrder).not.toHaveBeenCalled();
+  });
+
+  it("详情弹窗：消耗积分按成本口径显示 -N（回归：曾被当 delta 渲染成 +N 绿色，与列表 -N 打架）", async () => {
+    // 前序用例 mount 的实例未卸载，弹窗 DOM 残留会干扰全局查询，先清空
+    document.body.innerHTML = "";
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    const approvedRow = wrapper.findAll(".el-table__row").find((r) => r.text().includes("李四"))!;
+    await approvedRow.findAll("button").find((b) => b.text() === "详情")!.trigger("click");
+    await flushPromises();
+
+    // 页面同时挂着驳回弹窗（关闭后 DOM 不销毁），按标题 aria-label 精确定位详情弹窗
+    const dialogText = document
+      .querySelector('.el-overlay-dialog[aria-label="兑换工单详情"]')
+      ?.textContent || "";
+    expect(dialogText).toContain("兑换工单详情");
+    expect(dialogText).toContain("消耗积分");
+    expect(dialogText).toContain("-300");
+    expect(dialogText).not.toContain("+300");
   });
 
   it("加载失败：提示错误且不崩（回归：原来缺 catch 静默悬空）", async () => {

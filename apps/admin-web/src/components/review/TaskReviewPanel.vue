@@ -11,6 +11,7 @@ import { employees as fetchEmployees } from "../../api/employee/employee";
 import type { Employee } from "../../api/employee/types";
 import RejectReasonDialog from "../RejectReasonDialog.vue";
 import WorkOrderDetail from "../WorkOrderDetail.vue";
+import { signedPoints } from "../../utils/points";
 import type { WorkOrderField } from "../WorkOrderDetail.vue";
 import { TASK_RECORD_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
@@ -72,7 +73,7 @@ function openDetail(row: EmployeeTask) {
   detailDialog.fields = [
     { label: "员工", value: employeeLabel(row) },
     { label: "任务名称", value: row.taskName || `任务 #${row.taskId}` },
-    { label: "奖励积分", value: row.rewardPoints, type: "delta" },
+    { label: "奖励积分", value: signedPoints(row.rewardPoints || 0), type: "delta" },
     { label: "成果描述", value: row.submissionText || "—（尚未提交）" },
     { label: "佐证材料", type: "images", images: row.submissionImages || [] },
     { label: "提交时间", value: row.submittedAt, type: "time" },

@@ -11,6 +11,7 @@ import { employees as fetchEmployees } from "../../api/employee/employee";
 import type { Employee } from "../../api/employee/types";
 import RejectReasonDialog from "../RejectReasonDialog.vue";
 import WorkOrderDetail from "../WorkOrderDetail.vue";
+import { costPoints } from "../../utils/points";
 import type { WorkOrderField } from "../WorkOrderDetail.vue";
 import { ORDER_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
@@ -73,7 +74,7 @@ function openDetail(row: Order) {
   detailDialog.fields = [
     { label: "申请人", value: employeeLabel(row.employeeId, row.employeeName) },
     { label: "礼品", value: row.giftName },
-    { label: "消耗积分", value: row.pointsCost, type: "delta" },
+    { label: "消耗积分", value: costPoints(row.pointsCost), type: "cost" },
     { label: "申请时间", value: row.createdAt, type: "time" },
     { label: "当前状态", value: statusText(row.status) },
     { label: "处理备注", value: row.remark || "—" }

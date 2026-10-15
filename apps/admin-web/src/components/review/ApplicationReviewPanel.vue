@@ -11,6 +11,7 @@ import { employees as fetchEmployees } from "../../api/employee/employee";
 import type { Employee } from "../../api/employee/types";
 import RejectReasonDialog from "../RejectReasonDialog.vue";
 import WorkOrderDetail from "../WorkOrderDetail.vue";
+import { signedPoints } from "../../utils/points";
 import type { WorkOrderField } from "../WorkOrderDetail.vue";
 import { REVIEW_STATUS_MAP, statusMeta } from "../../utils/status";
 import { formatTimeText } from "../../utils/format";
@@ -71,7 +72,7 @@ function notifyRefreshed() {
 function openDetail(row: Application) {
   detailDialog.fields = [
     { label: "申请人", value: employeeLabel(row) },
-    { label: "申请分值", value: row.points, type: "delta" },
+    { label: "申请分值", value: signedPoints(row.points), type: "delta" },
     { label: "申请缘由", value: row.reason },
     { label: "佐证材料", type: "images", images: row.evidenceImages || [] },
     { label: "申请时间", value: row.createdAt, type: "time" },
