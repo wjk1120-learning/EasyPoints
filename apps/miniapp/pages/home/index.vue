@@ -1,16 +1,20 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
-import { getApiBase, getCachedData, isNetworkError, request } from '../../utils/request'
+import { getApiBase, getCachedData, isNetworkError, type WithOfflineFlag } from '../../utils/request'
 import { loginEmployee } from '../../api/auth/auth'
+import { fetchHome } from '../../api/home/home'
+import type { HomeVo } from '../../api/home/types'
+import type { PointRecordItem } from '../../api/points/types'
+import { fetchVotesPaged } from '../../api/vote/vote'
 import { formatPoints, friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const home = ref({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
-const recent = ref([])
+const home = ref<HomeVo>({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
+const recent = ref<PointRecordItem[]>([])
 const pendingVotes = ref(0)
 const loading = ref(true)
 const showSettings = ref(false)
@@ -20,20 +24,31 @@ const authError = ref('')
 const offlineMode = ref(false)
 const debugEnabled = ref(false)
 let debugTapCount = 0
-let debugTapTimer = null
+let debugTapTimer: ReturnType<typeof setTimeout> | null = null
 
 const availablePoints = computed(() => Number(home.value.pointsBalance || 0))
 const actualPoints = computed(() => {
-  const value = home.value.actualPoints ?? home.value.honorPoints
-  return value == null || value === '' ? null : Number(value)
+  const value = home.value.actualPoints
+  return value == null ? null : Number(value)
 })
 const monthDeltaText = computed(() => {
   const delta = Number(home.value.monthDelta || 0)
   return `${delta > 0 ? '+' : ''}${formatPoints(delta)}`
 })
 
-const shortcuts = [
+type Shortcut = {
+  label: string
+  icon: string
+  tile: string
+  tone: string
+  badge?: 'messages' | 'votes'
+  action: () => void
+}
+
+// 快捷入口 7 项 = PRD 4.1 定稿口径（积分商城/任务大厅/积分排名/积分申请/规则中心/通知中心/我的投票）
+const shortcuts: Shortcut[] = [
   { label: '积分商城', icon: 'shopping-bag', tile: 'blue', tone: 'brand', action: () => uni.switchTab({ url: '/pages/mall/index' }) },
+  { label: '任务大厅', icon: 'target', tile: 'green', tone: 'green', action: () => uni.switchTab({ url: '/pages/tasks/index' }) },
   { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
   { label: '积分申请', icon: 'file-text', tile: 'purple', tone: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
   { label: '规则中心', icon: 'book-open', tile: 'blue', tone: 'brand', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
@@ -55,18 +70,18 @@ onShow(async () => {
     if (!uni.getStorageSync('employeeToken')) {
       await loginEmployee({ wecomUserId: wecomUserId.value })
     }
-    const data = await request('/miniapp/home')
+    const data = await fetchHome()
     applyHomeData(data, Boolean(data?.__offline))
-    await loadRecent()
+    recent.value = data.recentRecords ?? []
     loadPendingVotes()
   } catch (error) {
     const cached = getCachedData('/miniapp/home')
     if (cached && isNetworkError(error)) {
-      applyHomeData(cached, true)
+      applyHomeData(cached as WithOfflineFlag<HomeVo>, true)
       return
     }
     offlineMode.value = false
-    authError.value = error?.message || '加载失败'
+    authError.value = (error as Error)?.message || '加载失败'
     uni.showToast({ title: authError.value, icon: 'none' })
   } finally {
     loading.value = false
@@ -75,32 +90,32 @@ onShow(async () => {
 
 onPullDownRefresh(async () => {
   try {
-    const data = await request('/miniapp/home')
+    const data = await fetchHome()
     applyHomeData(data, Boolean(data?.__offline))
-    await loadRecent()
+    recent.value = data.recentRecords ?? []
     loadPendingVotes()
   } catch {} finally {
     uni.stopPullDownRefresh()
   }
 })
 
+// 待参与角标：scope=pending 的 total 即未提交且未截止的投票数
 async function loadPendingVotes() {
   try {
-    const votes = await request('/miniapp/votes?scope=pending')
-    const rows = Array.isArray(votes) ? votes : []
-    pendingVotes.value = rows.filter((vote) => !vote.submitted).length
+    const page = await fetchVotesPaged('pending', { page: 1, pageSize: 50 })
+    pendingVotes.value = page.meta.total
   } catch {
     pendingVotes.value = 0
   }
 }
 
-function badgeCount(item) {
+function badgeCount(item: Shortcut): number {
   if (item.badge === 'messages') return Number(home.value.unreadMessages || 0)
   if (item.badge === 'votes') return pendingVotes.value
   return 0
 }
 
-function applyHomeData(data, offline) {
+function applyHomeData(data: WithOfflineFlag<HomeVo>, offline: boolean) {
   const next = { ...(data || {}) }
   delete next.__offline
   home.value = next
@@ -108,21 +123,7 @@ function applyHomeData(data, offline) {
   if (!offline) uni.removeStorageSync('employeeAuthError')
 }
 
-async function loadRecent() {
-  try {
-    const groups = await request('/miniapp/points/records')
-    const rows = []
-    Object.keys(groups || {}).forEach((month) => {
-      ;(groups[month] || []).forEach((record) => rows.push(record))
-    })
-    rows.sort((a, b) => String(b.occurredAt || b.createdAt || '').localeCompare(String(a.occurredAt || a.createdAt || '')))
-    recent.value = rows.slice(0, 3)
-  } catch {
-    recent.value = []
-  }
-}
-
-function recordIcon(record) {
+function recordIcon(record: PointRecordItem): { icon: string; tile: string; tone: string } {
   const text = `${record.type || ''} ${record.sourceType || ''}`
   if (/exchange|order|mall/.test(text)) return { icon: 'shopping-bag', tile: 'red', tone: 'red' }
   if (/penalty|deduct/.test(text)) return { icon: 'alert-triangle', tile: 'red', tone: 'red' }
@@ -145,7 +146,7 @@ function saveSettings() {
   uni.showToast({ title: '设置已保存' })
 }
 
-function normalizeApiBaseInput(value) {
+function normalizeApiBaseInput(value: unknown): string {
   const raw = String(value || '').trim()
   if (!raw || raw === 'false' || raw === 'true') return ''
   return raw.endsWith('/') ? raw.slice(0, -1) : raw
@@ -156,11 +157,12 @@ async function relogin() {
   try {
     await loginEmployee({ wecomUserId: wecomUserId.value })
     authError.value = ''
-    home.value = await request('/miniapp/home')
-    await loadRecent()
+    const data = await fetchHome()
+    applyHomeData(data, false)
+    recent.value = data.recentRecords ?? []
     uni.showToast({ title: '登录成功' })
   } catch (error) {
-    uni.showToast({ title: error?.message || '登录失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '登录失败', icon: 'none' })
   }
 }
 
@@ -201,7 +203,7 @@ function toggleSettings() {
       <view class="card">
         <view class="sk sk-line w28" />
         <view class="shortcut-grid">
-          <view v-for="n in 6" :key="n" class="shortcut">
+          <view v-for="n in 7" :key="n" class="shortcut">
             <view class="sk sk-tile" />
             <view class="sk sk-line sk-label" />
           </view>
@@ -239,7 +241,6 @@ function toggleSettings() {
             <text class="hero-num">{{ actualPoints == null ? '—' : formatPoints(actualPoints) }}</text>
           </view>
         </view>
-        <text v-if="actualPoints == null" class="hero-note">实际积分字段待后端提供，当前展示「—」</text>
       </view>
 
       <view v-if="offlineMode" class="card notice fade-up d1">
@@ -286,8 +287,8 @@ function toggleSettings() {
             <text class="recent-title">{{ record.remark }}</text>
             <text class="muted">{{ friendlyTime(record.occurredAt || record.createdAt) }}</text>
           </view>
-          <text class="recent-amount" :class="record.pointsDelta > 0 ? 'pos' : 'neg'">
-            {{ record.pointsDelta > 0 ? '+' : '' }}{{ formatPoints(record.pointsDelta) }}
+          <text class="recent-amount" :class="Number(record.pointsDelta || 0) > 0 ? 'pos' : 'neg'">
+            {{ Number(record.pointsDelta || 0) > 0 ? '+' : '' }}{{ formatPoints(record.pointsDelta) }}
           </text>
         </view>
       </view>

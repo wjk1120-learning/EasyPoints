@@ -8,6 +8,9 @@ import type { Paged } from "../api/types";
 
 export type QueryParams = Record<string, string | number | boolean | undefined | null>;
 
+/** 离线兜底标记：GET 网络失败回灌缓存时带上，页面据此显示离线提示 */
+export type WithOfflineFlag<T> = T & { __offline?: boolean };
+
 export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   /** 请求载荷：传输层不关心形状，业务载荷类型由各域定义 */

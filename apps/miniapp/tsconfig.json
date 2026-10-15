@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["api/**/*.ts", "utils/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+  "include": ["api/**/*.ts", "utils/**/*.ts", "tests/**/*.ts", "pages/**/*.vue", "components/**/*.vue", "*.d.ts", "vitest.config.ts"]
 }

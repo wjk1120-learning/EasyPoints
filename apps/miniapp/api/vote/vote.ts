@@ -1,5 +1,6 @@
 import type { VoteDetail, VoteSummary } from "./types"
-import { request } from "../../utils/request"
+import type { Paged } from "../types"
+import { request, requestPaged } from "../../utils/request"
 
 /** 投票 REST 路径（契约见 docs/Easy-Points-API.md 9.7~9.9；ballots 为小程序契约路由） */
 export const VoteApi = {
@@ -13,6 +14,14 @@ export type { VoteDetail, VoteSummary } from "./types"
 /** 我的投票（9.7：scope=pending 待参与 / history 已提交或已结束；现状按数组解析——第 3 阶段切 PageResult） */
 export function fetchVotes(scope: "pending" | "history"): Promise<VoteSummary[]> {
   return request<VoteSummary[]>(`${VoteApi.List}?scope=${scope}`)
+}
+
+/** 我的投票·分页（9.7：PageResult 归一；scope=pending 的 meta.total 即待参与角标数） */
+export function fetchVotesPaged(
+  scope: "pending" | "history",
+  params: { page?: number; pageSize?: number } = {}
+): Promise<Paged<VoteSummary>> {
+  return requestPaged<VoteSummary>(VoteApi.List, { scope, ...params })
 }
 
 /** 投票详情（9.8：非参与者 404 投票不存在；options[].text 与 selectedOptionIds 为小程序契约字段名） */
