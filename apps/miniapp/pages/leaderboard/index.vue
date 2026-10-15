@@ -1,17 +1,18 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../utils/request'
+import { fetchLeaderboard } from '../../api/leaderboard/leaderboard'
+import type { LeaderboardDimension, LeaderboardEntry } from '../../api/leaderboard/types'
 import { formatPoints } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const list = ref([])
+// 双榜维度（契约 2.5）：cumulative=累计积分（实际积分）/ realtime=可用积分（实时积分）
+const dimension = ref<LeaderboardDimension>('cumulative')
+const list = ref<LeaderboardEntry[]>([])
 const loading = ref(false)
-const rankBy = ref('actual')
-const sameBoard = ref(true)
 const updatedAt = ref('')
 
 const PASTELS = [
@@ -22,7 +23,7 @@ const PASTELS = [
   { bg: '#fdeeee', fg: '#f04438' }
 ]
 
-const medalColors = { 1: '#ffb020', 2: '#a8b4c4', 3: '#d9925f' }
+const medalColors: Record<number, string> = { 1: '#ffb020', 2: '#a8b4c4', 3: '#d9925f' }
 
 const myEntry = computed(() => {
   const employeeId = String(uni.getStorageSync('employeeId') || '')
@@ -35,36 +36,35 @@ onShow(loadLeaderboard)
 async function loadLeaderboard() {
   loading.value = true
   try {
-    const data = await request(`/miniapp/leaderboard?rankBy=${rankBy.value}`)
+    const data = await fetchLeaderboard(dimension.value)
     list.value = Array.isArray(data) ? data : []
-    sameBoard.value = !list.value.some((item) => item.actualPoints != null && item.availablePoints != null)
     const now = new Date()
     updatedAt.value = `${`${now.getHours()}`.padStart(2, '0')}:${`${now.getMinutes()}`.padStart(2, '0')}`
   } catch (error) {
-    uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   } finally {
     loading.value = false
   }
 }
 
-function switchRank(next) {
-  if (rankBy.value === next) return
-  rankBy.value = next
+function switchDimension(next: LeaderboardDimension) {
+  if (dimension.value === next) return
+  dimension.value = next
   loadLeaderboard()
 }
 
-function scoreOf(item) {
-  if (rankBy.value === 'actual' && item.actualPoints != null) return item.actualPoints
-  if (item.availablePoints != null) return item.availablePoints
-  return item.pointsBalance
+/** 当前榜的展示分数：累计榜取 actualPoints，实时榜取 availablePoints（行内同源字段，缺省回落 points） */
+function scoreOf(item: LeaderboardEntry): number {
+  const value = dimension.value === 'cumulative' ? item.actualPoints : item.availablePoints
+  return Number(value ?? item.points ?? 0)
 }
 
-function nameInitial(name) {
+function nameInitial(name?: string) {
   const text = String(name || '').trim()
   return text ? text.slice(0, 1) : '?'
 }
 
-function pastel(index) {
+function pastel(index: number) {
   return PASTELS[index % PASTELS.length]
 }
 </script>
@@ -74,15 +74,14 @@ function pastel(index) {
     <NavBar title="积分排名" />
 
     <view class="segmented">
-      <text class="tab" :class="{ active: rankBy === 'actual' }" @tap="switchRank('actual')">实际积分排名</text>
-      <text class="tab" :class="{ active: rankBy === 'available' }" @tap="switchRank('available')">实时积分排名</text>
+      <text class="tab" :class="{ active: dimension === 'cumulative' }" @tap="switchDimension('cumulative')">实际积分排名</text>
+      <text class="tab" :class="{ active: dimension === 'realtime' }" @tap="switchDimension('realtime')">实时积分排名</text>
     </view>
 
     <view class="update-line">
       <AppIcon name="refresh" :size="22" color="muted" />
       <text>数据更新于 {{ updatedAt || '--:--' }} 自动刷新</text>
     </view>
-    <text v-if="sameBoard" class="same-board-note">双榜字段待后端提供，两个页签暂展示同一份可用积分。</text>
 
     <view v-if="myEntry" class="card my-rank">
       <view class="my-rank-label">
@@ -91,7 +90,7 @@ function pastel(index) {
       </view>
       <view class="row my-rank-row">
         <text class="my-rank-num">{{ myEntry.rank }}</text>
-        <view class="my-avatar" :style="{ background: pastel(myEntry.rank).bg, color: pastel(myEntry.rank).fg }">
+        <view class="my-avatar" :style="{ background: pastel(myEntry.rank ?? 1).bg, color: pastel(myEntry.rank ?? 1).fg }">
           {{ nameInitial(myEntry.name) }}
         </view>
         <view class="my-info">
@@ -120,7 +119,7 @@ function pastel(index) {
       </view>
       <view v-for="(item, index) in list" :key="item.id" class="board-row">
         <view class="rank-badge">
-          <view v-if="item.rank <= 3" class="medal" :style="{ background: medalColors[item.rank] }">{{ item.rank }}</view>
+          <view v-if="Number(item.rank || 0) <= 3" class="medal" :style="{ background: medalColors[Number(item.rank || 0)] }">{{ item.rank }}</view>
           <text v-else class="rank-num">{{ item.rank }}</text>
         </view>
         <view class="board-avatar" :style="{ background: pastel(index).bg, color: pastel(index).fg }">
@@ -147,14 +146,6 @@ function pastel(index) {
   margin: 16rpx 0 4rpx;
   font-size: 22rpx;
   color: var(--muted);
-}
-
-.same-board-note {
-  display: block;
-  text-align: center;
-  margin-bottom: 8rpx;
-  font-size: 20rpx;
-  color: var(--faint);
 }
 
 .my-rank {

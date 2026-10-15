@@ -29,7 +29,7 @@ onShow(async () => {
 
 async function loadRank() {
   try {
-    const list = await request('/miniapp/leaderboard?rankBy=available')
+    const list = await request('/miniapp/leaderboard?dimension=realtime')
     const employeeId = String(uni.getStorageSync('employeeId') || '')
     const mine = (Array.isArray(list) ? list : []).find((item) => String(item.id) === employeeId)
     myRank.value = mine ? mine.rank : null
