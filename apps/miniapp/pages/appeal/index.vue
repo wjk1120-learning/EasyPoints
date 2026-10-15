@@ -1,24 +1,37 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { request } from '../../utils/request'
+import { createAppeal } from '../../api/appeal/appeal'
 import { formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
-const pointRecordId = ref('')
+/** 申诉目标（契约 7.1）：point_record / task_claim / order / point_application */
+const targetType = ref('point_record')
+const targetId = ref<number | string>('')
+const targetLabel = ref('积分明细')
 const originalRemark = ref('')
 const originalPoints = ref(0)
 const originalTime = ref('')
 const reason = ref('')
 const reasonError = ref(false)
-const images = ref([])
+const images = ref<string[]>([])
 let triedSubmit = false
+
+const TARGET_LABELS: Record<string, string> = {
+  point_record: '积分明细',
+  order: '兑换订单',
+  task_claim: '任务',
+  point_application: '积分申请'
+}
 
 onLoad((query) => {
   const safeQuery = query || {}
-  pointRecordId.value = safeQuery.recordId || ''
+  // 新口径 targetType/targetId；兼容明细页旧入口 recordId（=point_record 流水申诉）
+  targetType.value = safeQuery.targetType || 'point_record'
+  targetId.value = safeQuery.targetId || safeQuery.recordId || ''
+  targetLabel.value = TARGET_LABELS[targetType.value] || '关联事项'
   originalRemark.value = decodeURIComponent(safeQuery.remark || '')
   originalPoints.value = Number(safeQuery.points || 0)
   originalTime.value = decodeURIComponent(safeQuery.time || '')
@@ -42,7 +55,7 @@ function chooseImage() {
   })
 }
 
-function removeImage(index) {
+function removeImage(index: number) {
   images.value = images.value.filter((item, i) => i !== index)
 }
 
@@ -54,18 +67,13 @@ async function submit() {
     return
   }
   try {
-    await request('/miniapp/appeals', {
-      method: 'POST',
-      data: {
-        pointRecordId: pointRecordId.value,
-        reason: reason.value
-      }
-    })
+    // 契约 7.1：{ targetType, targetId, reason }（佐证图 evidenceImages 待上传接口接入）
+    await createAppeal({ targetType: targetType.value, targetId: targetId.value, reason: reason.value })
     uni.showToast({ title: '申诉已提交' })
     uni.navigateBack()
   } catch (error) {
     uni.showToast({
-      title: error?.message || '提交失败',
+      title: (error as Error)?.message || '提交失败',
       icon: 'none'
     })
   }
@@ -77,9 +85,9 @@ async function submit() {
     <NavBar title="发起申诉" />
 
     <view class="card">
-      <text class="muted">关联事项 · 积分明细</text>
+      <text class="muted">关联事项 · {{ targetLabel }}</text>
       <view class="row between related-row">
-        <text class="related-title">{{ originalRemark || '积分流水' }}</text>
+        <text class="related-title">{{ originalRemark || '未提供事项信息' }}</text>
       </view>
       <view class="row between">
         <text class="muted">{{ formatTime(originalTime) }}</text>

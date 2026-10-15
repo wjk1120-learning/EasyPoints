@@ -1,17 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getApiBase, request } from '../../utils/request'
+import { getApiBase } from '../../utils/request'
+import { fetchGifts } from '../../api/mall/mall'
+import type { Gift } from '../../api/mall/types'
+import { createOrder } from '../../api/order/order'
+import { fetchHome } from '../../api/home/home'
 import { formatPoints } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const gifts = ref([])
+const gifts = ref<Gift[]>([])
 const balance = ref(0)
-const dialog = ref(null)
-const filter = ref('all')
+const dialog = ref<{ gift: Gift; enough: boolean; after: number } | null>(null)
+const filter = ref<'all' | 'redeemable'>('all')
 const apiBase = getApiBase()
 
 const visibleGifts = computed(() => gifts.value.filter((gift) => gift.status !== 'inactive' && gift.status !== 'unpublished'))
@@ -27,40 +31,46 @@ onShow(load)
 async function load() {
   try {
     const [giftRows, home] = await Promise.all([
-      request('/miniapp/mall/gifts'),
-      request('/miniapp/home')
+      fetchGifts(),
+      fetchHome()
     ])
     gifts.value = Array.isArray(giftRows) ? giftRows : []
     balance.value = Number(home?.pointsBalance || 0)
   } catch (error) {
-    uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   }
 }
 
-function openRedeem(gift) {
+function openRedeem(gift: Gift) {
   if (Number(gift.stock) <= 0) return
   const enough = balance.value >= Number(gift.pointsCost || 0)
   dialog.value = { gift, enough, after: balance.value - Number(gift.pointsCost || 0) }
 }
 
 async function confirmRedeem() {
-  const gift = dialog.value?.gift
-  if (!gift || !dialog.value.enough) return
+  const current = dialog.value
+  const gift = current?.gift
+  if (!current || !gift || !current.enough) return
   try {
-    await request('/miniapp/orders', { method: 'POST', data: { giftId: gift.id } })
+    // 兑换下单（契约 4.8：POST /miniapp/orders { giftId }，仅扣可用积分）
+    await createOrder(gift.id)
     dialog.value = null
     uni.showToast({ title: '兑换申请已提交' })
     await load()
   } catch (error) {
-    uni.showToast({ title: error?.message || '兑换失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '兑换失败', icon: 'none' })
   }
 }
 
-function isSoldOut(gift) {
+function openOrders() {
+  uni.navigateTo({ url: '/pages/orders/index' })
+}
+
+function isSoldOut(gift: Gift) {
   return Number(gift.stock) <= 0
 }
 
-function isElectronic(gift) {
+function isElectronic(gift: Gift) {
   return gift.deliveryType === 'electronic' || gift.type === 'electronic' || gift.electronic === true
 }
 </script>
@@ -74,7 +84,7 @@ function isElectronic(gift) {
         <text class="mall-balance-label">可用积分</text>
         <text class="mall-balance-num">{{ formatPoints(balance) }}</text>
       </view>
-      <text class="mall-orders-link" @tap="uni.navigateTo({ url: '/pages/orders/index' })">兑换记录 ›</text>
+      <text class="mall-orders-link" @tap="openOrders">兑换记录 ›</text>
     </view>
 
     <view class="chips">

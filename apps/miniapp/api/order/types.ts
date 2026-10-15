@@ -8,9 +8,8 @@ export interface Order {
   pointsSpent?: number
   /** pending_review / approved（闭环终点）/ rejected / cancelled */
   status?: string
-  /** 审核备注：契约输出名 remark（驳回必填）；现状前端读 reviewRemark 老字段——第 3 阶段对齐 */
+  /** 审核备注（驳回必填；存储列 review_remark，契约输出名 remark——P4 起前端读 remark） */
   remark?: string
-  reviewRemark?: string
   createdAt?: string
   occurredAt?: string
 }

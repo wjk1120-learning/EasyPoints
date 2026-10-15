@@ -103,7 +103,7 @@ describe("积分明细页（契约 2.1 / PRD 4.4）", () => {
     await wrapper.find(".record-card").trigger("tap");
 
     expect(stub.navigations).toHaveLength(1);
-    expect(stub.navigations[0]).toContain("/pages/appeal/index?recordId=");
+    expect(stub.navigations[0]).toContain("/pages/appeal/index?targetType=point_record&targetId=");
     expect(stub.navigations[0]).toContain("remark=");
   });
 

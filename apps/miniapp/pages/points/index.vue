@@ -132,7 +132,8 @@ function iconOf(record: PointRecordItem): { icon: string; cls: string } {
 
 function appeal(record: PointRecordItem) {
   const query = [
-    `recordId=${record.id}`,
+    'targetType=point_record',
+    `targetId=${record.id}`,
     `remark=${encodeURIComponent(record.remark || '')}`,
     `points=${record.pointsDelta ?? 0}`,
     `time=${encodeURIComponent(record.occurredAt || record.createdAt || '')}`
