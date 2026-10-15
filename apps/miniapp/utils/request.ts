@@ -1,9 +1,12 @@
 /**
- * 请求层：uni.request 封装 + GET 离线缓存 + 网络错误识别。
- * 契约现状（老口径，第 2 步统一切新后端）：响应信封 { data: ... }，分页 { data, meta }，错误字段 message。
+ * 请求层：uni.request 封装 + BaseResult 解包 + GET 离线缓存 + 网络错误识别。
+ * 契约：docs/Easy-Points-API.md v4.3——统一 BaseResult{code:1|0, msg, data}；分页 PageResult{total,rows}；
+ * 业务错误 msg 为中文可展示文案（原样透传给页面 toast）；时间统一 yyyy-MM-dd HH:mm:ss（东八区）。
  */
 import { clearAuthError, clearEmployeeAuth, loginEmployee, markNetworkError } from "../api/auth/auth";
 import type { Paged } from "../api/types";
+
+export type QueryParams = Record<string, string | number | boolean | undefined | null>;
 
 export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -12,9 +15,11 @@ export type RequestOptions = {
   header?: Record<string, string>;
 };
 
+type BaseResult = { code: number; msg?: string; data?: unknown } & Record<string, unknown>;
+
 export type RawResponse = {
   statusCode: number;
-  data: { data?: unknown; meta?: unknown; message?: string } & Record<string, unknown>;
+  data: unknown;
 };
 
 function normalizeApiBase(value: unknown): string {
@@ -84,20 +89,54 @@ function isGetMethod(method: string): boolean {
   return String(method || "GET").toUpperCase() === "GET";
 }
 
+/** 只认 BaseResult：code!==1 抛后端 msg 原文；缺包装视为响应不合法 */
+function unwrap<T>(body: unknown): T {
+  if (body && typeof body === "object" && "code" in body && "msg" in body && "data" in body) {
+    const r = body as BaseResult;
+    if (r.code !== 1) throw new Error(typeof r.msg === "string" && r.msg.trim() ? r.msg.trim() : "请求失败");
+    return (r.data ?? null) as T;
+  }
+  throw new Error("响应格式不合法（缺少 BaseResult 包装）");
+}
+
+/** PageResult{total,rows} → Paged{data,meta}（page/pageSize 从请求参数回填）；非分页形状视为不合法 */
+function toPaged<T>(data: unknown, params: QueryParams): Paged<T> {
+  if (data && typeof data === "object" && "total" in data && "rows" in data) {
+    const r = data as { total?: number; rows?: unknown };
+    return {
+      data: (r.rows ?? []) as T[],
+      meta: {
+        total: Number(r.total ?? 0),
+        page: Number(params.page ?? 1),
+        pageSize: Number(params.pageSize ?? 50)
+      }
+    };
+  }
+  throw new Error("响应格式不合法（分页接口缺少 PageResult）");
+}
+
+/** 非 2xx：从 BaseResult body 提取 msg，无则给 HTTP 状态兜底文案 */
+function httpError(response: RawResponse): Error {
+  const body = response.data as BaseResult | undefined;
+  const msg =
+    body && typeof body === "object" && typeof body.msg === "string" && body.msg.trim()
+      ? body.msg.trim()
+      : `请求失败（HTTP ${response.statusCode}）`;
+  return new Error(msg);
+}
+
 export function rawRequest(path: string, options: RequestOptions = {}): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync("employeeToken") || "";
-    const authHeader = token
-      ? { authorization: `Bearer ${token}` }
-      : { "x-employee-id": uni.getStorageSync("employeeId") || "1" };
+    const header = {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(options.header || {})
+    };
     uni.request({
       url: `${getApiBase()}${path}`,
       method: options.method || "GET",
       data: options.data || {},
-      header: {
-        ...authHeader,
-        ...(options.header || {})
-      },
+      header,
       success(response) {
         resolve(response as unknown as RawResponse);
       },
@@ -114,29 +153,28 @@ function tryReadCache(path: string, method: string): unknown {
   return readCache(path);
 }
 
+/** 401 统一处理：清登录态 → 重登 → 原请求重试一次 */
+async function authorizeAndFetch(path: string, options: RequestOptions): Promise<RawResponse> {
+  let response = await rawRequest(path, options);
+  if (response.statusCode === 401) {
+    clearEmployeeAuth("unauthorized");
+    await loginEmployee();
+    response = await rawRequest(path, options);
+  }
+  return response;
+}
+
 export async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method || "GET";
   try {
-    const response = await rawRequest(path, options);
-    if (response.statusCode === 401) {
-      clearEmployeeAuth("unauthorized");
-      await loginEmployee();
-      const retry = await rawRequest(path, options);
-      if (retry.statusCode >= 200 && retry.statusCode < 300) {
-        const data = retry.data.data;
-        if (isGetMethod(method)) writeCache(path, data);
-        clearAuthError();
-        return data as T;
-      }
-      throw new Error(retry.data?.message || "请求失败");
-    }
+    const response = await authorizeAndFetch(path, options);
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      const data = response.data.data;
+      const data = unwrap<T>(response.data);
       if (isGetMethod(method)) writeCache(path, data);
       clearAuthError();
-      return data as T;
+      return data;
     }
-    throw new Error(response.data?.message || "请求失败");
+    throw httpError(response);
   } catch (error) {
     const cached = tryReadCache(path, method);
     if (isNetworkError(error) && cached != null) {
@@ -146,31 +184,28 @@ export async function request<T = unknown>(path: string, options: RequestOptions
   }
 }
 
-export async function requestPaged<T = unknown>(path: string, options: RequestOptions = {}): Promise<Paged<T>> {
+/**
+ * 分页请求：query 由 params 组装（替代手拼查询串），PageResult 归一为 Paged。
+ * 仅已适配的域函数使用；页面拿 { data: rows, meta: { total, page, pageSize } }。
+ */
+export async function requestPaged<T = unknown>(
+  path: string,
+  params: QueryParams = {},
+  options: RequestOptions = {}
+): Promise<Paged<T>> {
   const method = options.method || "GET";
+  const fullPath = `${path}${toQuery(params)}`;
   try {
-    const response = await rawRequest(path, options);
-    if (response.statusCode === 401) {
-      clearEmployeeAuth("unauthorized");
-      await loginEmployee();
-      const retry = await rawRequest(path, options);
-      if (retry.statusCode >= 200 && retry.statusCode < 300) {
-        const result = { data: retry.data.data as T, meta: retry.data.meta || null };
-        if (isGetMethod(method)) writeCache(path, result);
-        clearAuthError();
-        return result;
-      }
-      throw new Error(retry.data?.message || "请求失败");
-    }
+    const response = await authorizeAndFetch(fullPath, options);
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      const result = { data: response.data.data as T, meta: response.data.meta || null };
-      if (isGetMethod(method)) writeCache(path, result);
+      const result = toPaged<T>(unwrap(response.data), params);
+      if (isGetMethod(method)) writeCache(fullPath, result);
       clearAuthError();
       return result;
     }
-    throw new Error(response.data?.message || "请求失败");
+    throw httpError(response);
   } catch (error) {
-    const cachedPaged = tryReadCache(path, method) as Paged<T> | null;
+    const cachedPaged = tryReadCache(fullPath, method) as Paged<T> | null;
     if (isNetworkError(error) && cachedPaged != null) {
       return { ...cachedPaged, __offline: true } as Paged<T>;
     }
@@ -178,14 +213,14 @@ export async function requestPaged<T = unknown>(path: string, options: RequestOp
   }
 }
 
-/** 接口不存在族识别（页面用于展示「约定接口」引导文案） */
+/** 接口不存在族识别（页面过渡期引导文案用；后端 v4.3 全接口在位，第 3 阶段随页面切换移除） */
 export function isMissingApi(error: unknown): boolean {
   const msg = String((error as Error)?.message || "");
   return /接口不存在|404|未实现|501/.test(msg);
 }
 
 /** 查询参数序列化：跳过 null/undefined/空串 */
-export function toQuery(params?: Record<string, unknown>): string {
+export function toQuery(params?: QueryParams): string {
   if (!params) return "";
   const pairs = Object.keys(params)
     .filter((key) => params[key] !== null && params[key] !== undefined && params[key] !== "")
