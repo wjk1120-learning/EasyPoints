@@ -13,10 +13,13 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 
 # ---- 后端全家桶（Docker，app 端口 127.0.0.1:3000）----
+# 注意：必须进 apps/Easy-Points 目录执行（不能用 -f 指定文件），否则 docker-compose.override.yml（dev profile 本地覆盖）不会合并
 Write-Host "[后端] 启动 Docker 服务（apps/Easy-Points/docker-compose.yml）..." -ForegroundColor Cyan
 $backendOk = $false
 try {
-    docker compose -f "$root\apps\Easy-Points\docker-compose.yml" up -d 2>&1 | Out-Null
+    Push-Location "$root\apps\Easy-Points"
+    docker compose up -d 2>&1 | Out-Null
+    Pop-Location
     if ($LASTEXITCODE -eq 0) { $backendOk = $true }
 } catch {}
 if ($backendOk) {

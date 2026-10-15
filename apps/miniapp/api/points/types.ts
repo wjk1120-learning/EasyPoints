@@ -10,6 +10,8 @@ export interface PointRecordItem {
   operatorName?: string
   /** 完整备注（积分流水核心字段，不可改） */
   remark?: string
+  /** 冲正原流水 ID（本条为冲正流水时指向被冲正的原流水；契约缺口：无「是否已被冲正」出向字段） */
+  reversalOfId?: number | string | null
   occurredAt?: string
   createdAt?: string
   /** 归组键 yyyy-MM（东八区） */
