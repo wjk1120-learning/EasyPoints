@@ -48,10 +48,11 @@
 | 联调 | docker exec 造一条 `status='failed', read_at=null` → H5 可见未读 → 点「全部已读」count>0 → 列表全已读 → 首页未读数归零；npm test 全绿 |
 | 用户自查 | 通知中心有未读（含我会造好的 failed 消息）→ 点「全部已读」→ 所有消息变已读、红点清零；回首页刷新未读数归 0。修复前点了没反应，修复后一点就清 |
 
-- ⬜ mvn test 回归全绿
-- ⬜ docker 重建 + 造数 + curl 验证
-- ⬜ npm test 全绿
-- ⬜ 用户确认 + commit
+- ✅ mvn test 回归全绿（102/102）
+- ✅ docker 重建 + 造数 + API 全链路验证（home 未读数计 failed / unreadOnly=1 可见 / read-all count=3 / 清零）+ Playwright H5 交互验证（点全部已读 → 单次请求 → 红点清零 → 20/20 置灰 → 库内 0）
+- ✅ npm test 全绿（96/96）+ typecheck 0 错误
+- 附带发现（已留档反馈清单 #1）：Controller unreadOnly 按字符串 "1" 判断，前端 toQuery 布尔序列化为 "true"，当前无调用方，暂不改
+- ⬜ 用户确认 + commit（自查数据已备好：zhangsan 名下 3 条 failed 未读，备注含「自查测试数据」字样）
 
 ### ✅/⬜ 轮次 3 = 反馈 #3：payload 4 个业务 ID 提升为消息行字段（申诉直达）
 

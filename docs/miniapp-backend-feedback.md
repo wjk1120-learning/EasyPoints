@@ -3,7 +3,11 @@
 > 员工端 miniapp 正按 `Easy-Points-API.md`（v4.3）逐页切换真实接口联调（后端 dev 环境）。以下为切换过程中发现的问题汇总，格式参照 [admin-web-backend-feedback.md](./admin-web-backend-feedback.md)。
 > 前端均已做临时兼容，不阻塞联调；各项附后端源码出处，供评估排期。汇总日期：2026-10-14。
 
-## 1.【建议修复】「全部已读」排除 failed 消息，与单条已读口径矛盾 ★
+## 1.【已修复 ✅】「全部已读」排除 failed 消息，与单条已读口径矛盾 ★
+
+> **修复记录**：四处 SQL（selectByEmployeePage/countByEmployee/countUnread/markAllRead）统一去掉 `status != 'failed'`，口径定为「可见即可读可计」；前端 markAllRead 已从逐条兜底切回契约 10.3 read-all。过程备注见 [miniapp-backend-fix-plan.md](./miniapp-backend-fix-plan.md) 轮次 2。
+>
+> **联调发现的口径备忘（无需改动）**：Controller 的 unreadOnly 按字符串 `"1"` 判断；前端 `toQuery` 会把布尔 `true` 序列化为 `unreadOnly=true`（不生效）。当前前端未用该参数（列表客户端过滤），将来启用时要么传 1、要么后端兼容 "true"。
 
 - **位置**：`MessageOutboxMapper.xml`——markAllRead :62（`and status != 'failed'`）、单条 markRead :55（无 status 条件）、countUnread :48
 - **现象**：通知中心点「全部已读」，红点与未读数不变。员工消息全为 failed（企微推送失败）时 100% 复现——批量已读一条都命不中。
@@ -11,7 +15,9 @@
 - **前端临时处理**：不走契约 10.3 read-all，改为遍历未读逐条调单条已读接口兜底（Promise.allSettled + 防重）。
 - **建议**：markAllRead 去掉 `status != 'failed'`，与单条已读对齐；countUnread 是否把 failed 计入未读建议一并对齐口径（推荐：消息对员工可见即可标已读、计未读）。
 
-## 2.【建议修复】MessageVo 的 isRead 序列化成了 read
+## 2.【已修复 ✅】MessageVo 的 isRead 序列化成了 read
+
+> **修复记录**：字段改为 `read` + `@JsonProperty("isRead")`（直接在 isRead 字段上加注解会被 Jackson 3 拆成 isRead/read 两个属性同时输出，已被单测抓出）；前端删 `read` 兼容。过程备注见 [miniapp-backend-fix-plan.md](./miniapp-backend-fix-plan.md) 轮次 1。
 
 - **位置**：`MessageVo.java:23` `private boolean isRead;`
 - **现象**：契约 10.1 写 `isRead`，实际 JSON 输出 `read`——Lombok getter `isRead()` 被 Jackson 按 Bean 规范剥掉 `is` 前缀。

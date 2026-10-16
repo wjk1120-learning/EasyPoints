@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
-import { fetchMessages, markMessageRead } from '../../api/message/message'
+import { fetchMessages, markAllMessagesRead, markMessageRead } from '../../api/message/message'
 import type { Message } from '../../api/message/types'
 import { friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
@@ -110,18 +110,12 @@ async function openMessage(item: Message) {
   uni.navigateTo({ url: `/pages/message/index?${query}` })
 }
 
-/**
- * 全部已读：对未读逐条单标（契约 10.2）。
- * 不走 10.3 read-all：后端批量接口排除了 failed 消息（status != 'failed'），但列表把 failed
- * 显示为未读且单条接口可标——口径自相矛盾（已反馈后端），修好前用逐条兜底。
- */
+/** 全部已读（契约 10.3 read-all；后端 failed 口径修复后批量接口与单条已读一致，可一次清零） */
 async function markAllRead() {
-  const unread = messages.value.filter((item) => !item.isRead && !readSubmitted.has(String(item.id)))
-  if (!unread.length) return
-  unread.forEach((item) => readSubmitted.add(String(item.id)))
+  if (!unreadCount.value) return
   try {
-    await Promise.allSettled(unread.map((item) => markMessageRead(item.id)))
-    unread.forEach((item) => {
+    await markAllMessagesRead()
+    messages.value.forEach((item) => {
       item.isRead = true
     })
     uni.showToast({ title: '已全部标记为已读', icon: 'none' })

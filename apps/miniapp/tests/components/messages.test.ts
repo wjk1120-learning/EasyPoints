@@ -117,16 +117,15 @@ describe("通知中心（契约 10.1~10.3 / 附录 E / PRD 4.8）", () => {
     expect(markMessageRead).toHaveBeenCalledTimes(1);
   });
 
-  it("全部已读：对未读逐条单标（后端批量接口跳过 failed，已反馈）", async () => {
+  it("全部已读：调契约 10.3 read-all 批量接口，单条接口不发，全部行置已读", async () => {
     const wrapper = await mountMessages();
 
     await wrapper.find(".list-head-read").trigger("tap");
     await flushPromises();
 
-    // PAGE1 有 2 条未读（read=false），逐条调单条已读
-    expect(markMessageRead).toHaveBeenCalledTimes(2);
-    expect(markMessageRead).toHaveBeenCalledWith(1);
-    expect(markMessageRead).toHaveBeenCalledWith(2);
+    expect(markAllMessagesRead).toHaveBeenCalledTimes(1);
+    expect(markMessageRead).not.toHaveBeenCalled();
     expect(wrapper.find(".list-head-text").text()).toContain("消息已全部已读");
+    expect(wrapper.findAll(".msg-read")).toHaveLength(3);
   });
 });
