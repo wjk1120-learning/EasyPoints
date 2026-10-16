@@ -11,12 +11,7 @@ export const VoteApi = {
 
 export type { VoteDetail, VoteSummary } from "./types"
 
-/** 我的投票（9.7：scope=pending 待参与 / history 已提交或已结束；现状按数组解析——第 3 阶段切 PageResult） */
-export function fetchVotes(scope: "pending" | "history"): Promise<VoteSummary[]> {
-  return request<VoteSummary[]>(`${VoteApi.List}?scope=${scope}`)
-}
-
-/** 我的投票·分页（9.7：PageResult 归一；scope=pending 的 meta.total 即待参与角标数） */
+/** 我的投票（9.7：PageResult 归一；scope=pending 的 meta.total 即待参与角标数） */
 export function fetchVotesPaged(
   scope: "pending" | "history",
   params: { page?: number; pageSize?: number } = {}

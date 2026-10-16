@@ -1,13 +1,14 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../utils/request'
+import { fetchVote, submitBallot } from '../../api/vote/vote'
+import type { VoteDetail, VoteOption } from '../../api/vote/types'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
-const vote = ref(null)
-const selected = ref([])
+const vote = ref<VoteDetail | null>(null)
+const selected = ref<string[]>([])
 const missing = ref('')
 const submitting = ref(false)
 const id = ref('')
@@ -22,17 +23,16 @@ onLoad(async (query) => {
     return
   }
   try {
-    const data = await request(`/miniapp/votes/${encodeURIComponent(id.value)}`)
+    // 契约 9.8：非参与者 404「投票不存在」
+    const data = await fetchVote(id.value)
     vote.value = data
     selected.value = Array.isArray(data?.selectedOptionIds) ? data.selectedOptionIds.map(String) : []
   } catch (error) {
-    missing.value = isMissingApi(error)
-      ? '后端尚未提供 GET /miniapp/votes/{id}。提交接口约定为 POST /miniapp/votes/{id}/ballots，body: { optionIds }。每人仅一次，结果不自动加积分。'
-      : (error?.message || '加载失败')
+    missing.value = (error as Error)?.message || '加载失败'
   }
 })
 
-function toggle(option) {
+function toggle(option: VoteOption) {
   if (locked.value) return
   const key = String(option.id)
   if (!multiple.value) {
@@ -52,28 +52,22 @@ async function submit() {
   }
   submitting.value = true
   try {
-    const data = await request(`/miniapp/votes/${encodeURIComponent(id.value)}/ballots`, {
-      method: 'POST',
-      data: { optionIds: selected.value }
-    })
-    vote.value = { ...vote.value, ...(data || {}), submitted: true }
+    // 契约 9.9：ballots 路由返回提交后详情（含 selectedOptionIds 回显）
+    const data = await submitBallot(id.value, selected.value)
+    vote.value = { ...(vote.value as VoteDetail), ...(data || {}), submitted: true }
     uni.showToast({ title: '已完成投票' })
   } catch (error) {
-    uni.showToast({ title: error?.message || '提交失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '提交失败', icon: 'none' })
   } finally {
     submitting.value = false
   }
 }
 
-function deadlineOf(voteData) {
+/** 契约口径 deadline 为 yyyy-MM-dd HH:mm，截 MM-DD HH:mm 展示 */
+function deadlineOf(voteData: VoteDetail | null) {
   if (!voteData?.deadline) return ''
-  const date = new Date(voteData.deadline)
-  if (Number.isNaN(date.getTime())) return String(voteData.deadline)
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  const hh = `${date.getHours()}`.padStart(2, '0')
-  const mm = `${date.getMinutes()}`.padStart(2, '0')
-  return `${m}-${d} ${hh}:${mm}`
+  const matched = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(String(voteData.deadline))
+  return matched ? `${matched[2]}-${matched[3]} ${matched[4]}:${matched[5]}` : String(voteData.deadline)
 }
 </script>
 
