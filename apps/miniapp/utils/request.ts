@@ -3,7 +3,7 @@
  * 契约：docs/Easy-Points-API.md v4.3——统一 BaseResult{code:1|0, msg, data}；分页 PageResult{total,rows}；
  * 业务错误 msg 为中文可展示文案（原样透传给页面 toast）；时间统一 yyyy-MM-dd HH:mm:ss（东八区）。
  */
-import { clearAuthError, clearEmployeeAuth, loginEmployee, markNetworkError } from "../api/auth/auth";
+import { clearAuthError, clearEmployeeAuth, ensureEmployeeLogin, markNetworkError } from "../api/auth/auth";
 import type { Paged } from "../api/types";
 
 export type QueryParams = Record<string, string | number | boolean | undefined | null>;
@@ -161,7 +161,7 @@ async function authorizeAndFetch(path: string, options: RequestOptions): Promise
   let response = await rawRequest(path, options);
   if (response.statusCode === 401) {
     clearEmployeeAuth("unauthorized");
-    await loginEmployee();
+    await ensureEmployeeLogin();
     response = await rawRequest(path, options);
   }
   return response;

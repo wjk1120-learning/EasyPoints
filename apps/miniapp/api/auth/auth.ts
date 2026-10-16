@@ -65,3 +65,77 @@ export function loginEmployee(payload: LoginPayload = {}): Promise<EmployeeLogin
   });
   return loginPromise;
 }
+
+/** 企微 OAuth 网页授权配置：.env 构建注入为默认值，storage 可覆盖（同 apiBase 约定，免重建切换） */
+function wecomOAuthConfig(): { corpid: string; agentid: string } {
+  const env = (import.meta as { env?: Record<string, string | undefined> }).env || {}
+  return {
+    corpid: String(uni.getStorageSync("wecomCorpid") || env.VITE_WECOM_CORPID || "").trim(),
+    agentid: String(uni.getStorageSync("wecomAgentid") || env.VITE_WECOM_AGENTID || "").trim()
+  }
+}
+
+/** 是否在企微内置浏览器中（UA 含 wxwork）；普通浏览器/本地联调为 false */
+function isWecomBrowser(): boolean {
+  return typeof navigator !== "undefined" && /wxwork/i.test(navigator.userAgent || "")
+}
+
+/** 读企微 OAuth 回调附带的 code（redirect_uri 上的 ?code=，位于 hash 前） */
+function readOAuthCodeFromUrl(): string {
+  // #ifdef H5
+  try {
+    return new URLSearchParams(window.location.search).get("code") || ""
+  } catch {
+    return ""
+  }
+  // #endif
+  return ""
+}
+
+/** 构造企微 OAuth 静默授权跳转（snsapi_base 免确认；redirect_uri=站点根，回调后 code 落在 search 上） */
+export function buildOAuthUrl(corpid: string, agentid: string, redirectUri: string): string {
+  const query = [
+    `appid=${encodeURIComponent(corpid)}`,
+    `redirect_uri=${encodeURIComponent(redirectUri)}`,
+    "response_type=code",
+    "scope=snsapi_base",
+    "state=easypoints",
+    `agentid=${encodeURIComponent(agentid)}`
+  ].join("&")
+  return `https://open.weixin.qq.com/connect/oauth2/authorize?${query}#wechat_redirect`
+}
+
+function clearOAuthCodeFromUrl(): void {
+  // #ifdef H5
+  try {
+    const { origin, pathname, hash } = window.location
+    window.history.replaceState(null, "", `${origin}${pathname}${hash}`)
+  } catch {}
+  // #endif
+}
+
+/**
+ * 登录编排（第 4 步：企微自建应用内 H5 免登）：
+ * 1. 有 token 直接复用；
+ * 2. URL 带企微 OAuth 回调 code → 生产登录（契约 1.4，后端 code2user/getuserinfo）；
+ * 3. 企微内置浏览器（wxwork UA）且配置了 VITE_WECOM_CORPID/VITE_WECOM_AGENTID → 跳 OAuth 静默授权；
+ * 4. 其余（本地浏览器联调、未配置）→ dev 直登（默认 zhangsan，调试面板可覆盖）。
+ * App 启动与 request 内核 401 重登统一走这里。
+ */
+export async function ensureEmployeeLogin(): Promise<void> {
+  if (uni.getStorageSync("employeeToken")) return
+  // #ifdef H5
+  const oauthCode = readOAuthCodeFromUrl()
+  if (oauthCode) {
+    clearOAuthCodeFromUrl()
+    await loginEmployee({ code: oauthCode })
+    return
+  }
+  const { corpid, agentid } = wecomOAuthConfig()
+  if (corpid && agentid && isWecomBrowser()) {
+    window.location.replace(buildOAuthUrl(corpid, agentid, `${window.location.origin}/`))
+    return
+  }
+  // #endif
+  await loginEmployee()
+}

@@ -5,8 +5,7 @@
   "scripts": {
     "postinstall": "node ../../scripts/patch-uni-h5-vue.cjs",
     "dev:h5": "set UNI_INPUT_DIR=.&& uni -p h5",
-    "dev:mp-weixin": "set UNI_INPUT_DIR=.&& uni -p mp-weixin",
-    "build:mp-weixin": "set UNI_INPUT_DIR=.&& uni build -p mp-weixin",
+    "build:h5": "set UNI_INPUT_DIR=.&& uni build -p h5",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit"
   },

@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createUniStub } from "../helpers/uni-stub";
 import { LOGIN_REJECTED, LOGIN_SUCCESS, POINT_RECORDS, SUBMIT_EMPTY_CONTENT, TASKS_PAGED } from "../fixtures/auth";
-import { loginEmployee } from "../../api/auth/auth";
+import { ensureEmployeeLogin, loginEmployee } from "../../api/auth/auth";
 import { request, requestPaged } from "../../utils/request";
 
 /** L2 契约：请求内核（BaseResult 解包 / PageResult 归一 / 401 重登重试 / msg 透传）。fixture=docs/Easy-Points-API.md v4.3 示例 */
@@ -140,5 +140,77 @@ describe("loginEmployee：契约 1.4", () => {
     await loginEmployee({ code: "wecom-code-1" });
 
     expect(stub.calls[0].options.data).toEqual({ code: "wecom-code-1" });
+  });
+});
+
+describe("ensureEmployeeLogin：企微自建应用 H5 免登（第 4 步）", () => {
+  /** happy-dom 的 history.pushState 不生效，用官方 setURL 控制 URL */
+  function setTestUrl(url: string) {
+    (window as unknown as { happyDOM?: { setURL: (u: string) => void } }).happyDOM?.setURL(url);
+  }
+
+  /** vi.stubEnv 不影响其他模块的 import.meta.env，改用 storage 覆盖（wecomOAuthConfig 的 storage 优先约定） */
+  function stubOAuthEnv(corpid: string, agentid: string) {
+    stub.storage.set("wecomCorpid", corpid);
+    stub.storage.set("wecomAgentid", agentid);
+  }
+
+  beforeEach(() => {
+    stub = createUniStub();
+    setTestUrl("https://app.example.com/");
+  });
+  afterEach(() => {
+    delete (globalThis as unknown as { uni?: unknown }).uni;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("已有 token：直接复用，不登录也不跳授权", async () => {
+    stub.storage.set("employeeToken", "tok-keep");
+    const replaceSpy = vi.spyOn(window.location, "replace").mockImplementation(() => {});
+
+    await ensureEmployeeLogin();
+
+    expect(stub.calls).toHaveLength(0);
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it("URL 带企微 OAuth 回调 code：走生产登录（URL 清理走 replaceState，happy-dom 不模拟故不在此断言）", async () => {
+    setTestUrl("https://app.example.com/?code=h5-code-7&state=easypoints");
+    stub.responders.push({ statusCode: 200, data: LOGIN_SUCCESS });
+
+    await ensureEmployeeLogin();
+
+    expect(stub.calls[0].options.url).toContain("/miniapp/auth/login");
+    expect(stub.calls[0].options.data).toEqual({ code: "h5-code-7" });
+    expect(stub.storage.get("employeeToken")).toBe("emp-token-1");
+  });
+
+  it("企微内置浏览器 + 已配置 corpid/agentid：跳 OAuth 静默授权（不发登录请求）", async () => {
+    stubOAuthEnv("wwcorp123", "1000002");
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Linux; Android) wxwork/4.1" });
+    const replaceSpy = vi.spyOn(window.location, "replace").mockImplementation(() => {});
+
+    await ensureEmployeeLogin();
+
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    const url = String(replaceSpy.mock.calls[0][0]);
+    expect(url).toContain("open.weixin.qq.com/connect/oauth2/authorize");
+    expect(url).toContain("appid=wwcorp123");
+    expect(url).toContain("agentid=1000002");
+    expect(url).toContain("scope=snsapi_base");
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  it("普通浏览器（本地联调）：即使配置存在也回退 dev 直登", async () => {
+    stubOAuthEnv("wwcorp123", "1000002");
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 Chrome/126" });
+    stub.storage.set("wecomUserId", "zhangsan");
+    stub.responders.push({ statusCode: 200, data: LOGIN_SUCCESS });
+
+    await ensureEmployeeLogin();
+
+    expect(stub.calls[0].options.data).toEqual({ wecomUserId: "zhangsan", employeeId: "" });
+    expect(stub.storage.get("employeeToken")).toBe("emp-token-1");
   });
 });

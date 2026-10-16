@@ -1,11 +1,10 @@
 <script>
-import { loginEmployee } from "./api/auth/auth";
+import { ensureEmployeeLogin } from "./api/auth/auth";
 
 export default {
   onLaunch() {
-    const existing = uni.getStorageSync("employeeToken");
-    if (existing) return;
-    loginEmployee().catch(() => {});
+    // 启动预登录：有 token 复用；企微内走 OAuth 网页授权免登（生产），浏览器联调走 dev 直登
+    ensureEmployeeLogin().catch(() => {});
   }
 };
 </script>
