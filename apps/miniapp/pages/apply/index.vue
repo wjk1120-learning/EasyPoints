@@ -1,22 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { isMissingApi, request } from '../../utils/request'
+import { fetchApplications, createApplication } from '../../api/application/application'
+import type { PointApplication } from '../../api/application/types'
+import { uploadImage } from '../../api/upload/upload'
 import { formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const view = ref('form')
+type FilterKey = 'all' | 'pending' | 'passed' | 'rejected'
+
+const view = ref<'form' | 'mine'>('form')
 const points = ref('')
 const description = ref('')
 const pointsTouched = ref(false)
 const descriptionTouched = ref(false)
-const rows = ref([])
-const missing = ref('')
-const filter = ref('all')
-const images = ref([])
+const rows = ref<PointApplication[]>([])
+const filter = ref<FilterKey>('all')
+const images = ref<string[]>([])
+const submitting = ref(false)
 
 const pointsValue = computed(() => Number(points.value))
 const pointsEmpty = computed(() => String(points.value).trim() === '')
@@ -36,18 +40,15 @@ onShow(loadMine)
 
 async function loadMine() {
   try {
-    const data = await request('/miniapp/point-applications')
-    rows.value = Array.isArray(data) ? data : []
-    missing.value = ''
+    const page = await fetchApplications({ page: 1, pageSize: 50 })
+    rows.value = page.data
   } catch (error) {
     rows.value = []
-    missing.value = isMissingApi(error)
-      ? '积分申请接口尚未提供。约定：POST /miniapp/point-applications { points, description }，GET /miniapp/point-applications。'
-      : ''
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   }
 }
 
-function switchView(next) {
+function switchView(next: 'form' | 'mine') {
   view.value = next
 }
 
@@ -60,32 +61,35 @@ function onDescriptionBlur() {
 }
 
 function chooseImage() {
-  const left = 6 - images.value.length
+  const left = 9 - images.value.length
   if (left <= 0) {
-    uni.showToast({ title: '最多上传 6 张', icon: 'none' })
+    uni.showToast({ title: '最多上传 9 张', icon: 'none' })
     return
   }
   uni.chooseImage({
     count: left,
     success(res) {
-      images.value = images.value.concat(res.tempFilePaths || []).slice(0, 6)
+      images.value = images.value.concat(res.tempFilePaths || []).slice(0, 9)
     }
   })
 }
 
-function removeImage(index) {
+function removeImage(index: number) {
   images.value = images.value.filter((item, i) => i !== index)
 }
 
 async function submit() {
   pointsTouched.value = true
   descriptionTouched.value = true
-  if (!formValid.value) return
+  if (!formValid.value || submitting.value) return
+  submitting.value = true
   try {
-    await request('/miniapp/point-applications', {
-      method: 'POST',
-      data: { points: pointsValue.value, description: description.value.trim() }
-    })
+    // 佐证图先上传（契约 11.9）再随申请提交（6.1 evidenceImages ≤9）
+    const urls: string[] = []
+    for (const path of images.value) {
+      urls.push(await uploadImage(path))
+    }
+    await createApplication({ points: pointsValue.value, description: description.value.trim(), evidenceImages: urls })
     points.value = ''
     description.value = ''
     images.value = []
@@ -95,44 +99,47 @@ async function submit() {
     view.value = 'mine'
     await loadMine()
   } catch (error) {
-    uni.showToast({ title: error?.message || '提交失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '提交失败', icon: 'none' })
+  } finally {
+    submitting.value = false
   }
 }
 
-function isDone(item) {
+function isDone(item: PointApplication) {
   return /approved|rejected|通过|驳回/.test(`${item.status || ''}${item.statusText || ''}`)
 }
 
-function statusPill(item) {
+function statusPill(item: PointApplication) {
   const text = `${item.status || ''}${item.statusText || ''}`
   if (/approved|通过/.test(text)) return { label: '已通过', cls: 'green' }
   if (/rejected|驳回/.test(text)) return { label: '已驳回', cls: 'red' }
   return { label: item.statusText || '待审核', cls: 'amber' }
 }
 
-function statusLine(item) {
+function statusLine(item: PointApplication) {
   const text = `${item.status || ''}${item.statusText || ''}`
   if (/approved|通过/.test(text)) return `积分已于 ${formatTime(item.updatedAt || item.createdAt)} 入账`
   if (/rejected|驳回/.test(text)) return ''
   return '预计 3 个工作日内完成审核'
 }
 
-function rejectReason(item) {
-  return item.resolution || item.reviewRemark || item.result || '如有疑问请联系积分管理员'
+function rejectReason(item: PointApplication) {
+  return item.reviewRemark || '如有疑问请联系积分管理员'
 }
 
-function appealHint() {
-  uni.showModal({
-    title: '发起申诉',
-    content: '申诉需绑定本人积分流水，请在「积分明细」中选择对应记录后发起。',
-    confirmText: '去明细',
-    success(res) {
-      if (res.confirm) uni.switchTab({ url: '/pages/points/index' })
-    }
-  })
+/** 被驳回申请直达申诉页（PRD 4.6；targetType=point_application，契约 7.1） */
+function appealApplication(item: PointApplication) {
+  const query = [
+    'targetType=point_application',
+    `targetId=${item.id}`,
+    `remark=${encodeURIComponent(item.reason || '')}`,
+    `points=${item.points ?? 0}`,
+    `time=${encodeURIComponent(item.updatedAt || '')}`
+  ].join('&')
+  uni.navigateTo({ url: `/pages/appeal/index?${query}` })
 }
 
-const filters = [
+const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'all', label: '全部' },
   { key: 'pending', label: '待审核' },
   { key: 'passed', label: '已通过' },
@@ -193,7 +200,7 @@ const filters = [
             <text class="image-add-text">{{ images.length > 0 ? '继续上传' : '上传图片' }}</text>
           </view>
         </view>
-        <text class="muted image-note">附件暂不随申请提交，待后端上传接口就绪后开放。</text>
+        <text class="muted image-note">佐证图将先上传再随申请提交给管理员审核。</text>
       </view>
 
       <view class="card">
@@ -233,12 +240,10 @@ const filters = [
         >{{ item.label }}</text>
       </view>
 
-      <view v-if="missing" class="card"><text class="muted">{{ missing }}</text></view>
-
-      <template v-else>
+      <template v-if="view === 'mine'">
         <view v-for="item in visibleRows" :key="item.id" class="card apply-card">
           <view class="row between">
-            <text class="apply-title">{{ item.description || item.reason }}</text>
+            <text class="apply-title">{{ item.reason }}</text>
             <text class="pill" :class="statusPill(item).cls">{{ statusPill(item).label }}</text>
           </view>
           <view class="row between apply-meta">
@@ -248,7 +253,7 @@ const filters = [
           <text v-if="statusLine(item)" class="muted apply-status">{{ statusLine(item) }}</text>
           <view v-if="/rejected|驳回/.test(`${item.status || ''}${item.statusText || ''}`)" class="reject-row">
             <text class="reject-reason">原因：{{ rejectReason(item) }}</text>
-            <view class="small-button" @tap="appealHint">发起申诉</view>
+            <view class="small-button" @tap="appealApplication(item)">发起申诉</view>
           </view>
         </view>
         <view v-if="visibleRows.length === 0" class="card card-empty"><EmptyState icon="file-text" title="暂无申请" /></view>
