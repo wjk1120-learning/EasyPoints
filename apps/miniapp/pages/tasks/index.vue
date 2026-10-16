@@ -34,7 +34,12 @@ const sortedRows = computed(() => {
   return list
 })
 
-onShow(load)
+onShow(() => {
+  // 消息详情「发起申诉」降级入口：被驳回的领取记录在「我的」标签下，先切再加载（switchTab 不能带参，走 storage 握手）
+  if (uni.getStorageSync('tasks:pendingScope') === 'mine') tab.value = 'mine'
+  uni.removeStorageSync('tasks:pendingScope')
+  load()
+})
 onPullDownRefresh(async () => {
   await load()
   uni.stopPullDownRefresh()

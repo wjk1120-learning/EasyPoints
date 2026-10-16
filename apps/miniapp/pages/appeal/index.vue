@@ -89,9 +89,9 @@ async function submit() {
       <view class="row between related-row">
         <text class="related-title">{{ originalRemark || '未提供事项信息' }}</text>
       </view>
-      <view class="row between">
-        <text class="muted">{{ formatTime(originalTime) }}</text>
-        <text class="related-points" :class="originalPoints > 0 ? 'pos' : 'neg'">
+      <view v-if="originalTime || originalPoints" class="row between">
+        <text v-if="originalTime" class="muted">{{ formatTime(originalTime) }}</text>
+        <text v-if="originalPoints" class="related-points" :class="originalPoints > 0 ? 'pos' : 'neg'">
           {{ originalPoints > 0 ? '+' : '' }}{{ originalPoints }} 积分
         </text>
       </view>

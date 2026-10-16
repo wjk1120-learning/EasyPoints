@@ -1,4 +1,4 @@
-/** message 域类型：通知中心消息（契约见 docs/Easy-Points-API.md 10.1~10.3） */
+/** message 域类型：通知中心消息（契约见 docs/Easy-Points-API.md 10.1~10.3 与附录 E） */
 
 export interface Message {
   id: number | string
@@ -8,8 +8,16 @@ export interface Message {
   /** 摘要（富化后文案） */
   summary?: string
   isRead?: boolean
+  /** 后端实际输出名（boolean isRead 经 Jackson 剥离 is 前缀变 read；契约 10.1 写 isRead，已反馈后端对齐） */
+  read?: boolean
   readAt?: string
   /** 深链投票 ID（payload 含 voteId 时带出，点击直达投票详情；其余 null） */
   voteId?: number | string
+  /** 深链业务 ID（后端 payload 已有、MessageVo 待带出——反馈清单 #3；带出后消息详情可直达申诉表单） */
+  pointRecordId?: number | string
+  orderId?: number | string
+  claimId?: number | string
+  applicationId?: number | string
   createdAt?: string
+  updatedAt?: string
 }

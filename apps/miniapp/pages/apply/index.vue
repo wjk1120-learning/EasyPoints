@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { fetchApplications, createApplication } from '../../api/application/application'
 import type { PointApplication } from '../../api/application/types'
 import { uploadImage } from '../../api/upload/upload'
@@ -34,6 +34,11 @@ const visibleRows = computed(() => {
   if (filter.value === 'passed') return rows.value.filter((item) => /approved|通过/.test(`${item.status || ''}${item.statusText || ''}`))
   if (filter.value === 'rejected') return rows.value.filter((item) => /rejected|驳回/.test(`${item.status || ''}${item.statusText || ''}`))
   return rows.value
+})
+
+// 消息详情「发起申诉」降级入口带 view=mine：直接落到「我的申请」
+onLoad((query) => {
+  if (query?.view === 'mine') view.value = 'mine'
 })
 
 onShow(loadMine)

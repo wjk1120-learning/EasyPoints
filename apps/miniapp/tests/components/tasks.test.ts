@@ -131,4 +131,12 @@ describe("任务大厅（契约 5.1~5.2b / PRD 4.3）", () => {
     expect(stub.navigations[0]).toContain("/pages/appeal/index?targetType=task_claim&targetId=55");
     expect(stub.navigations[0]).toContain(encodeURIComponent("调研报告撰写"));
   });
+
+  it("pendingScope 握手（消息申诉降级入口）：onShow 先切「我的」再加载，用后即清", async () => {
+    stub.storage.set("tasks:pendingScope", "mine");
+    await mountTasks();
+
+    expect(fetchTasks).toHaveBeenCalledWith("mine", { page: 1, pageSize: 50 });
+    expect(stub.storage.get("tasks:pendingScope")).toBeUndefined();
+  });
 });

@@ -31,8 +31,9 @@ export function createUniStub() {
     showActionSheet: (options: { success?: (res: unknown) => void; fail?: (err: { errMsg: string }) => void } = {}) => {
       options.fail?.({ errMsg: "showActionSheet:fail cancel" });
     },
-    switchTab: (url: string) => {
-      navigations.push(url);
+    switchTab: (options: { url: string } | string) => {
+      // uni.switchTab 实际收 {url} 对象，与 navigateTo 统一记录为字符串
+      navigations.push(typeof options === "string" ? options : options.url);
     },
     navigateTo: (options: { url: string }) => {
       navigations.push(options.url);

@@ -5,7 +5,8 @@ const hooks = vi.hoisted(() => ({
 }));
 
 vi.mock("@dcloudio/uni-app", () => ({
-  onShow: (cb: (...args: unknown[]) => unknown) => (hooks.registry.onShow ||= []).push(cb)
+  onShow: (cb: (...args: unknown[]) => unknown) => (hooks.registry.onShow ||= []).push(cb),
+  onLoad: (cb: (...args: unknown[]) => unknown) => (hooks.registry.onLoad ||= []).push(cb)
 }));
 
 vi.mock("../../api/application/application", () => ({
@@ -48,6 +49,7 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     stub = createUniStub();
     vi.clearAllMocks();
     delete hooks.registry.onShow;
+    delete hooks.registry.onLoad;
     vi.mocked(fetchApplications).mockResolvedValue(APPLICATIONS_PAGED as never);
   });
   afterEach(() => {
@@ -118,5 +120,16 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     expect(stub.navigations).toHaveLength(1);
     expect(stub.navigations[0]).toContain("/pages/appeal/index?targetType=point_application&targetId=19");
     expect(stub.navigations[0]).toContain(encodeURIComponent("跨部门数据迁移支援"));
+  });
+
+  it("view=mine 入参（消息申诉降级入口）：直达「我的申请」视图", async () => {
+    const wrapper = mount(Apply, {
+      global: { stubs: { NavBar: true, AppTabBar: true, AppIcon: true, EmptyState: true } }
+    });
+    for (const cb of hooks.registry.onLoad ?? []) cb({ view: "mine" });
+    for (const cb of hooks.registry.onShow ?? []) await cb();
+    await flushPromises();
+
+    expect(wrapper.findAll(".segmented .tab")[1].classes()).toContain("active");
   });
 });

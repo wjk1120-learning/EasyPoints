@@ -1,16 +1,22 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
-import { request } from '../../utils/request'
+import { fetchMessages, markMessageRead } from '../../api/message/message'
+import type { Message } from '../../api/message/types'
 import { friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-const messages = ref([])
+const messages = ref<Message[]>([])
 const loading = ref(false)
 const typeFilter = ref('all')
+/** 上拉分页（契约 10.1 PageResult，按时间倒序追加） */
+const PAGE_SIZE = 20
+const page = ref(1)
+const total = ref(0)
+const hasMore = computed(() => messages.value.length < total.value)
 
 const FILTERS = ['all', '积分变动', '兑换审核', '任务审核', '积分申请', '申诉结果', '投票', '其他']
 
@@ -21,86 +27,108 @@ const visibleMessages = computed(() => {
   return messages.value.filter((item) => typeMeta(item).label === typeFilter.value)
 })
 
-function typeMeta(item) {
-  const text = `${item?.type || ''} ${item?.title || ''} ${item?.summary || ''}`
-  if (item?.type === 'vote_assigned' || item?.type === 'vote' || /投票/.test(text)) {
-    return { label: '投票', icon: 'check-square', tile: 'purple' }
-  }
-  if (item?.type === 'order_status' || /兑换|订单/.test(text)) {
-    return { label: '兑换审核', icon: 'shopping-bag', tile: 'blue' }
-  }
-  if (item?.type === 'task' || /任务/.test(text)) {
-    return { label: '任务审核', icon: 'clipboard', tile: 'amber' }
-  }
-  if (/申诉/.test(text)) {
-    return { label: '申诉结果', icon: 'shield', tile: 'green' }
-  }
-  if (/申请/.test(text)) {
-    return { label: '积分申请', icon: 'file-text', tile: 'purple' }
-  }
-  if (/积分/.test(text)) {
-    return { label: '积分变动', icon: 'activity', tile: 'green' }
-  }
+/** 消息类型映射（契约附录 E 枚举；正文关键词仅作容错兜底） */
+const TYPE_META: Record<string, { label: string; icon: string; tile: string }> = {
+  point_changed: { label: '积分变动', icon: 'activity', tile: 'green' },
+  order_status: { label: '兑换审核', icon: 'shopping-bag', tile: 'blue' },
+  task_review: { label: '任务审核', icon: 'clipboard', tile: 'amber' },
+  application_review: { label: '积分申请', icon: 'file-text', tile: 'purple' },
+  appeal_result: { label: '申诉结果', icon: 'shield', tile: 'green' },
+  vote_invitation: { label: '投票', icon: 'check-square', tile: 'purple' }
+}
+
+function typeMeta(item: Message) {
+  const byType = TYPE_META[item?.type || '']
+  if (byType) return byType
+  const text = `${item?.title || ''} ${item?.summary || ''}`
+  if (/投票/.test(text)) return TYPE_META.vote_invitation
+  if (/兑换|订单/.test(text)) return TYPE_META.order_status
+  if (/任务/.test(text)) return TYPE_META.task_review
+  if (/申诉/.test(text)) return TYPE_META.appeal_result
+  if (/申请/.test(text)) return TYPE_META.application_review
+  if (/积分/.test(text)) return TYPE_META.point_changed
   return { label: '其他', icon: 'bell', tile: 'blue' }
 }
 
-onShow(load)
-onReachBottom(load)
+onShow(() => loadPage(1))
+onReachBottom(() => {
+  if (hasMore.value) loadPage(page.value + 1)
+})
 
-async function load() {
+async function loadPage(target: number) {
   loading.value = true
   try {
-    messages.value = await request('/miniapp/messages')
+    const paged = await fetchMessages({ page: target, pageSize: PAGE_SIZE })
+    total.value = paged.meta.total
+    page.value = target
+    // 兼容：后端把 isRead 序列化成了 read（Lombok/Jackson 命名坑），归一为 isRead
+    const rows = paged.data.map((row) => ({ ...row, isRead: row.isRead ?? row.read ?? false }))
+    messages.value = target === 1 ? rows : [...messages.value, ...rows]
   } catch (error) {
-    uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   } finally {
     loading.value = false
   }
 }
 
-function isVote(item) {
+function isVote(item: Message) {
   return typeMeta(item).label === '投票'
 }
 
-function voteIdOf(item) {
-  const summary = String(item?.summary || '')
-  try {
-    const parsed = JSON.parse(summary)
-    if (parsed?.voteId) return String(parsed.voteId)
-  } catch {}
-  const match = summary.match(/voteId[=:：\s]+(\w+)/i)
-  return match ? match[1] : ''
-}
+/** 本会话已提交过已读的消息（防返回列表旧渲染时重复提交；后端对重复标已读会 404「消息不存在」） */
+const readSubmitted = new Set<string>()
 
-async function openMessage(item) {
-  if (!item?.isRead) {
+async function openMessage(item: Message) {
+  const key = String(item.id)
+  if (!item?.isRead && !readSubmitted.has(key)) {
+    readSubmitted.add(key)
     try {
-      await request(`/miniapp/messages/${item.id}/read`, { method: 'POST' })
+      await markMessageRead(item.id)
       item.isRead = true
-    } catch {}
+    } catch (error) {
+      // 后端口径：已读过的消息再标会 404「消息不存在」，等价于已读，静默置为已读
+      if (String((error as Error)?.message || '').includes('消息不存在')) {
+        item.isRead = true
+      }
+    }
   }
   if (isVote(item)) {
-    const voteId = voteIdOf(item)
-    uni.navigateTo({ url: voteId ? `/pages/vote/index?id=${encodeURIComponent(voteId)}` : '/pages/votes/index' })
+    // 顶层 voteId 深链（契约 10.1/R8），直达投票详情
+    uni.navigateTo({ url: item.voteId ? `/pages/vote/index?id=${encodeURIComponent(String(item.voteId))}` : '/pages/votes/index' })
     return
   }
+  // 深链业务 ID 透传（后端在消息行带出后，详情页可直达申诉表单——反馈清单 #3）
+  const deepLinkIds = (['applicationId', 'orderId', 'claimId', 'pointRecordId'] as const)
+    .filter((key) => item[key] != null && item[key] !== '')
+    .map((key) => `${key}=${item[key]}`)
   const query = [
     `id=${item.id}`,
     `title=${encodeURIComponent(item.title || '')}`,
     `summary=${encodeURIComponent(item.summary || '')}`,
     `type=${encodeURIComponent(item.type || '')}`,
-    `createdAt=${encodeURIComponent(item.createdAt || '')}`
+    `createdAt=${encodeURIComponent(item.createdAt || '')}`,
+    ...deepLinkIds
   ].join('&')
   uni.navigateTo({ url: `/pages/message/index?${query}` })
 }
 
+/**
+ * 全部已读：对未读逐条单标（契约 10.2）。
+ * 不走 10.3 read-all：后端批量接口排除了 failed 消息（status != 'failed'），但列表把 failed
+ * 显示为未读且单条接口可标——口径自相矛盾（已反馈后端），修好前用逐条兜底。
+ */
 async function markAllRead() {
+  const unread = messages.value.filter((item) => !item.isRead && !readSubmitted.has(String(item.id)))
+  if (!unread.length) return
+  unread.forEach((item) => readSubmitted.add(String(item.id)))
   try {
-    await request('/miniapp/messages/read-all', { method: 'POST' })
-    await load()
+    await Promise.allSettled(unread.map((item) => markMessageRead(item.id)))
+    unread.forEach((item) => {
+      item.isRead = true
+    })
     uni.showToast({ title: '已全部标记为已读', icon: 'none' })
   } catch (error) {
-    uni.showToast({ title: error?.message || '操作失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '操作失败', icon: 'none' })
   }
 }
 
@@ -113,9 +141,9 @@ function pickType() {
   })
 }
 
-function displayTitle(item) {
+function displayTitle(item: Message) {
   if (isVote(item) && (!item.title || item.title === '系统通知')) return '有新的投票待你参与'
-  return item.title
+  return item.title || ''
 }
 </script>
 
@@ -169,7 +197,7 @@ function displayTitle(item) {
     <view v-if="!loading && visibleMessages.length === 0" class="card card-empty">
       <EmptyState icon="bell" title="暂无通知" />
     </view>
-    <view v-if="visibleMessages.length > 0" class="list-footer">消息按时间排序 · 上拉加载更多</view>
+    <view v-if="visibleMessages.length > 0" class="list-footer">{{ hasMore ? "上拉加载更多" : "已展示全部消息" }}</view>
 
     <AppTabBar />
   </view>
