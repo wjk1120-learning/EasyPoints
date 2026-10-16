@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
-import { getApiBase, getCachedData, isNetworkError, type WithOfflineFlag } from '../../utils/request'
-import { loginEmployee } from '../../api/auth/auth'
+import { getCachedData, isNetworkError, type WithOfflineFlag } from '../../utils/request'
 import { fetchHome } from '../../api/home/home'
 import type { HomeVo } from '../../api/home/types'
 import type { PointRecordItem } from '../../api/points/types'
@@ -17,14 +16,8 @@ const home = ref<HomeVo>({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, e
 const recent = ref<PointRecordItem[]>([])
 const pendingVotes = ref(0)
 const loading = ref(true)
-const showSettings = ref(false)
-const apiBase = ref('')
-const wecomUserId = ref('')
 const authError = ref('')
 const offlineMode = ref(false)
-const debugEnabled = ref(false)
-let debugTapCount = 0
-let debugTapTimer: ReturnType<typeof setTimeout> | null = null
 
 const availablePoints = computed(() => Number(home.value.pointsBalance || 0))
 const actualPoints = computed(() => {
@@ -56,20 +49,10 @@ const shortcuts: Shortcut[] = [
   { label: '我的投票', icon: 'check-square', tile: 'purple', tone: 'purple', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
 ]
 
-onShow(async () => {
-  const storedApiBase = uni.getStorageSync('apiBase')
-  if (storedApiBase === false || storedApiBase === true || String(storedApiBase || '').trim() === 'false') {
-    uni.removeStorageSync('apiBase')
-  }
-  apiBase.value = getApiBase()
-  wecomUserId.value = uni.getStorageSync('wecomUserId') || 'zhangsan'
+async function load() {
   authError.value = uni.getStorageSync('employeeAuthError') || ''
-  debugEnabled.value = uni.getStorageSync('enableDebug') === '1'
-  if (debugEnabled.value) showSettings.value = true
   try {
-    if (!uni.getStorageSync('employeeToken')) {
-      await loginEmployee({ wecomUserId: wecomUserId.value })
-    }
+    // 无 token 时由请求内核先走 ensureEmployeeLogin（dev 直登/企微 OAuth），页面只管拉数据
     const data = await fetchHome()
     applyHomeData(data, Boolean(data?.__offline))
     recent.value = data.recentRecords ?? []
@@ -86,7 +69,16 @@ onShow(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onShow(() => load())
+
+/** 错误横幅「重新登录」：清错误标记后重走 登录+拉数据 */
+function retry() {
+  uni.removeStorageSync('employeeAuthError')
+  loading.value = true
+  load()
+}
 
 onPullDownRefresh(async () => {
   try {
@@ -135,52 +127,6 @@ function recordIcon(record: PointRecordItem): { icon: string; tile: string; tone
 
 function openPoints() {
   uni.switchTab({ url: '/pages/points/index' })
-}
-
-function saveSettings() {
-  const nextApiBase = normalizeApiBaseInput(apiBase.value)
-  apiBase.value = nextApiBase || getApiBase()
-  if (nextApiBase) uni.setStorageSync('apiBase', nextApiBase)
-  else uni.removeStorageSync('apiBase')
-  uni.setStorageSync('wecomUserId', String(wecomUserId.value || '').trim() || 'zhangsan')
-  uni.showToast({ title: '设置已保存' })
-}
-
-function normalizeApiBaseInput(value: unknown): string {
-  const raw = String(value || '').trim()
-  if (!raw || raw === 'false' || raw === 'true') return ''
-  return raw.endsWith('/') ? raw.slice(0, -1) : raw
-}
-
-async function relogin() {
-  saveSettings()
-  try {
-    await loginEmployee({ wecomUserId: wecomUserId.value })
-    authError.value = ''
-    const data = await fetchHome()
-    applyHomeData(data, false)
-    recent.value = data.recentRecords ?? []
-    uni.showToast({ title: '登录成功' })
-  } catch (error) {
-    uni.showToast({ title: (error as Error)?.message || '登录失败', icon: 'none' })
-  }
-}
-
-function toggleSettings() {
-  if (debugEnabled.value) {
-    showSettings.value = !showSettings.value
-    return
-  }
-  debugTapCount += 1
-  if (debugTapTimer) clearTimeout(debugTapTimer)
-  debugTapTimer = setTimeout(() => { debugTapCount = 0 }, 1200)
-  if (debugTapCount >= 7) {
-    uni.setStorageSync('enableDebug', '1')
-    debugEnabled.value = true
-    showSettings.value = true
-    debugTapCount = 0
-    uni.showToast({ title: '调试设置已开启', icon: 'none' })
-  }
 }
 </script>
 
@@ -252,7 +198,7 @@ function toggleSettings() {
           <AppIcon name="alert-triangle" :size="32" color="red" />
           <text class="muted">{{ authError }}</text>
         </view>
-        <view class="button notice-button" @tap="relogin">重新登录</view>
+        <view class="button notice-button" @tap="retry">重新登录</view>
       </view>
 
       <view class="card fade-up d1">
@@ -294,17 +240,6 @@ function toggleSettings() {
       </view>
     </template>
 
-    <view class="settings-toggle muted" @tap="toggleSettings">{{ showSettings ? '收起设置' : '展开设置' }}</view>
-    <view v-if="showSettings" class="card">
-      <text class="muted">API_BASE</text>
-      <input v-model="apiBase" class="input" placeholder="http://192.168.x.x:3000" />
-      <text class="muted">wecomUserId</text>
-      <input v-model="wecomUserId" class="input" placeholder="zhangsan" />
-      <view class="row settings-actions">
-        <view class="button" @tap="saveSettings">保存</view>
-        <view class="button ghost" @tap="relogin">保存并登录</view>
-      </view>
-    </view>
     <AppTabBar />
   </view>
 </template>
@@ -553,18 +488,4 @@ function toggleSettings() {
 .w40 { width: 40%; }
 .w64 { width: 64%; }
 
-/* ── 调试设置（默认隐藏） ── */
-.settings-toggle {
-  text-align: center;
-  padding: 16rpx 0;
-}
-
-.settings-actions {
-  gap: 16rpx;
-  margin-top: 16rpx;
-}
-
-.settings-actions .button {
-  flex: 1;
-}
 </style>

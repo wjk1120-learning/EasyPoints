@@ -14,7 +14,7 @@
 | 第 4 步 | 企微免登：`ensureEmployeeLogin()` 编排（企微内 OAuth 网页授权，浏览器联调 dev 直登） |
 | 清理 | 删除全部小程序残留（开发者工具配置、mp 构建、manifest mp-weixin 段），新增 `build:h5` |
 
-**形态定论：员工端是企微自建应用内打开的 H5 网页应用，与小程序无关。**
+**形态定论：员工端是企微自建应用内打开的 H5 网页应用，与小程序无关。** 首页的「展开设置」调试面板已随残留清理一并删除；联调切账号/后端地址改用浏览器 console 写 localStorage（`wecomUserId` / `apiBase`）后刷新。
 
 ## 二、怎么跑测试（apps/miniapp 下）
 

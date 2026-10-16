@@ -194,7 +194,7 @@ python scripts/h5-e2e.py   # 员工端浏览器冒烟（需 dev:h5 与后端已�
 
 ### 7.4 员工端（apps/miniapp，企微自建应用 H5）要点
 
-- 形态：企微自建应用内打开的 H5 网页应用（**不是小程序**）。生产免登=企微 OAuth 网页授权（corpid/agentid 经 `.env.production` 或 storage 配置，跳 `open.weixin.qq.com` 静默授权回跳带 code）；浏览器联调=dev 直登 zhangsan（首页调试面板连续点击 7 次开启，可切 apiBase/账号）。
+- 形态：企微自建应用内打开的 H5 网页应用（**不是小程序**）。生产免登=企微 OAuth 网页授权（corpid/agentid 经 `.env.production` 或 storage 配置，跳 `open.weixin.qq.com` 静默授权回跳带 code）；浏览器联调=dev 直登 zhangsan。调试无 UI 面板：切账号 `localStorage.setItem('wecomUserId','xxx')` 后刷新，自定义后端地址 `localStorage.setItem('apiBase','http://...')`。
 - 请求内核 `utils/request.ts`：BaseResult 解包、PageResult 归一 Paged、无 token 先登录（冷启动不 401）、401 重登重试一次、GET 离线缓存。
 - 11 个页面已全部切新后端契约（PageResult 分页、契约字段名、契约状态映射）；申诉支持四类目标直达（明细/订单/任务领取记录/积分申请）。
 - 后端反馈清单：`docs/miniapp-backend-feedback.md`（6 项）；迁移验收看 `docs/miniapp-迁移评审指南.md`。
