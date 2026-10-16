@@ -61,9 +61,7 @@ async function loadPage(target: number) {
     const paged = await fetchMessages({ page: target, pageSize: PAGE_SIZE })
     total.value = paged.meta.total
     page.value = target
-    // 兼容：后端把 isRead 序列化成了 read（Lombok/Jackson 命名坑），归一为 isRead
-    const rows = paged.data.map((row) => ({ ...row, isRead: row.isRead ?? row.read ?? false }))
-    messages.value = target === 1 ? rows : [...messages.value, ...rows]
+    messages.value = target === 1 ? paged.data : [...messages.value, ...paged.data]
   } catch (error) {
     uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   } finally {

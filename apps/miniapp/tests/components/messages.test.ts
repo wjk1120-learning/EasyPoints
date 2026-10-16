@@ -20,19 +20,19 @@ import { createUniStub } from "../helpers/uni-stub";
 import Messages from "../../pages/messages/index.vue";
 import { fetchMessages, markMessageRead, markAllMessagesRead } from "../../api/message/message";
 
-/** 契约 10.1 Message 形状：附录 E 枚举 type + 顶层 voteId 深链 */
+/** 契约 10.1 Message 形状：附录 E 枚举 type + 顶层 voteId 深链（字段名以契约为准：isRead） */
 const PAGE1 = {
   data: [
-    { id: 1, type: "vote_invitation", title: "系统通知", summary: "有新的投票待你参与：Q4 团建方案评选", read: false, voteId: 12, createdAt: "2026-10-15 10:00:00" },
-    { id: 2, type: "order_status", title: "兑换审核结果", summary: "你的兑换「颈椎按摩仪」已通过审核", read: false, voteId: null, orderId: 88, createdAt: "2026-10-14 10:00:00" },
-    { id: 3, type: "point_changed", title: "积分变动", summary: "人工扣分：迟到，-5 分", read: true, voteId: null, createdAt: "2026-10-13 10:00:00" }
+    { id: 1, type: "vote_invitation", title: "系统通知", summary: "有新的投票待你参与：Q4 团建方案评选", isRead: false, voteId: 12, createdAt: "2026-10-15 10:00:00" },
+    { id: 2, type: "order_status", title: "兑换审核结果", summary: "你的兑换「颈椎按摩仪」已通过审核", isRead: false, voteId: null, orderId: 88, createdAt: "2026-10-14 10:00:00" },
+    { id: 3, type: "point_changed", title: "积分变动", summary: "人工扣分：迟到，-5 分", isRead: true, voteId: null, createdAt: "2026-10-13 10:00:00" }
   ],
   meta: { total: 4, page: 1, pageSize: 20 }
 };
 
 const PAGE2 = {
   data: [
-    { id: 4, type: "task_review", title: "任务审核结果", summary: "「知识库整理」已通过", read: false, voteId: null, createdAt: "2026-10-12 10:00:00" }
+    { id: 4, type: "task_review", title: "任务审核结果", summary: "「知识库整理」已通过", isRead: false, voteId: null, createdAt: "2026-10-12 10:00:00" }
   ],
   meta: { total: 4, page: 2, pageSize: 20 }
 };

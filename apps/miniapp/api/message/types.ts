@@ -8,8 +8,6 @@ export interface Message {
   /** 摘要（富化后文案） */
   summary?: string
   isRead?: boolean
-  /** 后端实际输出名（boolean isRead 经 Jackson 剥离 is 前缀变 read；契约 10.1 写 isRead，已反馈后端对齐） */
-  read?: boolean
   readAt?: string
   /** 深链投票 ID（payload 含 voteId 时带出，点击直达投票详情；其余 null） */
   voteId?: number | string
