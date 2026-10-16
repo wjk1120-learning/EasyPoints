@@ -66,6 +66,7 @@ const COLORS = {
   ink: '#1a2233',
   muted: '#9aa1ab',
   faint: '#b4bac3',
+  gray: '#4b5563',
   green: '#16a34a',
   red: '#f04438',
   amber: '#d97706',

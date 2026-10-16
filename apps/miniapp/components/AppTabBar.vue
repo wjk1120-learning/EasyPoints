@@ -6,9 +6,9 @@ import AppIcon from './AppIcon.vue'
 // pages.json 里的原生 tabBar 仅作占位（运行时被 hideTabBar 隐藏），不受此处影响。
 const TABS = [
   { path: 'pages/home/index', text: '首页', icon: 'home' },
-  { path: 'pages/mall/index', text: '商城', icon: 'shopping-bag' },
-  { path: 'pages/tasks/index', text: '任务', icon: 'target' },
-  { path: 'pages/points/index', text: '明细', icon: 'list' },
+  { path: 'pages/mall/index', text: '积分商城', icon: 'shopping-bag' },
+  { path: 'pages/tasks/index', text: '任务大厅', icon: 'target' },
+  { path: 'pages/points/index', text: '积分明细', icon: 'list' },
   { path: 'pages/mine/index', text: '我的', icon: 'user' }
 ]
 

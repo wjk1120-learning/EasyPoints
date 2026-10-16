@@ -38,15 +38,15 @@ type Shortcut = {
   action: () => void
 }
 
-// 快捷入口 7 项 = PRD 4.1 定稿口径（积分商城/任务大厅/积分排名/积分申请/规则中心/通知中心/我的投票）
+// 快捷入口 6 项 = 用户定稿口径（2026-10-16）：申请中心/通知中心/投票中心/积分排名/兑换记录/规则中心
+// （积分商城、任务大厅走底部标签，不再占快捷入口）；配色互不重复：紫/红/绿/橙/蓝/灰
 const shortcuts: Shortcut[] = [
-  { label: '积分商城', icon: 'shopping-bag', tile: 'blue', tone: 'brand', action: () => uni.switchTab({ url: '/pages/mall/index' }) },
-  { label: '任务大厅', icon: 'target', tile: 'green', tone: 'green', action: () => uni.switchTab({ url: '/pages/tasks/index' }) },
-  { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
-  { label: '积分申请', icon: 'file-text', tile: 'purple', tone: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
-  { label: '规则中心', icon: 'book-open', tile: 'blue', tone: 'brand', action: () => uni.navigateTo({ url: '/pages/rules/index' }) },
+  { label: '申请中心', icon: 'file-text', tile: 'purple', tone: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
   { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
-  { label: '我的投票', icon: 'check-square', tile: 'purple', tone: 'purple', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) }
+  { label: '投票中心', icon: 'check-square', tile: 'green', tone: 'green', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) },
+  { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
+  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', tone: 'brand', action: () => uni.navigateTo({ url: '/pages/orders/index' }) },
+  { label: '规则中心', icon: 'book-open', tile: '', tone: 'gray', action: () => uni.navigateTo({ url: '/pages/rules/index' }) }
 ]
 
 async function load() {

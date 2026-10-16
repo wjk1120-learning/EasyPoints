@@ -84,18 +84,14 @@ describe("首页（契约 2.2 / PRD 4.1）", () => {
     expect(stub.calls.map((c) => c.url)).not.toContain("/miniapp/points/records");
   });
 
-  it("快捷入口 7 项且含「任务大厅」（PRD 4.1 定稿口径）", async () => {
+  it("快捷入口 6 项（用户定稿口径：申请中心/通知中心/投票中心/积分排名/兑换记录/规则中心）", async () => {
     vi.mocked(fetchHome).mockResolvedValue(HOME_PAYLOAD as never);
     vi.mocked(fetchVotesPaged).mockResolvedValue({ data: [], meta: { total: 0, page: 1, pageSize: 50 } } as never);
 
     const wrapper = await mountHome();
 
     const labels = wrapper.findAll(".shortcut-label").map((n) => n.text());
-    expect(labels).toHaveLength(7);
-    expect(labels).toContain("任务大厅");
-    // PRD 顺序：商城、任务大厅紧随其后
-    expect(labels[0]).toBe("积分商城");
-    expect(labels[1]).toBe("任务大厅");
+    expect(labels).toEqual(["申请中心", "通知中心", "投票中心", "积分排名", "兑换记录", "规则中心"]);
   });
 
   it("角标：通知中心显示未读消息数、我的投票显示待参与 total", async () => {
