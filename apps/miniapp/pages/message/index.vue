@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
-import { formatTime } from '../../utils/format'
+import { formatTime, splitMessageSummary } from '../../utils/format'
 
-/** 深链业务 ID（后端 payload 已有、MessageVo 待带出——反馈清单 #3；带出后「发起申诉」直达申诉表单） */
+/** 深链业务 ID（契约 10.1/v4.4：后端从 payload 提升的顶层字段；有值时「发起申诉」直达申诉表单） */
 const message = ref({
   title: '',
   summary: '',
@@ -50,6 +50,9 @@ function typeMeta() {
   }
   return { label: '积分变动', cls: 'blue' }
 }
+
+/** 摘要按主题分段展示（与申诉页关联卡同一套口径），段内「：」前缀灰化为标签 */
+const summarySegments = computed(() => splitMessageSummary(message.value.summary))
 
 function isVote() {
   return typeMeta().label === '投票'
@@ -126,7 +129,12 @@ function openVotes() {
         <text class="muted">{{ formatTime(message.createdAt) }}</text>
       </view>
       <text class="title">{{ message.title }}</text>
-      <text class="body">{{ message.summary }}</text>
+      <view class="body">
+        <view v-for="seg in summarySegments" :key="seg" class="body-line">
+          <text v-if="seg.includes('：')" class="body-key">{{ seg.slice(0, seg.indexOf('：') + 1) }}</text>
+          <text>{{ seg.includes('：') ? seg.slice(seg.indexOf('：') + 1) : seg }}</text>
+        </view>
+      </view>
     </view>
 
     <view v-if="canAppeal()" class="notice-amber">
@@ -159,6 +167,15 @@ function openVotes() {
   font-size: 28rpx;
   color: #344156;
   line-height: 1.7;
+}
+
+/* 摘要逐主题分行，「标签：」灰化、内容正常色（完整展示不截断） */
+.body-line {
+  display: block;
+}
+
+.body-key {
+  color: var(--muted);
 }
 
 .notice-amber {

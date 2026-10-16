@@ -73,6 +73,25 @@ describe("发起申诉页（契约 7.1 / PRD 4.8）", () => {
     expect(wrapper.find(".card .muted").text()).toContain("积分明细");
   });
 
+  it("关联事项分段展示：摘要按「；」拆行、「：」拆标签；自由备注整段一行", async () => {
+    const wrapper = await mountAppeal({
+      targetType: "point_application",
+      targetId: "994",
+      remark: encodeURIComponent("申请分值：10 分；状态：驳回；处理备注：自查测试数据C")
+    });
+
+    const items = wrapper.findAll(".related-item");
+    expect(items).toHaveLength(3);
+    expect(items[0].find(".related-key").text()).toBe("申请分值");
+    expect(items[0].find(".related-value").text()).toBe("10 分");
+    expect(items[1].find(".related-key").text()).toBe("状态");
+    expect(items[2].find(".related-value").text()).toBe("自查测试数据C");
+
+    const plain = await mountAppeal({ targetType: "order", targetId: "7", remark: encodeURIComponent("定制卫衣，尺码备注") });
+    expect(plain.findAll(".related-item")).toHaveLength(1);
+    expect(plain.find(".related-value").text()).toBe("定制卫衣，尺码备注");
+  });
+
   it("空理由：前端拦截不发请求", async () => {
     const wrapper = await mountAppeal({ targetType: "order", targetId: "7" });
 

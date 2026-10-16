@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import { fetchMessages, markAllMessagesRead, markMessageRead } from '../../api/message/message'
 import type { Message } from '../../api/message/types'
-import { friendlyTime } from '../../utils/format'
+import { friendlyTime, splitMessageSummary } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -137,6 +137,13 @@ function displayTitle(item: Message) {
   if (isVote(item) && (!item.title || item.title === '系统通知')) return '有新的投票待你参与'
   return item.title || ''
 }
+
+/** 列表摘要按主题分行展示，3 段封顶（完整信息进详情页看） */
+const SUMMARY_MAX_SEGMENTS = 3
+
+function summarySegments(summary?: string) {
+  return splitMessageSummary(summary).slice(0, SUMMARY_MAX_SEGMENTS)
+}
 </script>
 
 <template>
@@ -181,7 +188,9 @@ function displayTitle(item: Message) {
           <text class="msg-title" :class="{ 'msg-title-read': item.isRead }">{{ displayTitle(item) }}</text>
           <text class="msg-time">{{ friendlyTime(item.createdAt, 'date') }}</text>
         </view>
-        <text class="msg-summary" :class="{ 'msg-summary-read': item.isRead }">{{ item.summary }}</text>
+        <view class="msg-summary" :class="{ 'msg-summary-read': item.isRead }">
+          <text v-for="seg in summarySegments(item.summary)" :key="seg" class="msg-summary-line">{{ seg }}</text>
+        </view>
         <text class="msg-tag" :class="`tag-${typeMeta(item).tile}`">{{ typeMeta(item).label }}</text>
       </view>
     </view>
@@ -303,16 +312,22 @@ function displayTitle(item: Message) {
 }
 
 .msg-summary {
+  /* 摘要按主题逐行展示（splitMessageSummary），每段单行省略，3 段封顶 */
   display: block;
   margin-top: 8rpx;
+}
+
+.msg-summary-line {
+  display: block;
   font-size: 24rpx;
+  line-height: 1.5;
   color: var(--ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.msg-summary-read {
+.msg-summary-read .msg-summary-line {
   color: var(--muted);
 }
 

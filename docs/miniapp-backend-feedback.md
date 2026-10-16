@@ -24,7 +24,9 @@
 - **前端临时处理**：列表行归一化 `isRead = isRead ?? read ?? false`。
 - **建议**：字段加 `@JsonProperty("isRead")`，或改字段名后同步契约文档，二选一，别让文档和实现继续不一致。
 
-## 3.【建议修复 · 前端已就绪】消息行带出 payload 里的业务 ID（申诉直达）
+## 3.【已修复 ✅ · 前端零改动生效】消息行带出 payload 里的业务 ID（申诉直达）
+
+> **修复记录**：MessageVo 仿 voteId 新增 `pointRecordId`/`orderId`/`claimId`/`applicationId` 四个顶层深链字段，MessageFormatter 从 payload 无条件提取（有值即带出，互不冲突）；契约同步 v4.4（10.1 字段表）。前端原有透传+申诉直达逻辑零改动生效，联调已验证直达+预填。过程备注见 [miniapp-backend-fix-plan.md](./miniapp-backend-fix-plan.md) 轮次 3。
 
 - **位置**：`MessageFormatter.java:33`（已有 payload.voteId 深链提取先例）
 - **现状**：payload 里业务 ID 其实齐全——point_changed 带 `pointRecordId`（PointsLedgerServiceImpl :101）、order_status 带 `orderId`（OrderServiceImpl :191）、task_review 带 `claimId`（TaskClaimAdminServiceImpl :130）、application_review 带 `applicationId`（PointApplicationServiceImpl :171）；但 MessageVo 只把 voteId 提升为顶层字段，其余四类消息前端拿不到任何关联记录 ID。

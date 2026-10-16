@@ -11,7 +11,7 @@ export interface Message {
   readAt?: string
   /** 深链投票 ID（payload 含 voteId 时带出，点击直达投票详情；其余 null） */
   voteId?: number | string
-  /** 深链业务 ID（后端 payload 已有、MessageVo 待带出——反馈清单 #3；带出后消息详情可直达申诉表单） */
+  /** 深链业务 ID（契约 10.1/v4.4：后端从 payload 提升的顶层字段；有值时消息详情可直达申诉表单） */
   pointRecordId?: number | string
   orderId?: number | string
   claimId?: number | string

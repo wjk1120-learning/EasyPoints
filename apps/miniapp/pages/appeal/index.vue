@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { createAppeal } from '../../api/appeal/appeal'
 import { uploadImage } from '../../api/upload/upload'
@@ -27,6 +27,14 @@ const TARGET_LABELS: Record<string, string> = {
   task_claim: '任务',
   point_application: '积分申请'
 }
+
+/** 关联事项分段展示：消息摘要按后端拼接约定「；」分行、「：」拆「标签+内容」；自由备注拆不出结构则整段一行 */
+const relatedSegments = computed(() =>
+  originalRemark.value
+    .split('；')
+    .map((seg) => seg.trim())
+    .filter(Boolean)
+)
 
 onLoad((query) => {
   const safeQuery = query || {}
@@ -99,10 +107,14 @@ async function submit() {
 
     <view class="card">
       <text class="muted">关联事项 · {{ targetLabel }}</text>
-      <view class="row between related-row">
-        <text class="related-title">{{ originalRemark || '未提供事项信息' }}</text>
+      <view v-if="relatedSegments.length" class="related-list">
+        <view v-for="seg in relatedSegments" :key="seg" class="related-item">
+          <text v-if="seg.includes('：')" class="related-key">{{ seg.slice(0, seg.indexOf('：')) }}</text>
+          <text class="related-value">{{ seg.includes('：') ? seg.slice(seg.indexOf('：') + 1) : seg }}</text>
+        </view>
       </view>
-      <view v-if="originalTime || originalPoints" class="row between">
+      <text v-else class="related-title">未提供事项信息</text>
+      <view v-if="originalTime || originalPoints" class="row between related-meta">
         <text v-if="originalTime" class="muted">{{ formatTime(originalTime) }}</text>
         <text v-if="originalPoints" class="related-points" :class="originalPoints > 0 ? 'pos' : 'neg'">
           {{ originalPoints > 0 ? '+' : '' }}{{ originalPoints }} 积分
@@ -149,20 +161,45 @@ async function submit() {
 </template>
 
 <style scoped>
-.related-row {
+/* 参数表风格：标签列固定宽对齐、值列正常字重，整卡只突出内容本身 */
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
   margin-top: 16rpx;
 }
 
-.related-title {
+.related-item {
+  display: flex;
+  align-items: baseline;
+}
+
+.related-key {
+  flex-shrink: 0;
+  width: 150rpx;
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+.related-value {
   flex: 1;
   min-width: 0;
-  margin-right: 16rpx;
-  font-size: 30rpx;
-  font-weight: 700;
+  font-size: 28rpx;
+  line-height: 1.55;
   color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-all;
+}
+
+.related-title {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.related-meta {
+  margin-top: 14rpx;
 }
 
 .related-points {

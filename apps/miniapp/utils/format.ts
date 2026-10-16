@@ -48,3 +48,26 @@ export function friendlyTime(value: unknown, style: "datetime" | "date" = "datet
   const d = `${date.getDate()}`.padStart(2, "0");
   return style === "date" ? `${m}月${d}日` : `${m}-${d} ${hh}:${mm}`;
 }
+
+/**
+ * 消息摘要按主题分段（通知中心/消息详情/申诉关联卡共用）：
+ * - 含「；」：后端多主题拼接（订单/任务/申请/申诉摘要），逐段拆；
+ * - 积分变动形态（无「；」）：按「，」拆，「备注：」段保留完整（备注内逗号不拆）；
+ * - 其余（投票邀请、自由文案）：整段一行。
+ */
+export function splitMessageSummary(summary: unknown): string[] {
+  const text = String(summary || "").trim();
+  if (!text) return [];
+  if (text.includes("；")) {
+    return text.split("；").map((seg) => seg.trim()).filter(Boolean);
+  }
+  const remarkAt = text.indexOf("备注：");
+  if (remarkAt > 0) {
+    const head = text.slice(0, remarkAt).split("，").map((seg) => seg.trim()).filter(Boolean);
+    return [...head, text.slice(remarkAt).trim()];
+  }
+  if (/^[-+]?\d+ 分，/.test(text)) {
+    return text.split("，").map((seg) => seg.trim()).filter(Boolean);
+  }
+  return [text];
+}

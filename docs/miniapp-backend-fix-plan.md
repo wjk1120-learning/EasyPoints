@@ -65,11 +65,12 @@
 | 联调 | curl 确认 4 字段**真实带值**（防假修复）；4 类消息详情「发起申诉」直达 `/pages/appeal/index` 且预填 targetType/targetId，无 ID 降级仍正常；npm test 全绿 |
 | 用户自查 | 每类点进一条消息详情 → 点「发起申诉」→ 直达申诉表单且「关联记录」自动带上（修复前跳积分明细等页面自己找）；再点 appeal_result 消息确认无申诉按钮 |
 
-- ⬜ mvn test 全绿
-- ⬜ 契约文档 v4.4 增量
-- ⬜ docker 重建 + curl 4 字段带值
-- ⬜ npm test 全绿
-- ⬜ 用户确认 + commit
+- ✅ mvn test 全绿（103/103，含新增深链提升用例）
+- ✅ 契约文档 v4.4：10.1 字段表补 4 个深链字段 + 版本记录（含 isRead/未读口径两项同轮说明；注意该文件原带只读属性，已临时清除）
+- ✅ docker 重建 + API 验证 4 字段真实带值（含 3 条自查种子断言）+ Playwright H5 全流程（详情页带 ID → 发起申诉直达 → 预填 targetType=point_application&targetId=994 → 关联卡显示积分申请 → appeal_result 无按钮回归）
+- ✅ npm test 全绿（96/96）+ typecheck 0 错误；前端仅注释转正（types.ts + message/index.vue），业务代码零改动
+- 过程备注：首批种子经 docker exec mysql 造数时未带 --default-character-set=utf8mb4，中文存成乱码（我的造数姿势问题，非代码 bug），已删除重造
+- ⬜ 用户确认 + commit（自查数据已备好：3 条 failed 未读，A=积分变动/pointRecordId=996、B=任务审核/claimId=995、C=申请审核/applicationId=994）
 
 ## 待裁决项（本轮闭环后）
 
