@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { createAppeal } from '../../api/appeal/appeal'
+import { uploadImage } from '../../api/upload/upload'
 import { formatTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
@@ -17,6 +18,7 @@ const originalTime = ref('')
 const reason = ref('')
 const reasonError = ref(false)
 const images = ref<string[]>([])
+const uploading = ref(false)
 let triedSubmit = false
 
 const TARGET_LABELS: Record<string, string> = {
@@ -66,9 +68,18 @@ async function submit() {
     uni.showToast({ title: '请填写申诉理由', icon: 'none' })
     return
   }
+  if (uploading.value) return
+  uploading.value = true
   try {
-    // 契约 7.1：{ targetType, targetId, reason }（佐证图 evidenceImages 待上传接口接入）
-    await createAppeal({ targetType: targetType.value, targetId: targetId.value, reason: reason.value })
+    // 佐证图先过上传接口（11.9），再随申诉提交（契约 7.1 evidenceImages）
+    const urls: string[] = []
+    for (const img of images.value) urls.push(await uploadImage(img))
+    await createAppeal({
+      targetType: targetType.value,
+      targetId: targetId.value,
+      reason: reason.value.trim(),
+      ...(urls.length ? { evidenceImages: urls } : {})
+    })
     uni.showToast({ title: '申诉已提交' })
     uni.navigateBack()
   } catch (error) {
@@ -76,6 +87,8 @@ async function submit() {
       title: (error as Error)?.message || '提交失败',
       icon: 'none'
     })
+  } finally {
+    uploading.value = false
   }
 }
 </script>
@@ -121,7 +134,7 @@ async function submit() {
           <text class="image-add-text">{{ images.length > 0 ? '继续上传' : '上传图片' }}</text>
         </view>
       </view>
-      <text class="muted image-note">附件暂不随申诉提交，待后端上传接口就绪后开放。</text>
+      <text class="muted image-note">图片将随申诉一并上传提交，最多 6 张。</text>
     </view>
 
     <view class="safe-note">

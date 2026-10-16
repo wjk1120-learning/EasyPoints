@@ -9,11 +9,15 @@ vi.mock("@dcloudio/uni-app", () => ({
 }));
 
 vi.mock("../../api/appeal/appeal", () => ({ createAppeal: vi.fn(async () => ({ id: 1 })) }));
+vi.mock("../../api/upload/upload", () => ({
+  uploadImage: vi.fn(async (path: string) => (path.endsWith("1.png") ? "/uploads/ap/mock-1.png" : "/uploads/ap/mock-2.png"))
+}));
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { createUniStub } from "../helpers/uni-stub";
 import Appeal from "../../pages/appeal/index.vue";
 import { createAppeal } from "../../api/appeal/appeal";
+import { uploadImage } from "../../api/upload/upload";
 
 let stub!: ReturnType<typeof createUniStub>;
 
@@ -77,5 +81,25 @@ describe("发起申诉页（契约 7.1 / PRD 4.8）", () => {
 
     expect(createAppeal).not.toHaveBeenCalled();
     expect(wrapper.find(".error-text").exists()).toBe(true);
+  });
+
+  it("佐证图先上传再随申诉提交（11.9 → 7.1 evidenceImages）", async () => {
+    (globalThis as unknown as { uni: { chooseImage: (o: { success: (r: { tempFilePaths: string[] }) => void }) => void } }).uni.chooseImage = (o) =>
+      o.success({ tempFilePaths: ["tmp://ev-1.png", "tmp://ev-2.png"] });
+    const wrapper = await mountAppeal({ targetType: "order", targetId: "7" });
+
+    await wrapper.find(".image-add").trigger("tap");
+    await flushPromises();
+    wrapper.find(".textarea").setValue("颜色和图片不符");
+    await wrapper.find(".submit-button").trigger("tap");
+    await flushPromises();
+
+    expect(uploadImage).toHaveBeenCalledTimes(2);
+    expect(createAppeal).toHaveBeenCalledWith({
+      targetType: "order",
+      targetId: "7",
+      reason: "颜色和图片不符",
+      evidenceImages: ["/uploads/ap/mock-1.png", "/uploads/ap/mock-2.png"]
+    });
   });
 });
