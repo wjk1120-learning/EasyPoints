@@ -1,16 +1,25 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../utils/request'
+import { fetchHome } from '../../api/home/home'
+import type { HomeVo } from '../../api/home/types'
+import { fetchLeaderboard } from '../../api/leaderboard/leaderboard'
 import { formatPoints } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
-const home = ref({ pointsBalance: 0, monthDelta: 0, employee: {} })
-const myRank = ref(null)
+const home = ref<HomeVo>({ pointsBalance: 0, monthDelta: 0 })
+const myRank = ref<number | null>(null)
 
-const services = [
+interface Service {
+  label: string
+  icon: string
+  tile: string
+  url: string
+}
+
+const services: Service[] = [
   { label: '我的申请', icon: 'file-text', tile: 'purple', url: '/pages/apply/index' },
   { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', url: '/pages/orders/index' },
   { label: '申诉记录', icon: 'shield', tile: 'amber', url: '/pages/appeals/index' },
@@ -20,19 +29,20 @@ const services = [
 
 onShow(async () => {
   try {
-    home.value = await request('/miniapp/home')
+    home.value = await fetchHome()
   } catch (error) {
-    uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   }
   loadRank()
 })
 
 async function loadRank() {
   try {
-    const list = await request('/miniapp/leaderboard?dimension=realtime')
+    // 可用积分榜（realtime）里找本人名次；不在榜（如新员工 0 分未上榜）显示 —
+    const list = await fetchLeaderboard('realtime')
     const employeeId = String(uni.getStorageSync('employeeId') || '')
-    const mine = (Array.isArray(list) ? list : []).find((item) => String(item.id) === employeeId)
-    myRank.value = mine ? mine.rank : null
+    const mine = list.find((item) => String(item.id) === employeeId)
+    myRank.value = mine?.rank ?? null
   } catch {
     myRank.value = null
   }
@@ -43,15 +53,15 @@ function initial() {
 }
 
 function actualPoints() {
-  const value = home.value.actualPoints ?? home.value.honorPoints
-  return value == null || value === '' ? '—' : formatPoints(value)
+  const value = home.value.actualPoints ?? home.value.cumulativePoints
+  return value == null ? '—' : formatPoints(value)
 }
 
 function employeeTitle() {
   return home.value.employee?.title || home.value.employee?.position || home.value.employee?.employmentType || ''
 }
 
-function open(url) {
+function open(url: string) {
   uni.navigateTo({ url })
 }
 </script>
