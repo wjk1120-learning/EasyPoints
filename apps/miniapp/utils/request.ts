@@ -156,8 +156,11 @@ function tryReadCache(path: string, method: string): unknown {
   return readCache(path);
 }
 
-/** 401 统一处理：清登录态 → 重登 → 原请求重试一次 */
+/** 登录编排接入：无 token 先等登录完成再发请求（修冷启动首请求必 401 的竞态）；401 则清登录态 → 重登 → 重试一次 */
 async function authorizeAndFetch(path: string, options: RequestOptions): Promise<RawResponse> {
+  if (!uni.getStorageSync("employeeToken")) {
+    await ensureEmployeeLogin();
+  }
   let response = await rawRequest(path, options);
   if (response.statusCode === 401) {
     clearEmployeeAuth("unauthorized");

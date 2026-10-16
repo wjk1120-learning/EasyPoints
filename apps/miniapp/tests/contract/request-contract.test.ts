@@ -17,6 +17,7 @@ describe("request：BaseResult 解包", () => {
   });
 
   it("code=1 返回 data 本体（积分流水按月分组示例）", async () => {
+    stub.storage.set("employeeToken", "tok-1"); // 内核新契约：无 token 会先登录，这里直接给 token 走纯解包路径
     stub.responders.push({ statusCode: 200, data: POINT_RECORDS });
     const data = await request<{ "2026-10": unknown[] }>("/miniapp/points/records");
     expect(data["2026-10"]).toHaveLength(1);
@@ -24,6 +25,7 @@ describe("request：BaseResult 解包", () => {
   });
 
   it("code=0 抛后端 msg 原文（契约 5.2b：成果说明不能为空）", async () => {
+    stub.storage.set("employeeToken", "tok-1");
     stub.responders.push({ statusCode: 400, data: SUBMIT_EMPTY_CONTENT });
     await expect(request("/miniapp/tasks/7/submit", { method: "POST", data: { content: "" } })).rejects.toThrow(
       "成果说明不能为空"
@@ -31,19 +33,30 @@ describe("request：BaseResult 解包", () => {
   });
 
   it("缺 BaseResult 包装：抛「响应格式不合法」", async () => {
+    stub.storage.set("employeeToken", "tok-1");
     stub.responders.push({ statusCode: 200, data: [{ id: 1 }] });
     await expect(request("/miniapp/some-list")).rejects.toThrow("响应格式不合法");
   });
 
-  it("无 token 时不发 x-employee-id 冒充头；有 token 时带 Bearer", async () => {
+  it("无 token 冷启动：先登录再发业务请求，首请求即带 Bearer", async () => {
+    stub.storage.set("wecomUserId", "zhangsan");
+    stub.responders.push({ statusCode: 200, data: LOGIN_SUCCESS });
     stub.responders.push({ statusCode: 200, data: POINT_RECORDS });
-    await request("/miniapp/points/records");
-    expect(stub.calls[0].options.header).not.toHaveProperty("x-employee-id");
 
+    const data = await request<{ "2026-10": unknown[] }>("/miniapp/points/records");
+
+    expect(stub.calls[0].options.url).toContain("/miniapp/auth/login");
+    expect(stub.calls[1].options.header).not.toHaveProperty("x-employee-id"); // 冒充头已彻底移除
+    expect(stub.calls[1].options.header?.authorization).toBe("Bearer emp-token-1");
+    expect(data["2026-10"]).toHaveLength(1);
+  });
+
+  it("有 token：请求带 Bearer，不发 x-employee-id 冒充头", async () => {
     stub.storage.set("employeeToken", "tok-1");
     stub.responders.push({ statusCode: 200, data: POINT_RECORDS });
     await request("/miniapp/points/records");
-    expect(stub.calls[1].options.header?.authorization).toBe("Bearer tok-1");
+    expect(stub.calls[0].options.header).not.toHaveProperty("x-employee-id");
+    expect(stub.calls[0].options.header?.authorization).toBe("Bearer tok-1");
   });
 });
 
@@ -56,7 +69,7 @@ describe("request：401 自动重登并重试一次", () => {
   });
 
   it("401 → 登录拿新 token → 原请求重试带新 Bearer → 返回数据", async () => {
-    stub.storage.set("wecomUserId", "zhangsan");
+    stub.storage.set("employeeToken", "stale-token"); // 带过期 token 才会先发业务请求（无 token 会先走登录）
     stub.responders.push({ statusCode: 401, data: { code: 0, msg: "登录已过期", data: null } });
     stub.responders.push({ statusCode: 200, data: LOGIN_SUCCESS });
     stub.responders.push({ statusCode: 200, data: POINT_RECORDS });
@@ -64,6 +77,7 @@ describe("request：401 自动重登并重试一次", () => {
     const data = await request<{ "2026-10": unknown[] }>("/miniapp/points/records");
 
     expect(stub.calls).toHaveLength(3);
+    expect(stub.calls[0].options.header?.authorization).toBe("Bearer stale-token");
     expect(stub.calls[1].options.url).toContain("/miniapp/auth/login");
     expect(stub.calls[2].options.header?.authorization).toBe("Bearer emp-token-1");
     expect(stub.storage.get("employeeToken")).toBe("emp-token-1");
@@ -71,6 +85,7 @@ describe("request：401 自动重登并重试一次", () => {
   });
 
   it("重登也失败：抛登录失败 msg（员工不存在）", async () => {
+    stub.storage.set("employeeToken", "stale-token");
     stub.responders.push({ statusCode: 401, data: { code: 0, msg: "登录已过期", data: null } });
     stub.responders.push({ statusCode: 401, data: LOGIN_REJECTED });
 
