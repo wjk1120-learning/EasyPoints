@@ -33,3 +33,11 @@ export interface OutboxRetryFailedQuery {
   type?: string
   employeeId?: number
 }
+
+/** meta 响应（契约 10.5）：类型计数 + worker 配置 + 待处理失败数 */
+export interface OutboxMeta {
+  types: { type: string; count: number }[]
+  config: Record<string, unknown>
+  /** 当前 status=failed 的消息总数（重试成功后自然消失，作登录醒目提示口径） */
+  failed: number
+}

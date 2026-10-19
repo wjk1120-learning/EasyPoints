@@ -9,6 +9,7 @@ import { ordersPaged } from "./api/order/order";
 import { taskRecordsPaged } from "./api/task/task";
 import { applicationsPaged } from "./api/application/application";
 import { appealsPaged } from "./api/appeal/appeal";
+import { outboxMeta } from "./api/outbox/outbox";
 import { apiErrorMsg } from "./utils/error";
 
 const form = reactive({ username: "admin", password: "admin123" });
@@ -18,9 +19,10 @@ const admin = ref<AdminInfo | null>(loadAdmin());
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
-/** 四类待审合计（兑换/任务/申请/申诉），侧边栏工作台与审核中心徽标共用 */
-const badges = reactive({ pending: 0 });
+/** 四类待审合计（兑换/任务/申请/申诉），侧边栏工作台与审核中心徽标共用；outboxFailed=消息派发待处理失败数（通知中心红点） */
+const badges = reactive({ pending: 0, outboxFailed: 0 });
 const dashboardBadge = computed(() => Number(badges.pending || 0));
+const outboxFailedBadge = computed(() => Number(badges.outboxFailed || 0));
 let badgeTimer: ReturnType<typeof setInterval> | null = null;
 
 function loadAdmin(): AdminInfo | null {
@@ -99,6 +101,10 @@ function handleLogoutEvent(event: Event) {
  * 聚合接口不可用时（旧后端/未部署）回退为四次列表查询拼装，保证演示环境可用。 */
 async function refreshBadges() {
   if (!token.value) return;
+  // 消息派发待处理失败数（通知中心红点）：独立拉取，不随四类待审的回退逻辑一起失败
+  outboxMeta()
+    .then((meta) => { badges.outboxFailed = Number(meta.failed || 0); })
+    .catch(() => { badges.outboxFailed = 0; });
   try {
     const result = await fetchBadges();
     badges.pending =
@@ -245,7 +251,9 @@ watch(
         </el-menu-item>
         <el-menu-item index="/outbox">
           <el-icon><Message /></el-icon>
-          <span>通知中心</span>
+          <el-badge :value="outboxFailedBadge" :hidden="!outboxFailedBadge" :max="99" type="danger">
+            <span>通知中心</span>
+          </el-badge>
         </el-menu-item>
       </el-menu>
       <div class="sidebar-footer" @click="logout">

@@ -7,7 +7,7 @@
  */
 import { computed, onMounted, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { outboxPaged, retryOutboxFailed, retryOutboxOne } from "../api/outbox/outbox";
+import { outboxMeta, outboxPaged, retryOutboxFailed, retryOutboxOne } from "../api/outbox/outbox";
 import type { OutboxMessage } from "../api/outbox/types";
 import { employees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
@@ -46,6 +46,8 @@ const type = ref("");
 const employeeId = ref<number | "">("");
 const pageSize = ref(50);
 const page = ref(1);
+/** 待处理失败数（meta 全量口径，页头醒目提示；点击即切失败筛选） */
+const failedTotal = ref(0);
 
 /** 员工 id→姓名 映射（量级小，进页拉一次全量；含 inactive 供历史消息溯源） */
 const employeeMap = ref<Map<number, string>>(new Map());
@@ -65,6 +67,12 @@ function employeeName(id: number): string {
   return employeeMap.value.get(id) ?? `#${id}`;
 }
 
+/** 员工筛选值 → 请求参数：el-select 清除后是 undefined/null（valueOnClear），统一兜成不传，避免 Number(undefined)=NaN 报参数格式错误 */
+function numericEmployeeId(): number | undefined {
+  const value = employeeId.value;
+  return value === "" || value == null ? undefined : Number(value);
+}
+
 async function load() {
   loading.value = true;
   try {
@@ -73,7 +81,7 @@ async function load() {
       pageSize: pageSize.value,
       status: status.value || undefined,
       type: type.value || undefined,
-      employeeId: employeeId.value === "" ? undefined : Number(employeeId.value)
+      employeeId: numericEmployeeId()
     });
     rows.value = result.data;
     total.value = result.meta.total;
@@ -115,7 +123,7 @@ async function retryOne(row: OutboxMessage) {
 async function retryFailedBatch() {
   const scope = [
     type.value ? `类型=${TYPE_TEXT[type.value] ?? type.value}` : "",
-    employeeId.value !== "" ? `员工=${employeeName(Number(employeeId.value))}` : ""
+    numericEmployeeId() != null ? `员工=${employeeName(numericEmployeeId()!)}` : ""
   ].filter(Boolean).join("、");
   try {
     await ElMessageBox.confirm(
@@ -129,7 +137,7 @@ async function retryFailedBatch() {
   try {
     const result = await retryOutboxFailed({
       type: type.value || undefined,
-      employeeId: employeeId.value === "" ? undefined : Number(employeeId.value)
+      employeeId: numericEmployeeId()
     });
     ElMessage.success(`已重置 ${result.count} 条失败消息`);
     await load();
@@ -141,15 +149,35 @@ async function retryFailedBatch() {
 onMounted(() => {
   load();
   loadEmployees();
+  loadMeta();
 });
+
+async function loadMeta() {
+  try {
+    failedTotal.value = Number((await outboxMeta()).failed || 0);
+  } catch {
+    /* 统计失败不阻塞列表 */
+  }
+}
 </script>
 
 <template>
   <div class="panel">
     <div class="panel-head">
       <span class="panel-bar" />
-      <h3 class="panel-title">消息派发</h3>
+      <h3 class="panel-title">通知中心</h3>
       <span class="panel-sub">站内通知与企微推送共用队列；发送失败时在此归因并人工重发</span>
+      <span class="filter-spacer" />
+      <el-tooltip content="当前发送失败、等待人工处理的消息总数（重试成功后消失）" placement="top">
+        <el-button
+          v-if="failedTotal > 0"
+          link
+          type="danger"
+          @click="status = 'failed'"
+        >
+          发送失败 {{ failedTotal }} 条，点击处理
+        </el-button>
+      </el-tooltip>
     </div>
 
     <div class="panel-body">
