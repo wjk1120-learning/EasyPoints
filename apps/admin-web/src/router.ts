@@ -10,6 +10,7 @@ import RuleConfig from "./views/RuleConfig.vue";
 import Mall from "./views/Mall.vue";
 import Reports from "./views/Reports.vue";
 import Logs from "./views/Logs.vue";
+import Outbox from "./views/Outbox.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", component: Dashboard, meta: { title: "工作台" } },
@@ -22,6 +23,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/mall", component: Mall, meta: { title: "商城礼品" } },
   { path: "/reports", component: Reports, meta: { title: "数据导出" } },
   { path: "/logs", component: Logs, meta: { title: "操作日志" } },
+  { path: "/outbox", component: Outbox, meta: { title: "通知中心" } },
   // 旧入口收敛：三类独立审核页并入审核中心对应 Tab（PRD 5.2）
   { path: "/orders", redirect: "/review-center?tab=exchange" },
   { path: "/appeals", redirect: "/review-center?tab=appeal" },

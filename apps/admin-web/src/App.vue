@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading, Message } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
 import type { AdminInfo } from "./api/auth/types";
 import { badges as fetchBadges, login } from "./api/auth/auth";
@@ -242,6 +242,10 @@ watch(
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>
           <span>操作日志</span>
+        </el-menu-item>
+        <el-menu-item index="/outbox">
+          <el-icon><Message /></el-icon>
+          <span>通知中心</span>
         </el-menu-item>
       </el-menu>
       <div class="sidebar-footer" @click="logout">
