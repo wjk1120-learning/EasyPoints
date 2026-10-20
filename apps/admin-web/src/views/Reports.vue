@@ -2,7 +2,7 @@
 /**
  * 数据导出管理（PRD 5.7）：五类数据导出，文件一律由后端生成 Excel，前端只触发下载。
  * 导出列口径（2026-10-10 定稿，契约见 docs/Easy-Points-API.md 3.5/9.6/11.5~11.8）：
- * - 全员积分数据表：每人一行（姓名 + 可用积分 + 累计积分），累计倒序
+ * - 全员积分数据表：每人一行（姓名 + 实际积分 + 累计积分），累计倒序
  * - 个人积分明细：流水明细含备注（PRD 核心规则），员工/月份必选
  * - 兑换记录表：姓名 + 兑换商品 + 兑换时间；任务审核记录表：领取人/状态/任务名称/任务成果
  * - 投票统计数据表：投票主题 + 选项票数 + 合计 + 最高票选项 + 参与人员明细（双 Sheet）
@@ -39,7 +39,7 @@ function exportErrorMsg(error: unknown): string {
   return /404|Cannot|not found|接口不存在/i.test(message) ? "导出接口暂不可用（当前后端未部署该接口，新后端接入后可用）" : message;
 }
 
-/** 1. 全员积分数据表（每人一行：姓名 + 可用积分 + 累计积分；后端待实现，契约 3.9） */
+/** 1. 全员积分数据表（每人一行：姓名 + 实际积分 + 累计积分；后端待实现，契约 3.9） */
 async function exportFull() {
   full.exporting = true;
   try {
@@ -145,7 +145,7 @@ onMounted(async () => {
             <el-icon :size="20" color="var(--color-primary)"><Document /></el-icon>
             <div>
               <div class="export-name">全员积分数据表</div>
-              <div class="export-desc">每人一行：姓名 + 可用积分 + 累计积分</div>
+              <div class="export-desc">每人一行：姓名 + 实际积分 + 累计积分</div>
             </div>
           </div>
           <el-button type="primary" plain :icon="Download" :loading="full.exporting" @click="exportFull">导出 Excel</el-button>

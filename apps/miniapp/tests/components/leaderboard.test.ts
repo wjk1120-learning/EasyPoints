@@ -46,7 +46,7 @@ describe("积分排行榜（契约 2.5 / PRD 4.5）", () => {
     delete (globalThis as unknown as { uni?: unknown }).uni;
   });
 
-  it("默认实际积分榜：dimension=cumulative，分数取 actualPoints", async () => {
+  it("默认累计积分榜：dimension=cumulative，分数取 actualPoints", async () => {
     const wrapper = await mountBoard();
 
     expect(fetchLeaderboard).toHaveBeenCalledWith("cumulative");
@@ -58,7 +58,7 @@ describe("积分排行榜（契约 2.5 / PRD 4.5）", () => {
     expect(wrapper.html()).not.toContain("同一份可用积分");
   });
 
-  it("切实时榜：dimension=realtime，分数取 availablePoints", async () => {
+  it("切实际积分榜：dimension=realtime，分数取 availablePoints", async () => {
     const wrapper = await mountBoard();
 
     await wrapper.findAll(".segmented .tab")[1].trigger("tap");
@@ -66,8 +66,8 @@ describe("积分排行榜（契约 2.5 / PRD 4.5）", () => {
 
     expect(fetchLeaderboard).toHaveBeenLastCalledWith("realtime");
     const rows = wrapper.findAll(".board-row");
-    expect(rows[1].find(".board-points").text()).toBe("750"); // 李四按可用积分
-    expect(rows[2].find(".board-points").text()).toBe("100"); // 王五按可用积分
+    expect(rows[1].find(".board-points").text()).toBe("750"); // 李四按实际积分
+    expect(rows[2].find(".board-points").text()).toBe("100"); // 王五按实际积分
   });
 
   it("我的排名置顶卡：高亮本人（李四）及其当前榜分数", async () => {

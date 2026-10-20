@@ -13,7 +13,7 @@ export function fetchOrders(status?: string): Promise<Order[]> {
   return request<Order[]>(status ? `${OrderApi.List}?status=${encodeURIComponent(status)}` : OrderApi.List)
 }
 
-/** 兑换下单（4.8：{ giftId }；仅扣可用积分，驳回同事务自动退分） */
+/** 兑换下单（4.8：{ giftId }；仅扣实际积分，驳回同事务自动退分） */
 export function createOrder(giftId: number | string): Promise<Order> {
   return request<Order>(OrderApi.List, { method: "POST", data: { giftId } })
 }

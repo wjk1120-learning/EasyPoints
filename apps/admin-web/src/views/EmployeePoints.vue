@@ -259,7 +259,7 @@ onMounted(async () => {
           <el-table-column label="部门" min-width="100">
             <template #default="{ row }">{{ row.departmentName || `部门(${row.departmentId})` }}</template>
           </el-table-column>
-          <el-table-column label="可用积分" min-width="110" sortable :sort-method="sortByAvailable">
+          <el-table-column label="实际积分" min-width="110" sortable :sort-method="sortByAvailable">
             <template #default="{ row }">
               <span class="balance-text balance-available">{{ row.availablePoints ?? row.pointsBalance }}</span>
             </template>
@@ -317,8 +317,8 @@ onMounted(async () => {
       </el-form-item>
       <el-alert
         :title="adjustDialog.type === 'reward'
-          ? '加分规则：可用积分、累计积分同步增加'
-          : '扣分规则：可用积分、累计积分同步扣减（累计积分仅人工扣分可减少，兑换不扣）'"
+          ? '加分规则：实际积分、累计积分同步增加'
+          : '扣分规则：实际积分、累计积分同步扣减（累计积分仅人工扣分可减少，兑换不扣）'"
         type="info"
         :closable="false"
         show-icon
@@ -491,7 +491,7 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-// 可用积分=可兑换余额（青绿），累计积分=终身荣誉（品牌蓝，只增不减）
+// 实际积分=可兑换余额（青绿），累计积分=终身荣誉（品牌蓝，只增不减）
 .balance-available {
   color: var(--color-points-refund);
 }

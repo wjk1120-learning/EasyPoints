@@ -9,7 +9,7 @@ export interface LeaderboardEntry {
   departmentName?: string
   /** 当前榜维度的分数 */
   points?: number
-  /** 可用积分（两榜同源随行带出） */
+  /** 实际积分（两榜同源随行带出） */
   availablePoints?: number
   /** 累计积分（小程序契约字段，两榜同源） */
   actualPoints?: number

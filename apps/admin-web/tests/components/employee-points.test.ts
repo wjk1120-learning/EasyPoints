@@ -45,11 +45,11 @@ describe("员工积分页", () => {
     for (const name of ["张三", "李四", "王五", "赵六", "孙八"]) {
       expect(text).toContain(name);
     }
-    expect(text).toContain("1520"); // 王五可用积分
+    expect(text).toContain("1520"); // 王五实际积分
     expect(text).toContain("2980"); // 王五累计积分
   });
 
-  it("列表按可用积分降序展示（fixture 故意乱序投喂）", async () => {
+  it("列表按实际积分降序展示（fixture 故意乱序投喂）", async () => {
     const wrapper = mountPage();
     await flushPromises();
 
@@ -73,7 +73,7 @@ describe("员工积分页", () => {
     await flushPromises();
 
     const headers = wrapper.findAll(".el-table__header .caret-wrapper");
-    expect(headers.length).toBe(2); // 仅可用积分/累计积分两列可排序
+    expect(headers.length).toBe(2); // 仅实际积分/累计积分两列可排序
     const cumulativeHeader = headers[1];
     await cumulativeHeader.trigger("click"); // 第一次点击为升序
     await flushPromises();

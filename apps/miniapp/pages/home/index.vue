@@ -215,11 +215,11 @@ function openPoints() {
         </view>
         <view class="hero-scores">
           <view class="hero-score">
-            <text class="hero-label">实时积分</text>
+            <text class="hero-label">实际积分</text>
             <text class="hero-num">{{ formatPoints(availablePoints) }}</text>
           </view>
           <view class="hero-score">
-            <text class="hero-label">实际积分</text>
+            <text class="hero-label">累计积分</text>
             <text class="hero-num">{{ actualPoints == null ? '—' : formatPoints(actualPoints) }}</text>
           </view>
         </view>

@@ -9,7 +9,7 @@ import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
-// 双榜维度（契约 2.5）：cumulative=累计积分（实际积分）/ realtime=可用积分（实时积分）
+// 双榜维度（契约 2.5）：cumulative=累计积分 / realtime=实际积分
 const dimension = ref<LeaderboardDimension>('cumulative')
 const list = ref<LeaderboardEntry[]>([])
 const loading = ref(false)
@@ -74,8 +74,8 @@ function pastel(index: number) {
     <NavBar title="积分排名" />
 
     <view class="segmented">
-      <text class="tab" :class="{ active: dimension === 'cumulative' }" @tap="switchDimension('cumulative')">实际积分排名</text>
-      <text class="tab" :class="{ active: dimension === 'realtime' }" @tap="switchDimension('realtime')">实时积分排名</text>
+      <text class="tab" :class="{ active: dimension === 'cumulative' }" @tap="switchDimension('cumulative')">累计积分排名</text>
+      <text class="tab" :class="{ active: dimension === 'realtime' }" @tap="switchDimension('realtime')">实际积分排名</text>
     </view>
 
     <view class="update-line">

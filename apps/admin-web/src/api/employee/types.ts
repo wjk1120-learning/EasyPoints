@@ -2,7 +2,7 @@
 
 /**
  * 双积分口径（PRD 3.1，展示名以中文为准）：
- * - 可用积分 availablePoints：当前可兑换余额；兑换礼品、管理员扣分会扣减。
+ * - 实际积分 availablePoints：当前可兑换余额；兑换礼品、管理员扣分会扣减。
  * - 累计积分 cumulativePoints：终身累计荣誉分；只增不减（仅管理员人工扣分可减少），兑换不扣减；用于荣誉排名。
  * 过渡期兼容：旧后端无双积分字段时由页面 `?? pointsBalance` 兜底展示。
  */
@@ -13,9 +13,9 @@ export interface Employee {
   name: string
   departmentId: number
   departmentName: string
-  /** 可用积分（兼容冗余字段，=availablePoints） */
+  /** 实际积分（兼容冗余字段，=availablePoints） */
   pointsBalance: number
-  /** 可用积分：可兑换余额 */
+  /** 实际积分：可兑换余额 */
   availablePoints: number
   /** 累计积分：终身荣誉分 */
   cumulativePoints: number

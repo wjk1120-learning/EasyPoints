@@ -38,7 +38,7 @@ onShow(async () => {
 
 async function loadRank() {
   try {
-    // 可用积分榜（realtime）里找本人名次；不在榜（如新员工 0 分未上榜）显示 —
+    // 实际积分榜（realtime）里找本人名次；不在榜（如新员工 0 分未上榜）显示 —
     const list = await fetchLeaderboard('realtime')
     const employeeId = String(uni.getStorageSync('employeeId') || '')
     const mine = list.find((item) => String(item.id) === employeeId)
@@ -84,12 +84,12 @@ function open(url: string) {
     <view class="card stats">
       <view class="stat">
         <text class="stat-num">{{ formatPoints(home.pointsBalance || 0) }}</text>
-        <text class="stat-label">实时积分</text>
+        <text class="stat-label">实际积分</text>
       </view>
       <view class="stat-divider" />
       <view class="stat">
         <text class="stat-num">{{ actualPoints() }}</text>
-        <text class="stat-label">实际积分</text>
+        <text class="stat-label">累计积分</text>
       </view>
       <view class="stat-divider" />
       <view class="stat">

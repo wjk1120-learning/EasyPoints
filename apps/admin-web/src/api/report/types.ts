@@ -5,7 +5,7 @@ export interface PointRecord {
   id: number
   employeeId: number
   employeeName?: string
-  /** 可用积分变动 */
+  /** 实际积分变动 */
   pointsDelta: number
   /** 累计积分变动（双积分流水；旧后端缺失时页面兜底 = pointsDelta） */
   cumulativePointsDelta?: number

@@ -62,8 +62,8 @@ describe("我的页（契约 2.2/2.5）", () => {
     expect(wrapper.text()).toContain("张三");
     expect(wrapper.text()).toContain("专员");
     expect(wrapper.text()).toContain("综合管理部");
-    expect(wrapper.text()).toContain("1,200"); // 实时积分千分位
-    expect(wrapper.text()).toContain("1,500"); // 实际积分千分位
+    expect(wrapper.text()).toContain("1,200"); // 实际积分千分位
+    expect(wrapper.text()).toContain("1,500"); // 累计积分千分位
     expect(wrapper.text()).toContain("2"); // 本人在实时榜 rank=2
   });
 

@@ -2,7 +2,7 @@
 import type { PointRecordItem } from "../points/types"
 
 export interface HomeVo {
-  /** 可用积分（=pointsBalance） */
+  /** 实际积分（=pointsBalance） */
   pointsBalance?: number
   cumulativePoints?: number
   /** 累计积分（小程序契约别名，=cumulativePoints） */

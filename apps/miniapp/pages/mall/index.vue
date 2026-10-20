@@ -52,7 +52,7 @@ async function confirmRedeem() {
   const gift = current?.gift
   if (!current || !gift || !current.enough) return
   try {
-    // 兑换下单（契约 4.8：POST /miniapp/orders { giftId }，仅扣可用积分）
+    // 兑换下单（契约 4.8：POST /miniapp/orders { giftId }，仅扣实际积分）
     await createOrder(gift.id)
     dialog.value = null
     uni.showToast({ title: '兑换申请已提交' })
@@ -81,7 +81,7 @@ function isElectronic(gift: Gift) {
 
     <view class="card mall-head">
       <view class="mall-balance">
-        <text class="mall-balance-label">可用积分</text>
+        <text class="mall-balance-label">实际积分</text>
         <text class="mall-balance-num">{{ formatPoints(balance) }}</text>
       </view>
       <text class="mall-orders-link" @tap="openOrders">兑换记录 ›</text>
@@ -146,7 +146,7 @@ function isElectronic(gift: Gift) {
         <view v-if="dialog.enough" class="dialog-note">确认后进入审核，审核通过后发送至企业微信消息。</view>
         <view v-else class="dialog-warn">
           <AppIcon name="alert-triangle" :size="36" color="amber" />
-          <text>当前可用积分 {{ formatPoints(balance) }}，暂无法兑换该礼品</text>
+          <text>当前实际积分 {{ formatPoints(balance) }}，暂无法兑换该礼品</text>
         </view>
         <view class="dialog-buttons">
           <view class="dialog-cancel" @tap="dialog = null">取消</view>

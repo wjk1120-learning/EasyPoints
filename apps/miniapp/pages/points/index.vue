@@ -149,7 +149,7 @@ function appeal(record: PointRecordItem) {
     <view class="card head-card">
       <view class="row between">
         <view class="head-main">
-          <text class="head-label">当前实时积分</text>
+          <text class="head-label">当前实际积分</text>
           <text class="head-num">{{ balance == null ? '—' : formatPoints(balance) }}</text>
         </view>
         <view class="head-month">

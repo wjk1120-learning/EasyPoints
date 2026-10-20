@@ -6,7 +6,7 @@ import { download, get } from "../../utils/request"
 export const ReportApi = {
   Records: "/admin/reports/point-records",
   RecordsXlsx: "/admin/reports/point-records.xlsx",
-  /** 全员积分汇总导出（每人一行：姓名/可用积分/累计积分，累计倒序） */
+  /** 全员积分汇总导出（每人一行：姓名/实际积分/累计积分，累计倒序） */
   PointsSummaryXlsx: "/admin/reports/points-summary.xlsx",
 } as const
 

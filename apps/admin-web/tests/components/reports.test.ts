@@ -79,7 +79,7 @@ describe("数据导出页", () => {
     for (const name of ["全员积分数据表", "个人积分明细", "兑换记录表", "任务审核记录表", "投票统计数据表"]) {
       expect(text).toContain(name);
     }
-    expect(text).toContain("每人一行：姓名 + 可用积分 + 累计积分");
+    expect(text).toContain("每人一行：姓名 + 实际积分 + 累计积分");
   });
 
   it("全员积分数据表：一键导出触发下载并保存文件", async () => {

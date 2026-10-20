@@ -67,7 +67,7 @@ with sync_playwright() as p:
 
     rows = page.locator(".el-table__row").all_inner_texts()
     order = [r.split("\n")[0] for r in rows]
-    check("按可用积分降序排序", order[:3] == ["3", "1", "2"], f"order={order}")
+    check("按实际积分降序排序", order[:3] == ["3", "1", "2"], f"order={order}")
 
     page.locator("input[placeholder*='搜索员工']").fill("张三")
     page.wait_for_timeout(600)
