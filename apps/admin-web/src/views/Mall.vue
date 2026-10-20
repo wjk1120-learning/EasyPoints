@@ -321,10 +321,10 @@ onMounted(load);
         <el-input-number v-model="form.limitPerUser" :min="1" :max="999999" style="width: 100%" placeholder="为空表示不限购" />
       </el-form-item>
       <el-form-item label="状态">
-        <el-select v-model="form.status" style="width: 100%">
-          <el-option value="inactive" label="下架" />
-          <el-option value="active" label="上架" />
-        </el-select>
+        <el-radio-group v-model="form.status">
+          <el-radio-button value="inactive">下架</el-radio-button>
+          <el-radio-button value="active">上架</el-radio-button>
+        </el-radio-group>
       </el-form-item>
 
       <el-form-item label="封面图">

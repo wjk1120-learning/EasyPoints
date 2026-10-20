@@ -33,7 +33,8 @@ const form = reactive<TaskPayload>({
   description: "",
   rewardPoints: 50,
   deadline: "",
-  requirement: ""
+  requirement: "",
+  status: "unpublished"
 });
 
 /** 进度抽屉 */
@@ -63,6 +64,7 @@ function resetForm() {
   form.rewardPoints = 50;
   form.deadline = "";
   form.requirement = "";
+  form.status = "unpublished";
 }
 
 function openCreate() {
@@ -77,6 +79,7 @@ function openEdit(row: Task) {
   form.rewardPoints = Number(row.rewardPoints || 0);
   form.deadline = row.deadline;
   form.requirement = row.requirement;
+  form.status = row.status;
   dialog.visible = true;
 }
 
@@ -94,7 +97,11 @@ async function save() {
       ElMessage.success("任务已更新");
     } else {
       await createTask({ ...form, name });
-      ElMessage.success("任务已创建（默认下架，上架后员工端可见）");
+      ElMessage.success(
+        form.status === "published"
+          ? "任务已创建并上架，员工端任务大厅可见"
+          : "任务已创建（已下架，上架后员工端可见）"
+      );
     }
     dialog.visible = false;
     await load();
@@ -246,6 +253,12 @@ onMounted(load);
       </el-form-item>
       <el-form-item label="完成要求" required>
         <el-input v-model="form.requirement" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="说明验收标准，例如：上传回访记录截图" />
+      </el-form-item>
+      <el-form-item v-if="!dialog.editId" label="上架状态">
+        <el-radio-group v-model="form.status">
+          <el-radio-button value="unpublished">下架</el-radio-button>
+          <el-radio-button value="published">上架</el-radio-button>
+        </el-radio-group>
       </el-form-item>
     </el-form>
 

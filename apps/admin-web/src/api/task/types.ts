@@ -19,13 +19,15 @@ export interface Task {
   updatedAt?: string
 }
 
-/** 新增/编辑任务参数（5.6/5.7：deadline 由页面必填；新建默认下架由后端保证） */
+/** 新增/编辑任务参数（5.6/5.7：deadline 由页面必填；status 缺省时后端默认下架，编辑时后端忽略该字段） */
 export interface TaskPayload {
   name: string
   description: string
   rewardPoints: number
   deadline: string
   requirement: string
+  /** published=立即上架 / unpublished=下架（5.6 可选入参；缺省由后端默认 unpublished） */
+  status?: string
 }
 
 /** 员工任务记录（5.10：领取 → 进行中 → 提交成果（待审核）→ 通过/驳回） */

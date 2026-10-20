@@ -33,6 +33,14 @@ describe("契约：任务列表与 CRUD（文档 5.5~5.9）", () => {
     expect(httpCalls[0].body).toMatchObject({ name: "整理客户回访文档", rewardPoints: 100, deadline: "2026-10-31" });
   });
 
+  it("新建任务：status 可选入参透传（缺省下架由后端默认，编辑时后端忽略）", async () => {
+    setResponse(baseResult(TASKS_FIXTURE[0]));
+
+    await createTask({ name: "立即上架任务", description: "", rewardPoints: 50, deadline: "2026-10-31", requirement: "输出文档", status: "published" });
+
+    expect(httpCalls[0].body).toMatchObject({ name: "立即上架任务", status: "published" });
+  });
+
   it("编辑任务：PUT /admin/tasks/{id}", async () => {
     setResponse(baseResult(TASKS_FIXTURE[0]));
     await updateTask(3, { name: "改名", description: "", rewardPoints: 120, deadline: "2026-11-30", requirement: "要求" });
