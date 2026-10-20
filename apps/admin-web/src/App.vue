@@ -1,32 +1,40 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Menu, Star, EditPen, DataLine, Check, Present, Ticket, Document, SwitchButton } from "@element-plus/icons-vue";
+import { Menu, Star, EditPen, DataLine, Check, Present, Document, SwitchButton, Stamp, Management, Reading, Message } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
-import { api } from "./api";
+import type { AdminInfo } from "./api/auth/types";
+import { badges as fetchBadges, login } from "./api/auth/auth";
+import { ordersPaged } from "./api/order/order";
+import { taskRecordsPaged } from "./api/task/task";
+import { applicationsPaged } from "./api/application/application";
+import { appealsPaged } from "./api/appeal/appeal";
+import { outboxMeta } from "./api/outbox/outbox";
+import { apiErrorMsg } from "./utils/error";
 
 const form = reactive({ username: "admin", password: "admin123" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
-const admin = ref(loadAdmin());
-const avatarUrl = ref('/images/avatar.png')
+const admin = ref<AdminInfo | null>(loadAdmin());
 const isAuthed = computed(() => Boolean(token.value));
 const route = useRoute();
 const activeMenu = computed(() => route.path);
-const badges = reactive({ appeals: 0, orders: 0 });
-const dashboardBadge = computed(() => Number(badges.appeals || 0) + Number(badges.orders || 0));
-let badgeTimer = null;
+/** 四类待审合计（兑换/任务/申请/申诉），侧边栏工作台与审核中心徽标共用；outboxFailed=消息派发待处理失败数（通知中心红点） */
+const badges = reactive({ pending: 0, outboxFailed: 0 });
+const dashboardBadge = computed(() => Number(badges.pending || 0));
+const outboxFailedBadge = computed(() => Number(badges.outboxFailed || 0));
+let badgeTimer: ReturnType<typeof setInterval> | null = null;
 
-function loadAdmin() {
+function loadAdmin(): AdminInfo | null {
   try {
     const raw = localStorage.getItem("admin");
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as AdminInfo) : null;
   } catch {
     return null;
   }
 }
 
-function formatRole(role) {
+function formatRole(role?: string) {
   const value = String(role || "");
   if (value === "super_admin") return "超级管理员";
   if (value === "hr_admin") return "人事管理员";
@@ -34,7 +42,10 @@ function formatRole(role) {
   return value || "管理员";
 }
 
-function parseJwtPayload(value) {
+/** 内容管理权限（契约附录 A：礼品/任务/规则/投票仅超管与人事可见，department_admin 一律 403） */
+const isContentAdmin = computed(() => ["super_admin", "hr_admin"].includes(String(admin.value?.role || "")));
+
+function parseJwtPayload(value: string): { exp?: number } | null {
   try {
     const parts = String(value || "").split(".");
     if (parts.length !== 3) return null;
@@ -45,7 +56,7 @@ function parseJwtPayload(value) {
   }
 }
 
-function isJwtExpired(value) {
+function isJwtExpired(value: string) {
   const payload = parseJwtPayload(value);
   if (!payload?.exp) return false;
   return Date.now() >= Number(payload.exp) * 1000;
@@ -54,7 +65,7 @@ function isJwtExpired(value) {
 async function submitLogin() {
   loading.value = true;
   try {
-    const result = await api.login(form);
+    const result = await login(form);
     localStorage.setItem("token", result.token);
     localStorage.setItem("adminId", String(result.admin.id));
     localStorage.setItem("admin", JSON.stringify(result.admin));
@@ -62,7 +73,7 @@ async function submitLogin() {
     admin.value = result.admin;
     ElMessage.success("登录成功");
   } catch (error) {
-    ElMessage.error(error?.message || "登录失败");
+    ElMessage.error(apiErrorMsg(error, "登录失败"));
   } finally {
     loading.value = false;
   }
@@ -76,25 +87,47 @@ function logout() {
   admin.value = null;
 }
 
-function handleLogoutEvent(event) {
+function handleLogoutEvent(event: Event) {
   token.value = localStorage.getItem("token") || "";
   admin.value = loadAdmin();
+  const detail = (event as CustomEvent<{ reason?: string }>).detail;
   if (!token.value) {
-    if (event?.detail?.reason === "expired") ElMessage.warning("登录已过期，请重新登录");
-    else if (event?.detail?.reason === "unauthorized") ElMessage.warning("登录已失效，请重新登录");
+    if (detail?.reason === "expired") ElMessage.warning("登录已过期，请重新登录");
+    else if (detail?.reason === "unauthorized") ElMessage.warning("登录已失效，请重新登录");
   }
 }
 
+/** 刷新侧边栏待办徽标（契约 11.2）：优先走 badges 聚合接口一次拿四类待审合计；
+ * 聚合接口不可用时（旧后端/未部署）回退为四次列表查询拼装，保证演示环境可用。 */
 async function refreshBadges() {
   if (!token.value) return;
+  // 消息派发待处理失败数（通知中心红点）：独立拉取，不随四类待审的回退逻辑一起失败
+  outboxMeta()
+    .then((meta) => { badges.outboxFailed = Number(meta.failed || 0); })
+    .catch(() => { badges.outboxFailed = 0; });
   try {
-    const result = await api.badges();
-    badges.appeals = Number(result.appealsUnread || 0);
-    badges.orders = Number(result.ordersUnread || 0);
+    const result = await fetchBadges();
+    badges.pending =
+      Number(result.exchangePending || 0) +
+      Number(result.taskPending || 0) +
+      Number(result.applicationPending || 0) +
+      Number(result.appealPending || 0);
+    return;
   } catch {
-    badges.appeals = 0;
-    badges.orders = 0;
+    /* 聚合接口不可用 → 回退四次查询 */
   }
+  const empty = { data: [], meta: { total: 0, page: 1, pageSize: 1 } };
+  const [exchange, task, application, appeal] = await Promise.all([
+    ordersPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    taskRecordsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    applicationsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+    appealsPaged({ page: 1, pageSize: 1, status: "pending_review" }).catch(() => empty),
+  ]);
+  badges.pending =
+    Number(exchange.meta.total || 0) +
+    Number(task.meta.total || 0) +
+    Number(application.meta.total || 0) +
+    Number(appeal.meta.total || 0);
 }
 
 function handleBadgeRefreshEvent() {
@@ -123,8 +156,7 @@ watch(
   isAuthed,
   (value) => {
     if (!value) {
-      badges.appeals = 0;
-      badges.orders = 0;
+      badges.pending = 0;
       if (badgeTimer) {
         clearInterval(badgeTimer);
         badgeTimer = null;
@@ -133,7 +165,7 @@ watch(
     }
     refreshBadges();
     if (badgeTimer) clearInterval(badgeTimer);
-    badgeTimer = setInterval(refreshBadges, 15000);
+    badgeTimer = setInterval(refreshBadges, 60000);
   },
   { immediate: true }
 );
@@ -169,8 +201,8 @@ watch(
   <el-container v-else class="shell">
     <el-aside width="232px" class="sidebar">
       <div class="brand">
-        <strong style="color: #fdfbff;">易积分</strong>
-        <span style="color: #9498a6;">企业微信积分管理</span>
+        <strong style="color: var(--color-text-primary);">易积分</strong>
+        <span style="color: var(--color-text-secondary);">企业微信积分管理</span>
       </div>
       <el-menu router :default-active="activeMenu">
         <el-menu-item index="/">
@@ -187,29 +219,41 @@ watch(
           <el-icon><EditPen /></el-icon>
           <span>积分录入</span>
         </el-menu-item>
-        <el-menu-item index="/reports">
-          <el-icon><DataLine /></el-icon>
-          <span>明细报表</span>
-        </el-menu-item>
-        <el-menu-item index="/appeals">
+        <el-menu-item index="/review-center">
           <el-icon><Check /></el-icon>
-          <el-badge :value="badges.appeals" :hidden="!badges.appeals" :max="99">
-            <span>申诉审核</span>
+          <el-badge :value="dashboardBadge" :hidden="!dashboardBadge" :max="99">
+            <span>审核中心</span>
           </el-badge>
         </el-menu-item>
-        <el-menu-item index="/mall">
+        <el-menu-item v-if="isContentAdmin" index="/tasks">
+          <el-icon><Management /></el-icon>
+          <span>任务管理</span>
+        </el-menu-item>
+        <el-menu-item v-if="isContentAdmin" index="/votes">
+          <el-icon><Stamp /></el-icon>
+          <span>投票管理</span>
+        </el-menu-item>
+        <el-menu-item v-if="isContentAdmin" index="/rules">
+          <el-icon><Reading /></el-icon>
+          <span>规则配置</span>
+        </el-menu-item>
+        <el-menu-item v-if="isContentAdmin" index="/mall">
           <el-icon><Present /></el-icon>
           <span>商城礼品</span>
         </el-menu-item>
-        <el-menu-item index="/orders">
-          <el-icon><Ticket /></el-icon>
-          <el-badge :value="badges.orders" :hidden="!badges.orders" :max="99">
-            <span>订单核销</span>
-          </el-badge>
+        <el-menu-item index="/reports">
+          <el-icon><DataLine /></el-icon>
+          <span>数据导出</span>
         </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>
           <span>操作日志</span>
+        </el-menu-item>
+        <el-menu-item index="/outbox">
+          <el-icon><Message /></el-icon>
+          <el-badge :value="outboxFailedBadge" :hidden="!outboxFailedBadge" :max="99" type="danger">
+            <span>通知中心</span>
+          </el-badge>
         </el-menu-item>
       </el-menu>
       <div class="sidebar-footer" @click="logout">
@@ -221,15 +265,15 @@ watch(
     <el-container>
       <el-header class="topbar">
         <div>
-          <strong style="color: #0056c1; font-size: 20px;">{{ route.meta.title || "易积分后台管理系统" }}</strong>
+          <strong style="color: var(--color-primary); font-size: 20px;">{{ route.meta.title || "易积分后台管理系统" }}</strong>
         </div>
         <div class="topbar-right">
           <div class="userInfo">
             <div class="user-des">
-              <div class="username">{{ admin.name }}</div>
-              <div class="role">{{ formatRole(admin.role) }}</div>
+              <div class="username">{{ admin?.name }}</div>
+              <div class="role">{{ formatRole(admin?.role) }}</div>
             </div>
-            <el-avatar class="user-avatar" shape="square" :size="40" :src="avatarUrl" />
+            <el-avatar class="user-avatar" shape="square" :size="40" src="/images/avatar.svg" />
           </div>
         </div>
       </el-header>
@@ -252,34 +296,34 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: #2d2f38;
+  background-color: var(--color-bg-card);
 
   :deep(.el-menu) {
     flex: 1;
     overflow-y: auto;
-    background: #2d2f38;
-    border-bottom: 1px solid #41434b;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-menu-item) {
     padding-left: 10px !important;
     margin: 5px 20px;
-    color: #dfe2ed !important; /* 默认文字 */
+    color: var(--color-text-regular) !important; /* 默认文字 */
     border-radius: 10px;
   }
 
   :deep(.el-menu-item:hover) {
-    color: #fff !important; /* hover文字色 */
-    background-color: #0056c1 !important; /* hover背景 */
+    color: var(--color-primary) !important; /* hover文字色 */
+    background-color: var(--el-color-primary-light-9) !important; /* hover背景 */
   }
 
   :deep(.el-menu-item.is-active) {
-    color: #fff !important; /* 选中文字 */
-    background-color: #0056c1 !important; /* 选中背景 */
+    color: var(--color-primary) !important; /* 选中文字 */
+    background-color: var(--el-color-primary-light-9) !important; /* 选中背景 */
   }
 
   .brand {
-    border-bottom: 1px solid #41434b;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .sidebar-footer {
@@ -287,11 +331,11 @@ watch(
     align-items: center;
     padding: 16px 30px;
     cursor: pointer;
-    color: #dfe2ed;
+    color: var(--color-text-regular);
     transition: background-color 0.2s, color 0.2s;
 
     &:hover {
-      color: #FF4444;
+      color: var(--color-points-deduct);
     }
   }
 
@@ -350,14 +394,14 @@ watch(
 
       .role {
         font-size: 14px;
-        color: #434654;
+        color: var(--color-text-secondary);
       }
     }
 
     .user-avatar {
       width: 46px;
       height: 46px;
-      border: 2px solid #c1c6d6;
+      border: 2px solid var(--color-border);
       border-radius: 12px;
     }
   }
@@ -366,10 +410,10 @@ watch(
 /* 全局分页组件背景色统一 */
 :deep(.el-pagination.is-background) {
   .el-pager li.is-active {
-    background-color: #0056c1;
+    background-color: var(--color-primary);
   }
   .el-pager li:not(.is-active):hover {
-    color: #0056c1;
+    color: var(--color-primary);
   }
 }
 

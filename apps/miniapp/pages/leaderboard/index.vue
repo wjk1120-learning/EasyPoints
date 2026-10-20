@@ -1,187 +1,195 @@
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { request } from '../../api'
-import AiFloatBall from '../../components/AiFloatBall.vue'
+import { fetchLeaderboard } from '../../api/leaderboard/leaderboard'
+import type { LeaderboardDimension, LeaderboardEntry } from '../../api/leaderboard/types'
+import { formatPoints } from '../../utils/format'
+import NavBar from '../../components/NavBar.vue'
+import AppTabBar from '../../components/AppTabBar.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import EmptyState from '../../components/EmptyState.vue'
 
-const list = ref([])
+// 双榜维度（契约 2.5）：cumulative=累计积分（实际积分）/ realtime=可用积分（实时积分）
+const dimension = ref<LeaderboardDimension>('cumulative')
+const list = ref<LeaderboardEntry[]>([])
 const loading = ref(false)
+const updatedAt = ref('')
 
-onShow(async () => {
-  await loadLeaderboard()
+const PASTELS = [
+  { bg: '#eaf3ff', fg: '#2f6bff' },
+  { bg: '#e9f7ef', fg: '#16a34a' },
+  { bg: '#fff6e5', fg: '#d97706' },
+  { bg: '#f1edff', fg: '#7c5cbf' },
+  { bg: '#fdeeee', fg: '#f04438' }
+]
+
+const medalColors: Record<number, string> = { 1: '#ffb020', 2: '#a8b4c4', 3: '#d9925f' }
+
+const myEntry = computed(() => {
+  const employeeId = String(uni.getStorageSync('employeeId') || '')
+  if (!employeeId) return null
+  return list.value.find((item) => String(item.id) === employeeId) || null
 })
+
+onShow(loadLeaderboard)
 
 async function loadLeaderboard() {
   loading.value = true
   try {
-    list.value = await request('/miniapp/leaderboard')
+    const data = await fetchLeaderboard(dimension.value)
+    list.value = Array.isArray(data) ? data : []
+    const now = new Date()
+    updatedAt.value = `${`${now.getHours()}`.padStart(2, '0')}:${`${now.getMinutes()}`.padStart(2, '0')}`
   } catch (error) {
-    uni.showToast({ title: error?.message || '加载失败', icon: 'none' })
+    uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   } finally {
     loading.value = false
   }
 }
 
-function nameInitial(name) {
+function switchDimension(next: LeaderboardDimension) {
+  if (dimension.value === next) return
+  dimension.value = next
+  loadLeaderboard()
+}
+
+/** 当前榜的展示分数：累计榜取 actualPoints，实时榜取 availablePoints（行内同源字段，缺省回落 points） */
+function scoreOf(item: LeaderboardEntry): number {
+  const value = dimension.value === 'cumulative' ? item.actualPoints : item.availablePoints
+  return Number(value ?? item.points ?? 0)
+}
+
+function nameInitial(name?: string) {
   const text = String(name || '').trim()
   return text ? text.slice(0, 1) : '?'
+}
+
+function pastel(index: number) {
+  return PASTELS[index % PASTELS.length]
 }
 </script>
 
 <template>
-  <view class="page page-tab">
-    <view class="lb-header">
-      <text class="lb-title">排行榜</text>
-      <text class="lb-desc">按当前积分降序排列</text>
+  <view class="page page-nav">
+    <NavBar title="积分排名" />
+
+    <view class="segmented">
+      <text class="tab" :class="{ active: dimension === 'cumulative' }" @tap="switchDimension('cumulative')">实际积分排名</text>
+      <text class="tab" :class="{ active: dimension === 'realtime' }" @tap="switchDimension('realtime')">实时积分排名</text>
     </view>
 
-    <view v-if="loading" class="lb-empty">
-      <text class="muted">加载中…</text>
+    <view class="update-line">
+      <AppIcon name="refresh" :size="22" color="muted" />
+      <text>数据更新于 {{ updatedAt || '--:--' }} 自动刷新</text>
     </view>
 
-    <view v-else-if="list.length === 0" class="lb-empty">
-      <text class="muted">暂无数据</text>
-    </view>
-
-    <view v-else class="lb-list">
-      <view
-        v-for="item in list"
-        :key="item.id"
-        class="lb-row"
-        :class="{ 'is-podium': item.rank <= 3 }"
-      >
-        <text class="lb-rank" :class="item.rank === 1 ? 'is-first' : ''">{{ item.rank }}</text>
-        <view class="lb-avatar" :class="item.rank <= 3 ? 'is-podium-avatar' : ''">
-          <text class="lb-initial">{{ nameInitial(item.name) }}</text>
+    <view v-if="myEntry" class="card my-rank">
+      <view class="my-rank-label">
+        <AppIcon name="map-pin" :size="24" color="brand" />
+        <text>我的排名 · 置顶</text>
+      </view>
+      <view class="row my-rank-row">
+        <text class="my-rank-num">{{ myEntry.rank }}</text>
+        <view class="my-avatar" :style="{ background: pastel(myEntry.rank ?? 1).bg, color: pastel(myEntry.rank ?? 1).fg }">
+          {{ nameInitial(myEntry.name) }}
         </view>
-        <view class="lb-body">
-          <text class="lb-name">{{ item.name }}</text>
-          <text class="lb-dept">{{ item.departmentName || '-' }}</text>
+        <view class="my-info">
+          <text class="my-name">{{ myEntry.name }}（我）</text>
+          <text class="my-dept">{{ myEntry.departmentName || '-' }}</text>
         </view>
-        <view class="lb-score">
-          <text class="lb-points">{{ item.pointsBalance }}</text>
-          <text class="lb-unit">分</text>
-        </view>
+        <text class="my-points">{{ formatPoints(scoreOf(myEntry)) }}</text>
       </view>
     </view>
 
-    <AiFloatBall />
+    <view class="card board">
+      <view class="board-title">全员榜单</view>
+      <view v-if="loading" class="board-empty">
+        <view v-for="n in 3" :key="n" class="sk-row">
+          <view class="rank-badge"><view class="sk sk-rank" /></view>
+          <view class="sk sk-avatar" />
+          <view class="sk-lines">
+            <view class="sk sk-line w40" />
+            <view class="sk sk-line w24" />
+          </view>
+          <view class="sk sk-line sk-points" />
+        </view>
+      </view>
+      <view v-else-if="list.length === 0" class="board-empty">
+        <EmptyState icon="trophy" title="暂无排名数据" />
+      </view>
+      <view v-for="(item, index) in list" :key="item.id" class="board-row">
+        <view class="rank-badge">
+          <view v-if="Number(item.rank || 0) <= 3" class="medal" :style="{ background: medalColors[Number(item.rank || 0)] }">{{ item.rank }}</view>
+          <text v-else class="rank-num">{{ item.rank }}</text>
+        </view>
+        <view class="board-avatar" :style="{ background: pastel(index).bg, color: pastel(index).fg }">
+          {{ nameInitial(item.name) }}
+        </view>
+        <view class="board-main">
+          <text class="board-name">{{ item.name }}</text>
+          <text class="board-dept">{{ item.departmentName || '-' }}</text>
+        </view>
+        <text class="board-points">{{ formatPoints(scoreOf(item)) }}</text>
+      </view>
+    </view>
+
+    <AppTabBar />
   </view>
 </template>
 
 <style scoped>
-/* ---- header card (hero style) ---- */
-.lb-header {
-  padding: 32rpx;
-  margin-bottom: 20rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(145deg, rgba(168, 230, 207, 0.42), rgba(168, 216, 234, 0.48));
-  border: 1rpx solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 12rpx 40rpx rgba(107, 203, 154, 0.12),
-    0 1rpx 0 rgba(255, 255, 255, 0.8) inset;
-}
-
-.lb-title {
-  display: block;
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #3a7ca5;
-  letter-spacing: -0.5rpx;
-  line-height: 1.15;
-}
-
-.lb-desc {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #8e8e93;
-}
-
-/* ---- empty ---- */
-.lb-empty {
-  padding: 80rpx 0;
-  text-align: center;
-}
-
-/* ---- list ---- */
-.lb-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.lb-row {
+.update-line {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  padding: 24rpx;
-  border-radius: 28rpx;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1rpx solid rgba(255, 255, 255, 0.88);
-  box-shadow:
-    0 8rpx 32rpx rgba(91, 155, 213, 0.07),
-    0 1rpx 0 rgba(255, 255, 255, 0.95) inset;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition: all 0.2s ease;
+  justify-content: center;
+  gap: 6rpx;
+  margin: 16rpx 0 4rpx;
+  font-size: 22rpx;
+  color: var(--muted);
 }
 
-.lb-row:active {
-  opacity: 0.92;
-  transform: scale(0.992);
+.my-rank {
+  background: var(--brand-soft);
+  box-shadow: none;
+  padding: 24rpx 28rpx;
 }
 
-.lb-row.is-podium {
-  background: linear-gradient(145deg, rgba(168, 230, 207, 0.35), rgba(168, 216, 234, 0.38));
-  border: 1rpx solid rgba(255, 255, 255, 0.75);
+.my-rank-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: var(--brand);
 }
 
-/* ---- rank number ---- */
-.lb-rank {
-  width: 40rpx;
-  flex-shrink: 0;
-  text-align: center;
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #aeaeb2;
+.my-rank-row {
+  gap: 20rpx;
+  margin-top: 18rpx;
+}
+
+.my-rank-num {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--brand);
   font-variant-numeric: tabular-nums;
+  min-width: 56rpx;
+  text-align: center;
 }
 
-.lb-rank.is-first {
-  font-size: 26rpx;
-  font-weight: 700;
-  color: #3a7ca5;
-}
-
-/* ---- avatar ---- */
-.lb-avatar {
-  width: 64rpx;
-  height: 64rpx;
-  flex-shrink: 0;
+.my-avatar {
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(142, 142, 147, 0.12);
-}
-
-.lb-avatar.is-podium-avatar {
-  background: linear-gradient(135deg, #6bcb9a, #5b9bd5);
-}
-
-.lb-initial {
-  font-size: 24rpx;
+  font-size: 28rpx;
   font-weight: 600;
-  color: #8e8e93;
+  flex-shrink: 0;
 }
 
-.is-podium-avatar .lb-initial {
-  color: #ffffff;
-}
-
-/* ---- body ---- */
-.lb-body {
+.my-info {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -189,36 +197,154 @@ function nameInitial(name) {
   gap: 4rpx;
 }
 
-.lb-name {
+.my-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1c1c1e;
-  line-height: 1.3;
+  color: var(--ink);
 }
 
-.lb-dept {
+.my-dept {
   font-size: 22rpx;
-  color: #8e8e93;
+  color: #8a97b8;
 }
 
-/* ---- score ---- */
-.lb-score {
+.my-points {
   flex-shrink: 0;
-  text-align: right;
-  display: flex;
-  align-items: baseline;
-  gap: 4rpx;
-}
-
-.lb-points {
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #1c1c1e;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-.lb-unit {
-  font-size: 22rpx;
-  color: #aeaeb2;
+.board-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8rpx;
 }
+
+.board-empty {
+  padding: 48rpx 0;
+  text-align: center;
+}
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--bg);
+}
+
+.board-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 4rpx;
+}
+
+.rank-badge {
+  width: 48rpx;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.medal {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-num {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.board-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.board-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.board-dept {
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.board-points {
+  flex-shrink: 0;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 加载骨架（对应排行行：名次块 + 圆点 + 两行文字 + 数字条） ── */
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx 0;
+}
+
+.sk-rank {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+}
+
+.sk-avatar {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--r-full);
+}
+
+.sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.sk-line {
+  height: 28rpx;
+}
+
+.sk-points {
+  flex-shrink: 0;
+  width: 96rpx;
+  height: 32rpx;
+}
+
+.w24 { width: 24%; }
+.w40 { width: 40%; }
 </style>

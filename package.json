@@ -4,15 +4,12 @@
   "private": true,
   "description": "企业微信小程序易积分系统",
   "workspaces": [
-    "apps/api",
     "apps/admin-web",
     "apps/miniapp"
   ],
-  "scripts": {
-    "dev:api": "node apps/api/src/server.js",
-    "test": "node --test apps/api/tests/*.test.js"
-  },
+  "scripts": {},
   "devDependencies": {
+    "sass": "^1.105.1",
     "unplugin-auto-import": "^21.0.0"
   },
   "dependencies": {

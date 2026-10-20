@@ -1,7 +1,94 @@
+/* 「信赖蓝」配色方案 —— 唯一依据：docs/admin-web-color-scheme.md */
+:root {
+  /* 基础色板 */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-bg-page: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-muted: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-regular: #334155;
+  --color-text-secondary: #64748b;
+  --color-text-placeholder: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-light: #edf1f5;
+
+  /* 业务语义色（积分系统） */
+  --color-points-add: #059669;
+  --color-points-deduct: #dc2626;
+  --color-points-reversal: #d97706;
+  --color-points-refund: #0d9488;
+  --color-status-pending: #d97706;
+  --color-status-neutral: #64748b;
+
+  /* Element Plus 主题覆盖：主色 */
+  --el-color-primary: #2563eb;
+  --el-color-primary-light-3: #6692f1;
+  --el-color-primary-light-5: #92b1f5;
+  --el-color-primary-light-7: #bed0f9;
+  --el-color-primary-light-8: #d4e0fb;
+  --el-color-primary-light-9: #e9effd;
+  --el-color-primary-dark-2: #1e4fbc;
+
+  /* Element Plus 主题覆盖：语义色 */
+  --el-color-success: #059669;
+  --el-color-success-light-3: #50b696;
+  --el-color-success-light-5: #82cbb4;
+  --el-color-success-light-7: #b4e0d2;
+  --el-color-success-light-8: #cdeae1;
+  --el-color-success-light-9: #e6f5f0;
+  --el-color-success-dark-2: #047854;
+
+  --el-color-warning: #d97706;
+  --el-color-warning-light-3: #e4a051;
+  --el-color-warning-light-5: #ecbb83;
+  --el-color-warning-light-7: #f4d6b4;
+  --el-color-warning-light-8: #f7e4cd;
+  --el-color-warning-light-9: #fbf1e6;
+  --el-color-warning-dark-2: #ae5f05;
+
+  --el-color-danger: #dc2626;
+  --el-color-danger-light-3: #e76767;
+  --el-color-danger-light-5: #ee9393;
+  --el-color-danger-light-7: #f5bebe;
+  --el-color-danger-light-8: #f8d4d4;
+  --el-color-danger-light-9: #fce9e9;
+  --el-color-danger-dark-2: #b01e1e;
+
+  --el-color-error: #dc2626;
+  --el-color-error-light-3: #e76767;
+  --el-color-error-light-5: #ee9393;
+  --el-color-error-light-7: #f5bebe;
+  --el-color-error-light-8: #f8d4d4;
+  --el-color-error-light-9: #fce9e9;
+  --el-color-error-dark-2: #b01e1e;
+
+  --el-color-info: #64748b;
+  --el-color-info-light-3: #939eae;
+  --el-color-info-light-5: #b2bac5;
+  --el-color-info-light-7: #d1d5dc;
+  --el-color-info-light-8: #e0e3e8;
+  --el-color-info-light-9: #f0f1f3;
+  --el-color-info-dark-2: #505d6f;
+
+  /* Element Plus 主题覆盖：文字 / 背景 / 边框 */
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #64748b;
+  --el-text-color-placeholder: #94a3b8;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f8fafc;
+  --el-fill-color-light: #f1f5f9;
+  --el-border-color: #e2e8f0;
+  --el-border-color-light: #e2e8f0;
+  --el-border-color-lighter: #edf1f5;
+}
+
 body {
   margin: 0;
-  color: #1f2937;
-  background: #f4f7fb;
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
   font-family: Inter, "Microsoft YaHei", Arial, sans-serif;
 }
 
@@ -24,8 +111,8 @@ body {
 }
 
 .sidebar {
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border-right: 1px solid var(--color-border);
 }
 
 .brand {
@@ -41,7 +128,7 @@ body {
 
 .brand span,
 .topbar span {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -49,8 +136,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel {

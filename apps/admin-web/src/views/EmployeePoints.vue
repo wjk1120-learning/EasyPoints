@@ -1,22 +1,32 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Refresh, Search } from "@element-plus/icons-vue";
-import { api } from "../api";
+import { Connection, Refresh, Search } from "@element-plus/icons-vue";
+import { employees as fetchEmployees } from "../api/employee/employee";
+import type { Employee } from "../api/employee/types";
+import { adjustment } from "../api/points/points";
+import { reportsPaged } from "../api/report/report";
+import type { PointRecord } from "../api/report/types";
+import { syncContacts } from "../api/wecom/wecom";
+import { createSubmitLock } from "../utils/submit-lock";
+import { formatTimeText } from "../utils/format";
+import { apiErrorMsg } from "../utils/error";
 
-const employees = ref([]);
+const employees = ref<Employee[]>([]);
 const loading = ref(false);
+const syncing = ref(false);
+const syncLock = createSubmitLock();
 const keyword = ref("");
-const selectedEmployeeId = ref(null);
-const selectedDepartmentId = ref("");
+const selectedEmployeeId = ref<number | null>(null);
+const selectedDepartmentId = ref<number | string>("");
 const meta = reactive({ page: 1, pageSize: 10 });
 
 const adjustDialog = reactive({
   visible: false,
   submitting: false,
-  employeeId: null,
+  employeeId: null as number | null,
   employeeName: "",
-  type: "reward",
+  type: "reward" as "reward" | "penalty",
   pointsDelta: 10,
   remark: ""
 });
@@ -24,16 +34,16 @@ const adjustDialog = reactive({
 const drawer = reactive({
   visible: false,
   loading: false,
-  employeeId: null,
+  employeeId: null as number | null,
   employeeName: "",
-  rows: [],
+  rows: [] as PointRecord[],
   meta: { total: 0, page: 1, pageSize: 20 }
 });
 
 const filtered = computed(() => {
   const key = String(keyword.value || "").trim().toLowerCase();
   let items = employees.value.slice();
-  items.sort((a, b) => Number(b.pointsBalance || 0) - Number(a.pointsBalance || 0));
+  items.sort((a, b) => Number(b.availablePoints ?? b.pointsBalance ?? 0) - Number(a.availablePoints ?? a.pointsBalance ?? 0));
   if (selectedDepartmentId.value) {
     items = items.filter((item) => String(item.departmentId) === String(selectedDepartmentId.value));
   }
@@ -63,7 +73,7 @@ watch([keyword, selectedDepartmentId], () => {
 });
 
 const departmentOptions = computed(() => {
-  const seen = new Map();
+  const seen = new Map<number, { departmentId: number; name: string }>();
   for (const emp of employees.value) {
     const id = emp.departmentId;
     if (id != null && !seen.has(id)) {
@@ -73,14 +83,23 @@ const departmentOptions = computed(() => {
   return [...seen.values()].sort((a, b) => Number(a.departmentId || 0) - Number(b.departmentId || 0));
 });
 
-function formatStatus(value) {
+function formatStatus(value: unknown) {
   const status = String(value || "");
   if (status === "active") return "在职";
   if (status === "inactive") return "停用";
   return status || "";
 }
 
-function formatType(value) {
+/** 列头排序：兜底旧后端无双积分字段时退回 pointsBalance 比较 */
+function sortByAvailable(a: Employee, b: Employee): number {
+  return Number(a.availablePoints ?? a.pointsBalance ?? 0) - Number(b.availablePoints ?? b.pointsBalance ?? 0);
+}
+
+function sortByCumulative(a: Employee, b: Employee): number {
+  return Number(a.cumulativePoints ?? a.pointsBalance ?? 0) - Number(b.cumulativePoints ?? b.pointsBalance ?? 0);
+}
+
+function formatType(value: unknown) {
   const type = String(value || "");
   if (type === "reward") return "加分";
   if (type === "penalty") return "扣分";
@@ -91,30 +110,41 @@ function formatType(value) {
   return type || "";
 }
 
-function formatTime(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
-}
-
 function resetFilters() {
   keyword.value = "";
   selectedDepartmentId.value = "";
   loadEmployees();
 }
 
+/** 企微通讯录一键同步（10.8）：后端拉取部门/成员落库（新员工入库、离职自动停用），完成后刷新列表 */
+async function handleSync() {
+  if (!syncLock.acquire()) return;
+  syncing.value = true;
+  try {
+    const result = await syncContacts();
+    ElMessage.success(`同步完成：新增 ${result.created} 人、更新 ${result.updated} 人、停用 ${result.disabled} 人（企微名单共 ${result.total} 人）`);
+    await loadEmployees();
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "同步失败，请稍后重试"));
+  } finally {
+    syncing.value = false;
+    syncLock.release();
+  }
+}
+
 async function loadEmployees() {
   loading.value = true;
   try {
-    employees.value = await api.employees();
+    employees.value = await fetchEmployees();
     if (employees.value.length && selectedEmployeeId.value == null) selectedEmployeeId.value = employees.value[0].id;
+  } catch (error) {
+    ElMessage.error(apiErrorMsg(error, "加载员工列表失败"));
   } finally {
     loading.value = false;
   }
 }
 
-function openAdjust(employee) {
+function openAdjust(employee: Employee) {
   adjustDialog.employeeId = employee.id;
   adjustDialog.employeeName = employee.name;
   adjustDialog.type = "reward";
@@ -138,8 +168,8 @@ async function submitAdjust() {
   try {
     const normalizedPointsDelta =
       adjustDialog.type === "penalty" ? -Math.abs(points) : Math.abs(points);
-    await api.adjustment({
-      employeeId: adjustDialog.employeeId,
+    await adjustment({
+      employeeId: adjustDialog.employeeId as number,
       type: adjustDialog.type,
       pointsDelta: normalizedPointsDelta,
       remark
@@ -149,13 +179,13 @@ async function submitAdjust() {
     await loadEmployees();
     if (drawer.visible && drawer.employeeId === adjustDialog.employeeId) await loadRecords({ reset: true });
   } catch (error) {
-    ElMessage.error(error?.message || "提交失败");
+    ElMessage.error(apiErrorMsg(error, "提交失败"));
   } finally {
     adjustDialog.submitting = false;
   }
 }
 
-function openDrawer(employee) {
+function openDrawer(employee: Employee) {
   drawer.employeeId = employee.id;
   drawer.employeeName = employee.name;
   drawer.meta.page = 1;
@@ -164,7 +194,7 @@ function openDrawer(employee) {
   loadRecords({ reset: true });
 }
 
-async function loadRecords({ reset } = {}) {
+async function loadRecords({ reset }: { reset?: boolean } = {}) {
   if (!drawer.employeeId) return;
   drawer.loading = true;
   try {
@@ -172,7 +202,7 @@ async function loadRecords({ reset } = {}) {
       drawer.rows = [];
       drawer.meta.page = 1;
     }
-    const result = await api.reportsPaged({
+    const result = await reportsPaged({
       page: drawer.meta.page,
       pageSize: drawer.meta.pageSize,
       employeeId: drawer.employeeId
@@ -210,6 +240,7 @@ onMounted(async () => {
         <el-select v-model="selectedDepartmentId" clearable placeholder="全部部门" class="filter-item">
           <el-option v-for="item in departmentOptions" :key="item.departmentId" :label="item.name" :value="item.departmentId" />
         </el-select>
+        <el-button type="primary" plain :icon="Connection" :loading="syncing" @click="handleSync">同步企微通讯录</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="resetFilters">重置</el-button>
       </div>
 
@@ -221,18 +252,21 @@ onMounted(async () => {
           row-key="id"
           highlight-current-row
           class="emp-table"
-          @current-change="(row) => (selectedEmployeeId = row?.id ?? null)"
+          @current-change="(row: { id?: number } | null) => (selectedEmployeeId = row?.id ?? null)"
         >
           <el-table-column prop="id" label="员工ID" min-width="100" />
           <el-table-column label="姓名" min-width="120" prop="name" />
           <el-table-column label="部门" min-width="100">
             <template #default="{ row }">{{ row.departmentName || `部门(${row.departmentId})` }}</template>
           </el-table-column>
-          <el-table-column prop="pointsBalance" label="当前积分" min-width="120">
+          <el-table-column label="可用积分" min-width="110" sortable :sort-method="sortByAvailable">
             <template #default="{ row }">
-              <span :class="['balance-text', row.pointsBalance > 0 ? 'balance-positive' : 'balance-zero']">
-                {{ row.pointsBalance }}
-              </span>
+              <span class="balance-text balance-available">{{ row.availablePoints ?? row.pointsBalance }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="累计积分" min-width="110" sortable :sort-method="sortByCumulative">
+            <template #default="{ row }">
+              <span class="balance-text balance-cumulative">{{ row.cumulativePoints ?? row.pointsBalance }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" min-width="100">
@@ -260,7 +294,7 @@ onMounted(async () => {
           :total="total"
           :page-size="meta.pageSize"
           :current-page="meta.page"
-          @current-change="(p) => { meta.page = p; }"
+          @current-change="(p: number) => { meta.page = p; }"
         />
       </div>
     </div>
@@ -281,6 +315,15 @@ onMounted(async () => {
       <el-form-item label="备注原因" required>
         <el-input v-model="adjustDialog.remark" type="textarea" :rows="3" placeholder="例如：项目攻坚奖励、违规违纪处罚" />
       </el-form-item>
+      <el-alert
+        :title="adjustDialog.type === 'reward'
+          ? '加分规则：可用积分、累计积分同步增加'
+          : '扣分规则：可用积分、累计积分同步扣减（累计积分仅人工扣分可减少，兑换不扣）'"
+        type="info"
+        :closable="false"
+        show-icon
+        class="dual-points-tip"
+      />
     </el-form>
     <template #footer>
       <el-button @click="adjustDialog.visible = false">取消</el-button>
@@ -289,7 +332,7 @@ onMounted(async () => {
   </el-dialog>
 
   <!-- 积分流水抽屉 -->
-  <el-drawer v-model="drawer.visible" size="60%" class="records-drawer">
+  <el-drawer v-model="drawer.visible" size="50%" class="records-drawer">
     <template #header>
       <div class="drawer-head">
         <span class="drawer-bar" />
@@ -298,19 +341,19 @@ onMounted(async () => {
     </template>
     <div class="drawer-body">
       <el-table :data="drawer.rows" border v-loading="drawer.loading" class="drawer-table">
-        <el-table-column prop="pointsDelta" label="分值" width="120" />
-        <el-table-column label="类型" width="120">
+        <el-table-column prop="pointsDelta" label="分值" width="80" />
+        <el-table-column label="类型" width="80">
           <template #default="{ row }">
             <el-tag :type="row.type === 'reward' ? 'success' : row.type === 'penalty' ? 'danger' : 'info'" size="small" effect="plain">
               {{ formatType(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip />
         <el-table-column prop="operatorName" label="操作人" width="140" />
         <el-table-column prop="occurredAt" label="时间" width="190">
-          <template #default="{ row }">{{ formatTime(row.occurredAt) }}</template>
+          <template #default="{ row }">{{ formatTimeText(row.occurredAt) }}</template>
         </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip />
       </el-table>
       <div class="drawer-pagination">
         <el-pagination
@@ -319,7 +362,7 @@ onMounted(async () => {
           :total="drawer.meta.total"
           :page-size="drawer.meta.pageSize"
           :current-page="drawer.meta.page"
-          @current-change="(p) => { drawer.meta.page = p; loadRecords(); }"
+          @current-change="(p: number) => { drawer.meta.page = p; loadRecords(); }"
         />
       </div>
     </div>
@@ -343,7 +386,7 @@ onMounted(async () => {
   flex-direction: column;
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e8eaee;
+  border: 1px solid var(--color-border);
   overflow: hidden;
 }
 
@@ -355,8 +398,8 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e8eaee;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -365,14 +408,14 @@ onMounted(async () => {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 // ==============================
@@ -385,7 +428,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   flex-shrink: 0;
   padding: 16px 20px;
-  border-bottom: 1px solid #e8eaee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter-item {
@@ -412,11 +455,11 @@ onMounted(async () => {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d0d5dd;
+    background: var(--color-border);
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #a8abb2;
+    background: var(--color-text-placeholder);
   }
 }
 
@@ -427,8 +470,8 @@ onMounted(async () => {
   width: 100%;
 
   :deep(.el-table__header th) {
-    background: #f4f7fc;
-    color: #414654;
+    background: var(--color-bg-muted);
+    color: var(--color-text-regular);
     font-weight: 600;
     font-size: 13px;
   }
@@ -437,7 +480,7 @@ onMounted(async () => {
     transition: background 0.15s;
 
     &:hover > td {
-      background: #f8faff;
+      background: var(--el-color-primary-light-9);
     }
   }
 }
@@ -448,12 +491,17 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.balance-positive {
-  color: #0056c1;
+// 可用积分=可兑换余额（青绿），累计积分=终身荣誉（品牌蓝，只增不减）
+.balance-available {
+  color: var(--color-points-refund);
 }
 
-.balance-zero {
-  color: #ba1a1a;
+.balance-cumulative {
+  color: var(--color-primary);
+}
+
+.dual-points-tip {
+  margin-bottom: 4px;
 }
 
 // 状态徽标
@@ -467,13 +515,13 @@ onMounted(async () => {
 }
 
 .status-active {
-  background-color: #effdf4;
-  color: #52c41a;
+  background-color: var(--el-color-success-light-9);
+  color: var(--el-color-success);
 }
 
 .status-inactive {
-  background-color: #f2f4f6;
-  color: #999;
+  background-color: var(--el-color-info-light-9);
+  color: var(--color-status-neutral);
 }
 
 .status-dot {
@@ -483,11 +531,11 @@ onMounted(async () => {
   flex-shrink: 0;
 
   .status-active & {
-    background-color: #52c41a;
+    background-color: var(--el-color-success);
   }
 
   .status-inactive & {
-    background-color: #d9d9d9;
+    background-color: var(--color-text-placeholder);
   }
 }
 
@@ -495,24 +543,24 @@ onMounted(async () => {
 .btn-action {
   border-radius: 6px;
   font-weight: 500;
-  color: #0056c1;
-  border-color: #0056c1;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 
   &:hover {
-    color: #003d9b;
-    border-color: #003d9b;
-    background: #f0f4ff;
+    color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    background: var(--el-color-primary-light-9);
   }
 }
 
 .btn-action-secondary {
-  color: #414654;
-  border-color: #d0d5dd;
+  color: var(--color-text-regular);
+  border-color: var(--color-border);
 
   &:hover {
-    color: #181a23;
-    border-color: #a8abb2;
-    background: #f4f7fc;
+    color: var(--color-text-primary);
+    border-color: var(--color-text-placeholder);
+    background: var(--color-bg-muted);
   }
 }
 
@@ -525,8 +573,8 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   padding: 12px 20px;
-  border-top: 1px solid #e8eaee;
-  background: #fafbfc;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-page);
 }
 
 // ==============================
@@ -536,7 +584,7 @@ onMounted(async () => {
   :deep(.el-dialog__header) {
     padding: 16px 24px;
     margin: 0;
-    border-bottom: 1px solid #e8eaee;
+    border-bottom: 1px solid var(--color-border);
     font-weight: 600;
     font-size: 16px;
   }
@@ -547,7 +595,7 @@ onMounted(async () => {
 
   :deep(.el-dialog__footer) {
     padding: 12px 24px;
-    border-top: 1px solid #e8eaee;
+    border-top: 1px solid var(--color-border);
     margin: 0;
   }
 
@@ -558,7 +606,7 @@ onMounted(async () => {
   :deep(.el-form-item__label) {
     font-size: 13px;
     font-weight: 500;
-    color: #414654;
+    color: var(--color-text-regular);
     padding-bottom: 4px;
     line-height: 1.4;
   }
@@ -576,18 +624,18 @@ onMounted(async () => {
 .btn-primary {
   border-radius: 6px;
   font-weight: 500;
-  background-color: #0056c1;
-  border-color: #0056c1;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   transition: all 0.2s;
 
   &:hover {
-    background-color: #003d9b;
-    border-color: #003d9b;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   &:active {
-    background-color: #002b7a;
-    border-color: #002b7a;
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
   }
 }
 
@@ -598,7 +646,7 @@ onMounted(async () => {
   :deep(.el-drawer__header) {
     padding: 16px 24px;
     margin: 0;
-    border-bottom: 1px solid #e8eaee;
+    border-bottom: 1px solid var(--color-border);
   }
 
   :deep(.el-drawer__body) {
@@ -617,13 +665,13 @@ onMounted(async () => {
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: #0056c1;
+  background: var(--color-primary);
 }
 
 .drawer-title {
   font-size: 15px;
   font-weight: 600;
-  color: #181a23;
+  color: var(--color-text-primary);
 }
 
 .drawer-body {
@@ -639,14 +687,14 @@ onMounted(async () => {
   width: 100%;
 
   :deep(.el-table__header th) {
-    background: #f4f7fc;
-    color: #414654;
+    background: var(--color-bg-muted);
+    color: var(--color-text-regular);
     font-weight: 600;
     font-size: 13px;
   }
 
   :deep(.el-table__row:hover > td) {
-    background: #f8faff;
+    background: var(--el-color-primary-light-9);
   }
 }
 

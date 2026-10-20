@@ -2,11 +2,11 @@
 
 ## 1. 项目概览
 
-本项目是“企业微信小程序易积分系统”的生产版骨架，当前目录从需求文档出发，已经搭建出一个 monorepo：
+本项目是“企业微信积分系统”的 monorepo：
 
-- 后端 API：`apps/api`
+- 后端 API：`apps/Easy-Points`（Java/SpringBoot，Docker 编排部署）
 - PC 管理后台：`apps/admin-web`
-- 企业微信小程序/uni-app 员工端：`apps/miniapp`
+- 员工端：`apps/miniapp`（uni-app 编译 H5，企微自建应用内打开的网页应用，**不是小程序**）
 - 基础设施与部署：`infra`
 - 项目文档：`docs`
 
@@ -14,12 +14,12 @@
 
 ## 2. 当前技术栈
 
-- 后端：Node.js，当前核心 API 使用 Node 原生 `http` 实现，可在没有 npm 的环境下运行和测试。
+- 后端：Java/SpringBoot（`apps/Easy-Points`，MyBatis mapper + Lombok），Docker Compose 编排（app 监听 127.0.0.1:3000）。
 - 管理后台：Vue 3 + Vite + Element Plus。
-- 员工端：uni-app，目标编译到企业微信小程序。
-- 数据库：MySQL 8。
-- 缓存/队列：Redis，计划用于会话、短期状态和消息重试。
+- 员工端：uni-app 编译 H5（企微自建应用内网页应用，与小程序无关）。
+- 数据库：MySQL 8；缓存/队列：Redis。
 - 部署：Docker Compose + Nginx，默认单服务器部署。
+- 前后端唯一接口契约：`docs/Easy-Points-API.md`（v4.3），改接口先对契约。
 
 ## 3. 关键业务规则
 
@@ -54,44 +54,28 @@
 
 ## 4. 重要目录说明
 
-### `apps/api`
+### `apps/Easy-Points`
 
-后端核心代码。
+Java 后端（生产后端，Docker 编排：app + MySQL + Redis + Nginx）。
 
-- `src/app.js`：HTTP 路由入口，包含管理端和员工端主要 API。
-- `src/server.js`：API 启动入口。
-- `src/data/store.js`：当前内存数据仓库，用于骨架和测试。
-- `src/data/seed.js`：示例部门、员工、管理员、礼品。
-- `src/services/points.js`：积分录入、批量录分、流水查询、冲正等核心规则。
-- `src/services/permissions.js`：部门权限判断。
-- `src/services/appeals.js`：申诉创建和审核。
-- `src/services/orders.js`：商城兑换、订单状态、退分。
-- `src/services/wecom.js`：企业微信通讯录同步和消息发送 mock。
-- `tests/points.test.js`：核心业务测试。
+- `src/main/java/com/yidian/easypoints/`：按模块分包（auth/point/appeal/mall/task/application/vote/rule/notification/wecom/system 等）。
+- `src/main/resources/db/`：MySQL schema 与初始化脚本（point_records 有禁 UPDATE/DELETE 触发器）。
+- `docker-compose.yml` / `docker-compose.override.yml`：部署编排；override 切 dev profile（本地联调允许直登）。
 
 ### `apps/admin-web`
 
-Vue 管理后台。
-
-- `src/App.vue`：后台整体布局。
-- `src/api.js`：管理端 API 客户端。
-- `src/views/Points.vue`：单笔加减分、月度批量录分。
-- `src/views/Reports.vue`：带备注积分明细报表。
-- `src/views/Appeals.vue`：申诉审核页面。
-- `src/views/Orders.vue`：订单审核、发货、驳回退分。
-- `src/views/Mall.vue`：礼品管理骨架。
-- `src/views/Logs.vue`：操作日志。
+Vue 管理后台（已按 `docs/Easy-Points-API.md` 契约完成整体迁移，api 层为 `src/api/<功能域>/` 结构）。
 
 ### `apps/miniapp`
 
-uni-app 员工端。
+员工端（uni-app 编译 H5；**企微自建应用内网页应用，不是小程序**）。
 
-- `pages/home/index.vue`：首页积分、本月变动、通知数量。
-- `pages/points/index.vue`：按月份展示积分流水和完整备注。
-- `pages/appeal/index.vue`：基于具体积分流水提交申诉。
-- `pages/mall/index.vue`：积分商城。
-- `pages/orders/index.vue`：我的订单。
-- `api.js`：员工端 API 请求封装。
+- `utils/request.ts`：请求内核（BaseResult 解包 / PageResult 归一 Paged / 无 token 先登录 / 401 重登重试 / GET 离线缓存）。
+- `api/<功能域>/`：域目录 = `types.ts` 纯类型 + 域函数 + `XxxApi` 路径常量，页面直连域函数（与 admin-web 同构，无桶文件）。
+- `pages/`：11 个页面全部 TS 并已切新后端契约（home/points/leaderboard/mall/orders/appeal/appeals/tasks/apply/messages+message/votes+vote/rules/mine）。
+- `api/auth/auth.ts`：登录与 `ensureEmployeeLogin()` 编排——企微内走 OAuth 网页授权免登，浏览器联调 dev 直登 zhangsan。
+- `tests/`：vitest 四层（unit / contract / components / `scripts/h5-e2e.py` 浏览器冒烟），uni-stub 注入 uni API。
+- 工具链坑：vue 锁 3.4.21（uni alpha 配套）、根 `scripts/patch-uni-h5-vue.cjs` 修 H5 白屏（挂 postinstall）、H5 走 vite 代理防 CORS。
 
 ### `infra`
 
@@ -110,24 +94,23 @@ uni-app 员工端。
 
 ## 5. 常用命令
 
-当前环境可直接使用 Node 运行后端测试：
+一键启动本地环境（后端 Docker + 管理后台，`-H5` 额外启动员工端）：
 
-```bash
-node --test apps/api/tests/*.test.js
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1 -H5
 ```
 
-启动 API：
+员工端（在 `apps/miniapp` 下执行）：
 
 ```bash
-node apps/api/src/server.js
+npm run dev:h5     # H5 联调（http://localhost:5174，vite 代理转发后端 3000）
+npm run build:h5   # H5 生产构建（产物 dist/build/h5）
+npm test           # vitest 全量（unit/contract/components）
+npm run typecheck  # vue-tsc
+python scripts/h5-e2e.py   # 员工端浏览器冒烟（需 dev:h5 与后端已启动）
 ```
 
-根目录 `package.json` 中也声明了：
-
-```bash
-npm run dev:api
-npm test
-```
+后端（在 `apps/Easy-Points` 下执行）：`docker compose up -d` / `docker compose stop`；健康检查 `GET http://localhost:3000/health`。后端的环境变量与 profile 以 `apps/Easy-Points/docker-compose.yml`（及 override）为准。
 
 注意：当前机器曾出现 `npm` 不可用的情况，因此不要假设 npm 已安装或可直接调用。若要安装前端依赖或执行 Vite/uni-app 构建，需要先确认 npm/pnpm/yarn 环境。
 
@@ -178,7 +161,7 @@ npm test
 
 ## 7. 当前实现状态与后续重点
 
-本项目从“生产版骨架”推进到了“可上线形态的最小闭环”，但仍有若干生产化缺口需要按优先级补齐。
+> 本节部分内容基于早期骨架撰写，后端与 admin-web 的最新现状以各自仓库内文档为准；员工端现状见 7.4。
 
 ### 7.1 已落地（当前代码已具备）
 
@@ -209,11 +192,12 @@ npm test
 - 报表页：支持分页/筛选，并可下载 Excel（下载同样走统一鉴权处理）。
 - 日志页：包含 outbox 运维面板（筛选/分页/派发/重试/批量重试，均带二次确认）。
 
-### 7.4 小程序端（miniapp）要点
+### 7.4 员工端（apps/miniapp，企微自建应用 H5）要点
 
-- API_BASE 可配置：读取 `uni storage: apiBase`，默认 `http://localhost:3000`。
-- 登录重试：请求遇到 401 会自动重新登录并重试一次。
-- 调试设置入口收口：首页设置区默认隐藏，需要连续点击“展开设置”区域 7 次才会启用（`uni storage: enableDebug=1`）。
+- 形态：企微自建应用内打开的 H5 网页应用（**不是小程序**）。生产免登=企微 OAuth 网页授权（corpid/agentid 经 `.env.production` 或 storage 配置，跳 `open.weixin.qq.com` 静默授权回跳带 code）；浏览器联调=dev 直登 zhangsan。调试无 UI 面板：切账号 `localStorage.setItem('wecomUserId','xxx')` 后刷新，自定义后端地址 `localStorage.setItem('apiBase','http://...')`。
+- 请求内核 `utils/request.ts`：BaseResult 解包、PageResult 归一 Paged、无 token 先登录（冷启动不 401）、401 重登重试一次、GET 离线缓存。
+- 11 个页面已全部切新后端契约（PageResult 分页、契约字段名、契约状态映射）；申诉支持四类目标直达（明细/订单/任务领取记录/积分申请）。
+- 后端反馈清单：`docs/miniapp-backend-feedback.md`（6 项）；迁移验收看 `docs/miniapp-迁移评审指南.md`。
 
 ### 7.5 后续重点（仍建议继续补齐）
 
@@ -247,7 +231,9 @@ Remove-Item "C:\path\to\file.txt"
 
 ## 9. 协作注意事项
 
-- 修改积分相关逻辑时，优先查看 `apps/api/src/services/points.js` 和 `apps/api/tests/points.test.js`。
+- 员工端铁律：**apps/miniapp 是企微自建应用内 H5 应用，与小程序无关**——不要引入 wx.qy.login、小程序 appid、微信开发者工具发布等小程序方案；免登只走企微 OAuth 网页授权。
+- 员工端接口一律以 `docs/Easy-Points-API.md` 为准；api 层按功能域组织（同 admin-web），页面直连域函数，类型只进各域 `types.ts`。
+- 修改积分相关逻辑时，优先查看后端 `apps/Easy-Points` 对应 service 与契约文档，不要只压表面报错。
 - 不要新增能修改或删除积分流水备注的接口。
 - 不要绕过 `remark` 必填校验。
 - 新增积分变动类型时，应同步考虑员工端展示、报表导出、操作日志和消息通知。
