@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { fetchOrders } from '../../api/order/order'
 import type { Order } from '../../api/order/types'
 import { formatPoints, formatTime } from '../../utils/format'
+import { homeBadges } from '../../utils/badge-state'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 
 type FilterKey = 'all' | 'pending' | 'passed' | 'rejected'
+type StatusKey = Exclude<FilterKey, 'all'>
 
 const orders = ref<Order[]>([])
 const filter = ref<FilterKey>('all')
@@ -21,16 +23,80 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'rejected', label: '已驳回' }
 ]
 
+function matchStatus(item: Order, key: StatusKey): boolean {
+  if (key === 'pending') return item.status === 'pending_review'
+  if (key === 'passed') return ['approved', 'shipped', 'completed'].includes(item.status || '')
+  return ['rejected', 'cancelled'].includes(item.status || '')
+}
+
+const statusIds = (key: StatusKey) => orders.value.filter((item) => matchStatus(item, key)).map((item) => String(item.id))
+
 const visibleOrders = computed(() => {
-  if (filter.value === 'pending') return orders.value.filter((item) => item.status === 'pending_review')
-  if (filter.value === 'passed') return orders.value.filter((item) => ['approved', 'shipped', 'completed'].includes(item.status || ''))
-  if (filter.value === 'rejected') return orders.value.filter((item) => ['rejected', 'cancelled'].includes(item.status || ''))
-  return orders.value
+  if (filter.value === 'all') return orders.value
+  return orders.value.filter((item) => matchStatus(item, filter.value as StatusKey))
+})
+
+// ── 未读徽标：仅「已通过/已驳回」是新变化提醒（点击即提醒完成、清零不常驻）；
+// 「审核中」是流程状态不显示徽标（数量由首页入口角标承担）。已读记录本地持久化 ──
+const SEEN_KEY = 'orders:seenIds'
+type SeenMap = Record<StatusKey, string[]>
+
+function loadSeenMap(): SeenMap {
+  try {
+    const parsed = JSON.parse(String(uni.getStorageSync(SEEN_KEY) || ''))
+    if (parsed && Array.isArray(parsed.pending)) return parsed
+  } catch {}
+  return { pending: [], passed: [], rejected: [] }
+}
+
+const seenMap = ref<SeenMap>(loadSeenMap())
+
+// 首次使用（无已读记录）时历史订单计为未读，点击对应状态后清零
+const unreadCount = (key: StatusKey) => statusIds(key).filter((id) => !seenMap.value[key].includes(id)).length
+
+const counts = computed<Record<FilterKey, number>>(() => ({
+  all: 0, // 全部不显示徽标
+  pending: 0, // 审核中不显示徽标（数量由首页入口角标承担）
+  passed: unreadCount('passed'),
+  rejected: unreadCount('rejected')
+}))
+
+function switchFilter(key: FilterKey) {
+  filter.value = key
+  markSeen(key)
+}
+
+function markSeen(key: FilterKey) {
+  // 点「全部」= 两个提醒状态一并已读；审核中无徽标不参与
+  const keys: StatusKey[] = key === 'all' ? ['passed', 'rejected'] : [key as StatusKey].filter((k) => k !== 'pending')
+  if (keys.length === 0) return
+  const next: SeenMap = { ...seenMap.value }
+  for (const k of keys) {
+    next[k] = Array.from(new Set([...next[k], ...statusIds(k)])).slice(-300)
+  }
+  seenMap.value = next
+  uni.setStorageSync(SEEN_KEY, JSON.stringify(next))
+}
+
+/** 首页「兑换记录」入口带 filter=pending 直落审核中视图；数据到位后视同点击标签标记已读（一次性，返回刷新不重复标） */
+let entryMark: FilterKey | null = null
+onLoad((query) => {
+  const value = String(query?.filter || '') as FilterKey
+  if (['all', 'pending', 'passed', 'rejected'].includes(value)) {
+    filter.value = value
+    entryMark = value
+  }
 })
 
 onShow(async () => {
   try {
     orders.value = await fetchOrders()
+    // 首页/底栏「兑换记录」角标口径保持：审核中订单总数（未读语义只用于本页标签）
+    homeBadges.orders = statusIds('pending').length
+    if (entryMark) {
+      markSeen(entryMark)
+      entryMark = null
+    }
   } catch (error) {
     uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })
   }
@@ -67,8 +133,8 @@ function appealOrder(order: Order) {
         :key="item.key"
         class="tab"
         :class="{ active: filter === item.key }"
-        @tap="filter = item.key"
-      >{{ item.label }}</text>
+        @tap="switchFilter(item.key)"
+      >{{ item.label }}<text v-if="counts[item.key] > 0" class="tab-badge">{{ counts[item.key] > 99 ? '99+' : counts[item.key] }}</text></text>
     </view>
 
     <view v-for="order in visibleOrders" :key="order.id" class="card order-card">
@@ -94,6 +160,24 @@ function appealOrder(order: Order) {
 </template>
 
 <style scoped>
+/* 筛选标签数字徽标（样式对齐首页快捷入口 .shortcut-badge） */
+.tab-badge {
+  display: inline-block;
+  margin-left: 6rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  line-height: 28rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: var(--red);
+  color: #fff;
+  font-size: 18rpx;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
 .order-card {
   padding: 26rpx 28rpx;
 }

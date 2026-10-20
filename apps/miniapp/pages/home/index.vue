@@ -51,7 +51,7 @@ const shortcuts: Shortcut[] = [
   { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
   { label: '投票中心', icon: 'check-square', tile: 'green', tone: 'green', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) },
   { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
-  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', tone: 'brand', badge: 'orders', action: () => uni.navigateTo({ url: '/pages/orders/index' }) },
+  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', tone: 'brand', badge: 'orders', action: () => uni.navigateTo({ url: '/pages/orders/index?filter=pending' }) },
   { label: '规则中心', icon: 'book-open', tile: '', tone: 'gray', action: () => uni.navigateTo({ url: '/pages/rules/index' }) }
 ]
 
