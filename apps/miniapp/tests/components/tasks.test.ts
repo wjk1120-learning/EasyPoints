@@ -17,6 +17,7 @@ import { createUniStub } from "../helpers/uni-stub";
 import Tasks from "../../pages/tasks/index.vue";
 import { fetchTasks, claimTask, submitTask, fetchTaskClaims } from "../../api/task/task";
 import { uploadImage } from "../../api/upload/upload";
+import { homeBadges } from "../../utils/badge-state";
 
 /** 契约 5.1 Task 形状：status 为个人视角状态 + statusText/title 别名 */
 /** fetchTasks 归一后的 Paged 形状（requestPaged 已把 PageResult{total,rows} 转为 {data,meta}） */
@@ -63,6 +64,13 @@ describe("任务大厅（契约 5.1~5.2b / PRD 4.3）", () => {
     expect(wrapper.findAll(".task-card")).toHaveLength(3);
     expect(wrapper.find(".task-title").text()).toBe("整理客户回访文档");
     expect(wrapper.html()).not.toContain("接口尚未提供");
+  });
+
+  it("底栏角标联动：加载列表后把进行中任务数写入共享状态（供 AppTabBar 显示数字徽标）", async () => {
+    homeBadges.tasks = 0;
+    await mountTasks();
+
+    expect(homeBadges.tasks).toBe(1); // fixture 中仅 id=8 为 in_progress（进行中=待提交成果）
   });
 
   it("领取任务：claimTask(7) 后刷新列表", async () => {

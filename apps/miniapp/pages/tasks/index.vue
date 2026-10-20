@@ -4,6 +4,7 @@ import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { fetchTasks, claimTask, submitTask, fetchTaskClaims } from '../../api/task/task'
 import type { Task } from '../../api/task/types'
 import { uploadImage } from '../../api/upload/upload'
+import { homeBadges } from '../../utils/badge-state'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -51,6 +52,8 @@ async function load() {
   try {
     const page = await fetchTasks(tab.value, { page: 1, pageSize: 50 })
     rows.value = page.data
+    // 底栏「任务大厅」数字角标：列表 status 为个人视角，进行中（待提交成果）的数量即待办数
+    homeBadges.tasks = rows.value.filter((task) => isRunning(task)).length
   } catch (error) {
     rows.value = []
     missing.value = (error as Error)?.message || '加载失败'

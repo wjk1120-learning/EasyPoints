@@ -12,6 +12,7 @@ describe("AppTabBar 首页红点", () => {
     homeBadges.messages = 0;
     homeBadges.votes = 0;
     homeBadges.orders = 0;
+    homeBadges.tasks = 0;
   });
 
   function mountBar() {
@@ -57,5 +58,21 @@ describe("AppTabBar 首页红点", () => {
     homeBadges.orders = 0;
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".tab-dot").exists()).toBe(false);
+  });
+
+  it("任务大厅数字角标：进行中任务数显示为徽标文案，归 0 后消失（>99 显示 99+）", async () => {
+    const wrapper = mountBar();
+
+    homeBadges.tasks = 2;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".tab-badge").text()).toBe("2");
+
+    homeBadges.tasks = 0;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".tab-badge").exists()).toBe(false);
+
+    homeBadges.tasks = 120;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".tab-badge").text()).toBe("99+");
   });
 });

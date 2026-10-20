@@ -5,10 +5,11 @@ import { homeBadges } from '../utils/badge-state'
 
 // 图标用统一线性图标组件（与全端同一套），选中 brand / 未选中 muted；
 // pages.json 里的原生 tabBar 仅作占位（运行时被 hideTabBar 隐藏），不受此处影响。
+// dot=纯红点（首页：任一快捷入口角标 >0）；badge=数字角标键（任务大厅：进行中任务数）
 const TABS = [
-  { path: 'pages/home/index', text: '首页', icon: 'home' },
+  { path: 'pages/home/index', text: '首页', icon: 'home', dot: true },
   { path: 'pages/mall/index', text: '积分商城', icon: 'shopping-bag' },
-  { path: 'pages/tasks/index', text: '任务大厅', icon: 'target' },
+  { path: 'pages/tasks/index', text: '任务大厅', icon: 'target', badge: 'tasks' },
   { path: 'pages/points/index', text: '积分明细', icon: 'list' },
   { path: 'pages/mine/index', text: '我的', icon: 'user' }
 ]
@@ -28,6 +29,9 @@ function onTap(tab) {
 
 // 「首页」标签红点：首页快捷入口任一角标（未读消息/待参与投票/审核中订单）>0 时点亮
 const homeDot = computed(() => homeBadges.messages > 0 || homeBadges.votes > 0 || homeBadges.orders > 0)
+
+// 「任务大厅」数字角标：进行中（待提交成果）任务数
+const tasksBadge = computed(() => homeBadges.tasks)
 </script>
 
 <template>
@@ -41,7 +45,8 @@ const homeDot = computed(() => homeBadges.messages > 0 || homeBadges.votes > 0 |
     >
       <view class="tab-icon-wrap">
         <AppIcon :name="tab.icon" :size="44" :color="tab.path === activePath ? 'brand' : 'muted'" />
-        <view v-if="tab.path === 'pages/home/index' && homeDot" class="tab-dot" />
+        <view v-if="tab.dot && homeDot" class="tab-dot" />
+        <text v-if="tab.badge && tasksBadge > 0" class="tab-badge">{{ tasksBadge > 99 ? '99+' : tasksBadge }}</text>
       </view>
       <text class="tab-text">{{ tab.text }}</text>
     </view>
@@ -97,6 +102,24 @@ const homeDot = computed(() => homeBadges.messages > 0 || homeBadges.votes > 0 |
   height: 14rpx;
   border-radius: 999rpx;
   background: var(--red);
+}
+
+/* 任务大厅数字角标（样式对齐首页快捷入口 .shortcut-badge，字号略小适配底栏） */
+.tab-badge {
+  position: absolute;
+  top: -8rpx;
+  right: 6rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  line-height: 28rpx;
+  padding: 0 6rpx;
+  border-radius: 999rpx;
+  background: var(--red);
+  color: #fff;
+  font-size: 18rpx;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .tab-item-active .tab-icon-wrap {
