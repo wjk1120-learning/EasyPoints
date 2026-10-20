@@ -36,10 +36,14 @@ const APPLICATIONS_PAGED = {
 
 let stub!: ReturnType<typeof createUniStub>;
 
-async function mountApply() {
+async function mountApply(query?: Record<string, string>) {
   const wrapper = mount(Apply, {
     global: { stubs: { NavBar: true, AppTabBar: true, AppIcon: true, EmptyState: true } }
   });
+  // uni-app onLoad(query) 先于 onShow：有参数时先派发 onLoad 再触发 onShow（与真实时序一致）
+  if (query) {
+    for (const cb of hooks.registry.onLoad ?? []) cb(query);
+  }
   for (const cb of hooks.registry.onShow ?? []) await cb();
   await flushPromises();
   return wrapper;
@@ -79,6 +83,49 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     await mountApply();
 
     expect(homeBadges.applications).toBe(1); // fixture 中仅 id=21 为 pending_review
+  });
+
+  it("未读徽标：仅已通过/已驳回显示（待审核不显示），点击后清零且持久化", async () => {
+    const wrapper = await mountApply();
+
+    // 切到我的申请列表（chips 只在 mine 视图渲染）
+    await wrapper.findAll(".segmented .tab")[1].trigger("tap");
+    await flushPromises();
+
+    // 首次使用（无已读记录）：已通过/已驳回各 1 条未读；待审核/全部不显示徽标
+    let chips = wrapper.findAll(".chips .chip");
+    expect(chips[0].text()).toBe("全部");
+    expect(chips[1].text()).toBe("待审核");
+    expect(chips[2].text()).toBe("已通过1");
+    expect(chips[3].text()).toBe("已驳回1");
+
+    // 点击「已驳回」：提醒完成清零，「已通过」不受影响
+    await chips[3].trigger("tap");
+    await flushPromises();
+    chips = wrapper.findAll(".chips .chip");
+    expect(chips[3].text()).toBe("已驳回");
+    expect(chips[2].text()).toBe("已通过1");
+
+    // 已读持久化：重挂载（模拟退出再进）后「已驳回」仍为 0
+    const again = await mountApply();
+    await again.findAll(".segmented .tab")[1].trigger("tap");
+    await flushPromises();
+    chips = again.findAll(".chips .chip");
+    expect(chips[3].text()).toBe("已驳回");
+    expect(chips[2].text()).toBe("已通过1");
+  });
+
+  it("点「全部」= 已通过/已驳回一并已读", async () => {
+    const wrapper = await mountApply();
+    await wrapper.findAll(".segmented .tab")[1].trigger("tap");
+    await flushPromises();
+
+    await wrapper.findAll(".chips .chip")[0].trigger("tap");
+    await flushPromises();
+
+    const chips = wrapper.findAll(".chips .chip");
+    expect(chips[2].text()).toBe("已通过");
+    expect(chips[3].text()).toBe("已驳回");
   });
 
   it("提交申请带佐证图：先上传 2 张再 createApplication({ points, description, evidenceImages })", async () => {
@@ -139,5 +186,17 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     await flushPromises();
 
     expect(wrapper.findAll(".segmented .tab")[1].classes()).toContain("active");
+  });
+
+  it("首页入口带 filter=pending：默认落在待审核筛选（角标口径=待审核数）", async () => {
+    const wrapper = await mountApply({ view: "mine", filter: "pending" });
+
+    // 筛选落在待审核：chips 高亮第二项，列表只显示待审核记录
+    const chips = wrapper.findAll(".chips .chip");
+    expect(chips[1].classes()).toContain("chip-on");
+    expect(chips[1].text()).toBe("待审核");
+    const cards = wrapper.findAll(".apply-card");
+    expect(cards).toHaveLength(1); // fixture 中仅 id=21 为 pending_review
+    expect(cards[0].text()).toContain("周末值守系统上线保障");
   });
 });

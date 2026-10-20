@@ -32,14 +32,17 @@ const formValid = computed(() => !pointsEmpty.value && !pointsInvalid.value && !
 
 const visibleRows = computed(() => {
   if (filter.value === 'pending') return rows.value.filter((item) => !isDone(item))
-  if (filter.value === 'passed') return rows.value.filter((item) => /approved|通过/.test(`${item.status || ''}${item.statusText || ''}`))
-  if (filter.value === 'rejected') return rows.value.filter((item) => /rejected|驳回/.test(`${item.status || ''}${item.statusText || ''}`))
+  if (filter.value === 'passed') return rows.value.filter((item) => matchRemind(item, 'passed'))
+  if (filter.value === 'rejected') return rows.value.filter((item) => matchRemind(item, 'rejected'))
   return rows.value
 })
 
 // 消息详情「发起申诉」降级入口带 view=mine：直接落到「我的申请」
 onLoad((query) => {
   if (query?.view === 'mine') view.value = 'mine'
+  // 首页「我的申请」入口带 filter=pending：直落待审核筛选（角标口径=待审核数）
+  const value = String(query?.filter || '') as FilterKey
+  if (['all', 'pending', 'passed', 'rejected'].includes(value)) filter.value = value
 })
 
 onShow(loadMine)
@@ -147,6 +150,59 @@ function appealApplication(item: PointApplication) {
   uni.navigateTo({ url: `/pages/appeal/index?${query}` })
 }
 
+// ── 未读徽标：仅「已通过/已驳回」是新变化提醒（点击即提醒完成、清零不常驻）；
+// 「待审核」是流程状态不显示徽标（数量由首页「我的申请」入口角标承担）。已读记录本地持久化 ──
+const SEEN_KEY = 'apply:seenIds'
+type RemindKey = 'passed' | 'rejected'
+type SeenMap = Record<RemindKey, string[]>
+
+function matchRemind(item: PointApplication, key: RemindKey): boolean {
+  const text = `${item.status || ''}${item.statusText || ''}`
+  if (key === 'passed') return /approved|通过/.test(text)
+  return /rejected|驳回/.test(text)
+}
+
+const remindIds = (key: RemindKey) => rows.value.filter((item) => matchRemind(item, key)).map((item) => String(item.id))
+
+function loadSeenMap(): SeenMap {
+  try {
+    const parsed = JSON.parse(String(uni.getStorageSync(SEEN_KEY) || ''))
+    if (parsed && Array.isArray(parsed.passed)) return parsed
+  } catch {}
+  return { passed: [], rejected: [] }
+}
+
+const seenMap = ref<SeenMap>(loadSeenMap())
+
+// 首次使用（无已读记录）时历史记录计为未读，点击对应状态后清零
+const unreadCount = (key: RemindKey) => remindIds(key).filter((id) => !seenMap.value[key].includes(id)).length
+
+const remindCounts = computed<Record<FilterKey, number>>(() => ({
+  all: 0, // 全部不显示徽标
+  pending: 0, // 待审核不显示徽标（数量由首页「我的申请」入口角标承担）
+  passed: unreadCount('passed'),
+  rejected: unreadCount('rejected')
+}))
+
+function switchFilter(key: FilterKey) {
+  filter.value = key
+  markSeen(key)
+}
+
+function markSeen(key: FilterKey) {
+  // 点「全部」= 两个提醒状态一并已读；待审核无徽标不参与
+  const keys = (key === 'all' ? ['passed', 'rejected'] : [key]).filter(
+    (k): k is RemindKey => k === 'passed' || k === 'rejected'
+  )
+  if (keys.length === 0) return
+  const next: SeenMap = { ...seenMap.value }
+  for (const k of keys) {
+    next[k] = Array.from(new Set([...next[k], ...remindIds(k)])).slice(-300)
+  }
+  seenMap.value = next
+  uni.setStorageSync(SEEN_KEY, JSON.stringify(next))
+}
+
 const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'all', label: '全部' },
   { key: 'pending', label: '待审核' },
@@ -244,8 +300,8 @@ const filters: Array<{ key: FilterKey; label: string }> = [
           :key="item.key"
           class="chip"
           :class="{ 'chip-on': filter === item.key }"
-          @tap="filter = item.key"
-        >{{ item.label }}</text>
+          @tap="switchFilter(item.key)"
+        >{{ item.label }}<text v-if="remindCounts[item.key] > 0" class="chip-badge">{{ remindCounts[item.key] > 99 ? '99+' : remindCounts[item.key] }}</text></text>
       </view>
 
       <template v-if="view === 'mine'">
@@ -286,6 +342,7 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   display: flex;
   gap: 16rpx;
   flex-wrap: wrap;
+  margin-top: 16rpx;
   margin-bottom: 16rpx;
 }
 
@@ -300,6 +357,24 @@ const filters: Array<{ key: FilterKey; label: string }> = [
 .chip-on {
   background: var(--brand);
   color: var(--surface);
+}
+
+/* 筛选标签未读徽标（样式对齐兑换记录页 .tab-badge） */
+.chip-badge {
+  display: inline-block;
+  margin-left: 8rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  line-height: 28rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: var(--red);
+  color: #fff;
+  font-size: 18rpx;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+  vertical-align: middle;
 }
 
 .intro-icon {

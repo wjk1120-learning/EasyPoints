@@ -47,7 +47,7 @@ type Shortcut = {
 // 我的申请/通知中心/投票中心/积分排名/兑换记录/规则中心
 // （积分商城、任务大厅走底部标签，不再占快捷入口）；配色互不重复：紫/红/绿/橙/蓝/灰
 const shortcuts: Shortcut[] = [
-  { label: '我的申请', icon: 'file-text', tile: 'purple', tone: 'purple', badge: 'applications', action: () => uni.navigateTo({ url: '/pages/apply/index?view=mine' }) },
+  { label: '我的申请', icon: 'file-text', tile: 'purple', tone: 'purple', badge: 'applications', action: () => uni.navigateTo({ url: '/pages/apply/index?view=mine&filter=pending' }) },
   { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
   { label: '投票中心', icon: 'check-square', tile: 'green', tone: 'green', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) },
   { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
