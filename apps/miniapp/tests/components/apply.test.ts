@@ -22,6 +22,7 @@ import { createUniStub } from "../helpers/uni-stub";
 import Apply from "../../pages/apply/index.vue";
 import { fetchApplications, createApplication } from "../../api/application/application";
 import { uploadImage } from "../../api/upload/upload";
+import { homeBadges } from "../../utils/badge-state";
 
 /** 契约 6.2 PointApplication 形状：reason 为输出字段名，待审 pending_review */
 const APPLICATIONS_PAGED = {
@@ -50,6 +51,7 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     vi.clearAllMocks();
     delete hooks.registry.onShow;
     delete hooks.registry.onLoad;
+    homeBadges.applications = 0;
     vi.mocked(fetchApplications).mockResolvedValue(APPLICATIONS_PAGED as never);
   });
   afterEach(() => {
@@ -71,6 +73,12 @@ describe("积分申请页（契约 6.1/6.2 / PRD 4.6）", () => {
     expect(cards[0].find(".pill").text()).toBe("待审核"); // pending_review
     expect(cards[2].text()).toContain("贡献判定不符合同期任务范围");
     expect(wrapper.html()).not.toContain("接口尚未提供");
+  });
+
+  it("首页角标联动：加载我的申请后把待审核数写入共享状态（供快捷入口数字徽标）", async () => {
+    await mountApply();
+
+    expect(homeBadges.applications).toBe(1); // fixture 中仅 id=21 为 pending_review
   });
 
   it("提交申请带佐证图：先上传 2 张再 createApplication({ points, description, evidenceImages })", async () => {

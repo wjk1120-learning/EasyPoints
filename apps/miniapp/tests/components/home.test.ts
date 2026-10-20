@@ -16,6 +16,7 @@ vi.mock("@dcloudio/uni-app", () => ({
 vi.mock("../../api/home/home", () => ({ fetchHome: vi.fn() }));
 vi.mock("../../api/vote/vote", () => ({ fetchVotesPaged: vi.fn() }));
 vi.mock("../../api/order/order", () => ({ fetchOrders: vi.fn() }));
+vi.mock("../../api/application/application", () => ({ fetchApplications: vi.fn() }));
 vi.mock("../../api/auth/auth", () => ({
   loginEmployee: vi.fn(async () => ({ accessToken: "test-token", employee: { id: 1 } })),
   clearEmployeeAuth: vi.fn(),
@@ -29,6 +30,7 @@ import Home from "../../pages/home/index.vue";
 import { fetchHome } from "../../api/home/home";
 import { fetchVotesPaged } from "../../api/vote/vote";
 import { fetchOrders } from "../../api/order/order";
+import { fetchApplications } from "../../api/application/application";
 
 /** 契约 2.2 HomeVo 形状的测试数据（对齐 docs/Easy-Points-API.md 示例） */
 const HOME_PAYLOAD = {
@@ -64,6 +66,7 @@ describe("首页（契约 2.2 / PRD 4.1）", () => {
     stub = createUniStub();
     vi.clearAllMocks();
     vi.mocked(fetchOrders).mockResolvedValue([] as never);
+    vi.mocked(fetchApplications).mockResolvedValue({ data: [], meta: { total: 0, page: 1, pageSize: 50 } } as never);
     delete hooks.registry.onShow;
     delete hooks.registry.onPullDownRefresh;
   });
@@ -87,14 +90,14 @@ describe("首页（契约 2.2 / PRD 4.1）", () => {
     expect(stub.calls.map((c) => c.url)).not.toContain("/miniapp/points/records");
   });
 
-  it("快捷入口 6 项（用户定稿口径：申请中心/通知中心/投票中心/积分排名/兑换记录/规则中心）", async () => {
+  it("快捷入口 6 项（申请中心更名「我的申请」并直落列表，余下定稿口径不变）", async () => {
     vi.mocked(fetchHome).mockResolvedValue(HOME_PAYLOAD as never);
     vi.mocked(fetchVotesPaged).mockResolvedValue({ data: [], meta: { total: 0, page: 1, pageSize: 50 } } as never);
 
     const wrapper = await mountHome();
 
     const labels = wrapper.findAll(".shortcut-label").map((n) => n.text());
-    expect(labels).toEqual(["申请中心", "通知中心", "投票中心", "积分排名", "兑换记录", "规则中心"]);
+    expect(labels).toEqual(["我的申请", "通知中心", "投票中心", "积分排名", "兑换记录", "规则中心"]);
   });
 
   it("角标：通知中心显示未读消息数、我的投票显示待参与 total、兑换记录显示审核中订单数", async () => {
@@ -107,6 +110,10 @@ describe("首页（契约 2.2 / PRD 4.1）", () => {
       { id: 9001, status: "pending_review" },
       { id: 9002, status: "pending_review" }
     ] as never);
+    vi.mocked(fetchApplications).mockResolvedValue({
+      data: [{ id: 21, status: "pending_review" }, { id: 20, status: "approved" }],
+      meta: { total: 2, page: 1, pageSize: 50 }
+    } as never);
 
     const wrapper = await mountHome();
 
@@ -114,6 +121,7 @@ describe("首页（契约 2.2 / PRD 4.1）", () => {
     expect(badges).toContain("2"); // unreadMessages
     expect(badges).toContain("3"); // 待参与投票 total
     expect(badges).toContain("2"); // 审核中订单数
+    expect(badges).toContain("1"); // 待审核申请数
     expect(fetchVotesPaged).toHaveBeenCalledWith("pending", { page: 1, pageSize: 50 });
     expect(fetchOrders).toHaveBeenCalledWith("pending_review");
   });

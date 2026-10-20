@@ -5,6 +5,7 @@ import { fetchApplications, createApplication } from '../../api/application/appl
 import type { PointApplication } from '../../api/application/types'
 import { uploadImage } from '../../api/upload/upload'
 import { formatTime } from '../../utils/format'
+import { homeBadges } from '../../utils/badge-state'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -47,6 +48,8 @@ async function loadMine() {
   try {
     const page = await fetchApplications({ page: 1, pageSize: 50 })
     rows.value = page.data
+    // 首页「我的申请」角标：进行中（待审核）数量；失败保留上次值（页面已 toast，不清底栏提醒）
+    homeBadges.applications = rows.value.filter((item) => !isDone(item)).length
   } catch (error) {
     rows.value = []
     uni.showToast({ title: (error as Error)?.message || '加载失败', icon: 'none' })

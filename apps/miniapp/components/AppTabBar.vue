@@ -5,9 +5,9 @@ import { homeBadges } from '../utils/badge-state'
 
 // 图标用统一线性图标组件（与全端同一套），选中 brand / 未选中 muted；
 // pages.json 里的原生 tabBar 仅作占位（运行时被 hideTabBar 隐藏），不受此处影响。
-// dot=纯红点（首页：任一快捷入口角标 >0）；badge=数字角标键（任务大厅：进行中任务数）
+// badge=数字角标键：home=首页四类角标之和（未读消息/待参与投票/审核中订单/待审核申请），tasks=进行中任务数
 const TABS = [
-  { path: 'pages/home/index', text: '首页', icon: 'home', dot: true },
+  { path: 'pages/home/index', text: '首页', icon: 'home', badge: 'home' },
   { path: 'pages/mall/index', text: '积分商城', icon: 'shopping-bag' },
   { path: 'pages/tasks/index', text: '任务大厅', icon: 'target', badge: 'tasks' },
   { path: 'pages/points/index', text: '积分明细', icon: 'list' },
@@ -27,11 +27,16 @@ function onTap(tab) {
   uni.switchTab({ url: `/${tab.path}` })
 }
 
-// 「首页」标签红点：首页快捷入口任一角标（未读消息/待参与投票/审核中订单）>0 时点亮
-const homeDot = computed(() => homeBadges.messages > 0 || homeBadges.votes > 0 || homeBadges.orders > 0)
+// 「首页」数字角标：未读消息 + 待参与投票 + 审核中订单 + 待审核申请（四类待办合计）
+const homeBadgeTotal = computed(() => homeBadges.messages + homeBadges.votes + homeBadges.orders + homeBadges.applications)
 
 // 「任务大厅」数字角标：进行中（待提交成果）任务数
 const tasksBadge = computed(() => homeBadges.tasks)
+
+// 底栏角标数（badge 键 → 数值；模板里 >99 显示 99+）
+function tabBadge(tab) {
+  return tab.badge === 'home' ? homeBadgeTotal.value : tasksBadge.value
+}
 </script>
 
 <template>
@@ -45,8 +50,7 @@ const tasksBadge = computed(() => homeBadges.tasks)
     >
       <view class="tab-icon-wrap">
         <AppIcon :name="tab.icon" :size="44" :color="tab.path === activePath ? 'brand' : 'muted'" />
-        <view v-if="tab.dot && homeDot" class="tab-dot" />
-        <text v-if="tab.badge && tasksBadge > 0" class="tab-badge">{{ tasksBadge > 99 ? '99+' : tasksBadge }}</text>
+        <text v-if="tab.badge && tabBadge(tab) > 0" class="tab-badge">{{ tabBadge(tab) > 99 ? '99+' : tabBadge(tab) }}</text>
       </view>
       <text class="tab-text">{{ tab.text }}</text>
     </view>
@@ -93,18 +97,7 @@ const tasksBadge = computed(() => homeBadges.tasks)
   transition: background 0.2s;
 }
 
-/* 首页标签红点（尺寸对齐全局 .unread-dot） */
-.tab-dot {
-  position: absolute;
-  top: 0;
-  right: 16rpx;
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 999rpx;
-  background: var(--red);
-}
-
-/* 任务大厅数字角标（样式对齐首页快捷入口 .shortcut-badge，字号略小适配底栏） */
+/* 底栏数字角标（样式对齐首页快捷入口 .shortcut-badge，字号略小适配底栏） */
 .tab-badge {
   position: absolute;
   top: -8rpx;

@@ -8,6 +8,7 @@ import type { HomeVo } from '../../api/home/types'
 import type { PointRecordItem } from '../../api/points/types'
 import { fetchVotesPaged } from '../../api/vote/vote'
 import { fetchOrders } from '../../api/order/order'
+import { fetchApplications } from '../../api/application/application'
 import { formatPoints, friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
@@ -18,6 +19,7 @@ const home = ref<HomeVo>({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, e
 const recent = ref<PointRecordItem[]>([])
 const pendingVotes = ref(0)
 const pendingOrders = ref(0)
+const pendingApplications = ref(0)
 const loading = ref(true)
 const authError = ref('')
 const offlineMode = ref(false)
@@ -37,14 +39,15 @@ type Shortcut = {
   icon: string
   tile: string
   tone: string
-  badge?: 'messages' | 'votes' | 'orders'
+  badge?: 'messages' | 'votes' | 'orders' | 'applications'
   action: () => void
 }
 
-// 快捷入口 6 项 = 用户定稿口径（2026-10-16）：申请中心/通知中心/投票中心/积分排名/兑换记录/规则中心
+// 快捷入口 6 项 = 用户定稿口径（2026-10-16，2026-10-20「申请中心」更名「我的申请」并直落列表）：
+// 我的申请/通知中心/投票中心/积分排名/兑换记录/规则中心
 // （积分商城、任务大厅走底部标签，不再占快捷入口）；配色互不重复：紫/红/绿/橙/蓝/灰
 const shortcuts: Shortcut[] = [
-  { label: '申请中心', icon: 'file-text', tile: 'purple', tone: 'purple', action: () => uni.navigateTo({ url: '/pages/apply/index' }) },
+  { label: '我的申请', icon: 'file-text', tile: 'purple', tone: 'purple', badge: 'applications', action: () => uni.navigateTo({ url: '/pages/apply/index?view=mine' }) },
   { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
   { label: '投票中心', icon: 'check-square', tile: 'green', tone: 'green', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) },
   { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
@@ -61,6 +64,7 @@ async function load() {
     recent.value = data.recentRecords ?? []
     loadPendingVotes()
     loadPendingOrders()
+    loadPendingApplications()
   } catch (error) {
     const cached = getCachedData('/miniapp/home')
     if (cached && isNetworkError(error)) {
@@ -91,6 +95,7 @@ onPullDownRefresh(async () => {
     recent.value = data.recentRecords ?? []
     loadPendingVotes()
     loadPendingOrders()
+    loadPendingApplications()
   } catch {} finally {
     uni.stopPullDownRefresh()
   }
@@ -118,10 +123,22 @@ async function loadPendingOrders() {
   homeBadges.orders = pendingOrders.value
 }
 
+// 进行中（待审核）积分申请角标：契约 6.2 无 status 筛选，取列表内 pending_review 计数
+async function loadPendingApplications() {
+  try {
+    const page = await fetchApplications({ page: 1, pageSize: 50 })
+    pendingApplications.value = page.data.filter((item) => item.status === 'pending_review').length
+  } catch {
+    pendingApplications.value = 0
+  }
+  homeBadges.applications = pendingApplications.value
+}
+
 function badgeCount(item: Shortcut): number {
   if (item.badge === 'messages') return Number(home.value.unreadMessages || 0)
   if (item.badge === 'votes') return pendingVotes.value
   if (item.badge === 'orders') return pendingOrders.value
+  if (item.badge === 'applications') return pendingApplications.value
   return 0
 }
 
