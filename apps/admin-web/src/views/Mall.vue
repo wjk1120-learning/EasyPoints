@@ -29,6 +29,8 @@ const dialogVisible = ref(false);
 const saving = ref(false);
 const editId = ref<number | null>(null);
 const coverImageUrl = ref("");
+/** 新增时暂待上传的封面：礼品没有 ID 前先本地预览，保存拿到 ID 后自动上传 */
+const pendingCover = ref<{ file: File; previewUrl: string } | null>(null);
 
 const form = reactive({
   name: "",
@@ -38,6 +40,11 @@ const form = reactive({
   status: "inactive" as "active" | "inactive"
 });
 
+function clearPendingCover() {
+  if (pendingCover.value) URL.revokeObjectURL(pendingCover.value.previewUrl);
+  pendingCover.value = null;
+}
+
 function resetForm() {
   form.name = "";
   form.pointsCost = 0;
@@ -45,6 +52,7 @@ function resetForm() {
   form.limitPerUser = null;
   form.status = "inactive";
   coverImageUrl.value = "";
+  clearPendingCover();
   editId.value = null;
 }
 
@@ -61,6 +69,7 @@ function openEdit(row: Gift) {
   form.limitPerUser = row.limitPerUser == null ? null : Number(row.limitPerUser);
   form.status = (String(row.status || "inactive") === "active" ? "active" : "inactive");
   coverImageUrl.value = row.coverImageUrl || "";
+  clearPendingCover();
   dialogVisible.value = true;
 }
 
@@ -168,7 +177,11 @@ function toUploadError(message: string): UploadHookError {
 
 async function uploadCover(options: UploadRequestOptions) {
   if (!editId.value) {
-    options.onError?.(toUploadError("请先保存礼品信息，再上传封面"));
+    // 新增：礼品还没有 ID，暂存文件 + 本地预览，保存成功后随 save() 自动上传
+    clearPendingCover();
+    const file = options.file as File;
+    pendingCover.value = { file, previewUrl: URL.createObjectURL(file) };
+    options.onSuccess?.(file);
     return;
   }
   try {
@@ -205,14 +218,24 @@ async function save() {
       });
       ElMessage.success("已保存");
     } else {
-      await createGift({
+      const created = await createGift({
         name,
         pointsCost: form.pointsCost,
         stock: form.stock,
         limitPerUser: form.limitPerUser,
         status: form.status
       });
-      ElMessage.success("已创建，如需上传封面请在该礼品行点击「编辑」上传");
+      // 新增时顺带选了封面：拿到礼品 ID 后立即补传（失败不回滚礼品，提示去编辑里重试）
+      if (pendingCover.value) {
+        try {
+          await uploadGiftCover(created.id, pendingCover.value.file);
+          ElMessage.success("礼品已创建，封面已上传");
+        } catch {
+          ElMessage.warning("礼品已创建，但封面上传失败，可在该礼品行「编辑」中重新上传");
+        }
+      } else {
+        ElMessage.success("已创建");
+      }
     }
     dialogVisible.value = false;
     resetForm();
@@ -330,20 +353,19 @@ onMounted(load);
       <el-form-item label="封面图">
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
           <el-image
-            v-if="coverImageUrl"
-            :src="`${API_BASE}${coverImageUrl}`"
+            v-if="coverImageUrl || pendingCover"
+            :src="coverImageUrl ? `${API_BASE}${coverImageUrl}` : pendingCover?.previewUrl"
             style="width: 84px; height: 84px; border-radius: 8px"
             fit="cover"
           />
           <el-upload
             :show-file-list="false"
             accept="image/*"
-            :limit="1"
             :http-request="uploadCover"
           >
-            <el-button :disabled="!editId">选择图片并上传</el-button>
+            <el-button>{{ editId ? "更换封面" : "选择封面图" }}</el-button>
           </el-upload>
-          <el-tag v-if="!editId" type="info">先保存礼品后才能上传封面</el-tag>
+          <el-tag v-if="!editId" type="info">{{ pendingCover ? "保存礼品时自动上传" : "选好后随保存一起上传" }}</el-tag>
         </div>
       </el-form-item>
     </el-form>
