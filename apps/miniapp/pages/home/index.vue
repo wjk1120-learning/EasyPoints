@@ -2,10 +2,12 @@
 import { computed, ref } from 'vue'
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import { getCachedData, isNetworkError, type WithOfflineFlag } from '../../utils/request'
+import { homeBadges } from '../../utils/badge-state'
 import { fetchHome } from '../../api/home/home'
 import type { HomeVo } from '../../api/home/types'
 import type { PointRecordItem } from '../../api/points/types'
 import { fetchVotesPaged } from '../../api/vote/vote'
+import { fetchOrders } from '../../api/order/order'
 import { formatPoints, friendlyTime } from '../../utils/format'
 import NavBar from '../../components/NavBar.vue'
 import AppTabBar from '../../components/AppTabBar.vue'
@@ -15,6 +17,7 @@ import EmptyState from '../../components/EmptyState.vue'
 const home = ref<HomeVo>({ pointsBalance: 0, monthDelta: 0, unreadMessages: 0, employee: {} })
 const recent = ref<PointRecordItem[]>([])
 const pendingVotes = ref(0)
+const pendingOrders = ref(0)
 const loading = ref(true)
 const authError = ref('')
 const offlineMode = ref(false)
@@ -34,7 +37,7 @@ type Shortcut = {
   icon: string
   tile: string
   tone: string
-  badge?: 'messages' | 'votes'
+  badge?: 'messages' | 'votes' | 'orders'
   action: () => void
 }
 
@@ -45,7 +48,7 @@ const shortcuts: Shortcut[] = [
   { label: '通知中心', icon: 'bell', tile: 'red', tone: 'red', badge: 'messages', action: () => uni.navigateTo({ url: '/pages/messages/index' }) },
   { label: '投票中心', icon: 'check-square', tile: 'green', tone: 'green', badge: 'votes', action: () => uni.navigateTo({ url: '/pages/votes/index' }) },
   { label: '积分排名', icon: 'trophy', tile: 'amber', tone: 'amber', action: () => uni.navigateTo({ url: '/pages/leaderboard/index' }) },
-  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', tone: 'brand', action: () => uni.navigateTo({ url: '/pages/orders/index' }) },
+  { label: '兑换记录', icon: 'shopping-bag', tile: 'blue', tone: 'brand', badge: 'orders', action: () => uni.navigateTo({ url: '/pages/orders/index' }) },
   { label: '规则中心', icon: 'book-open', tile: '', tone: 'gray', action: () => uni.navigateTo({ url: '/pages/rules/index' }) }
 ]
 
@@ -57,6 +60,7 @@ async function load() {
     applyHomeData(data, Boolean(data?.__offline))
     recent.value = data.recentRecords ?? []
     loadPendingVotes()
+    loadPendingOrders()
   } catch (error) {
     const cached = getCachedData('/miniapp/home')
     if (cached && isNetworkError(error)) {
@@ -86,6 +90,7 @@ onPullDownRefresh(async () => {
     applyHomeData(data, Boolean(data?.__offline))
     recent.value = data.recentRecords ?? []
     loadPendingVotes()
+    loadPendingOrders()
   } catch {} finally {
     uni.stopPullDownRefresh()
   }
@@ -99,11 +104,24 @@ async function loadPendingVotes() {
   } catch {
     pendingVotes.value = 0
   }
+  homeBadges.votes = pendingVotes.value
+}
+
+// 审核中兑换订单角标：status=pending_review 全量列表长度（个人订单量级小）
+async function loadPendingOrders() {
+  try {
+    const list = await fetchOrders('pending_review')
+    pendingOrders.value = list.length
+  } catch {
+    pendingOrders.value = 0
+  }
+  homeBadges.orders = pendingOrders.value
 }
 
 function badgeCount(item: Shortcut): number {
   if (item.badge === 'messages') return Number(home.value.unreadMessages || 0)
   if (item.badge === 'votes') return pendingVotes.value
+  if (item.badge === 'orders') return pendingOrders.value
   return 0
 }
 
@@ -111,6 +129,7 @@ function applyHomeData(data: WithOfflineFlag<HomeVo>, offline: boolean) {
   const next = { ...(data || {}) }
   delete next.__offline
   home.value = next
+  homeBadges.messages = Number(next.unreadMessages || 0)
   offlineMode.value = offline
   if (!offline) uni.removeStorageSync('employeeAuthError')
 }

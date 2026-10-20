@@ -2,7 +2,7 @@
 
 export interface Message {
   id: number | string
-  /** 消息类型（附录 E：point_changed/order_status/appeal_result/task_review/application_review/vote_invitation） */
+  /** 消息类型（附录 E：point_changed/order_status/appeal_result/task_review/application_review/vote_invitation/rule_update） */
   type?: string
   title?: string
   /** 摘要（富化后文案） */
@@ -16,6 +16,8 @@ export interface Message {
   orderId?: number | string
   claimId?: number | string
   applicationId?: number | string
+  /** 深链规则 ID（payload 含 ruleId 时带出，rule_update 消息详情可去规则中心；其余 null） */
+  ruleId?: number | string
   createdAt?: string
   updatedAt?: string
 }

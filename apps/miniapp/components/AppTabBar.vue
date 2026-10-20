@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { homeBadges } from '../utils/badge-state'
 
 // 图标用统一线性图标组件（与全端同一套），选中 brand / 未选中 muted；
 // pages.json 里的原生 tabBar 仅作占位（运行时被 hideTabBar 隐藏），不受此处影响。
@@ -24,6 +25,9 @@ function onTap(tab) {
   if (tab.path === activePath.value) return
   uni.switchTab({ url: `/${tab.path}` })
 }
+
+// 「首页」标签红点：首页快捷入口任一角标（未读消息/待参与投票/审核中订单）>0 时点亮
+const homeDot = computed(() => homeBadges.messages > 0 || homeBadges.votes > 0 || homeBadges.orders > 0)
 </script>
 
 <template>
@@ -37,6 +41,7 @@ function onTap(tab) {
     >
       <view class="tab-icon-wrap">
         <AppIcon :name="tab.icon" :size="44" :color="tab.path === activePath ? 'brand' : 'muted'" />
+        <view v-if="tab.path === 'pages/home/index' && homeDot" class="tab-dot" />
       </view>
       <text class="tab-text">{{ tab.text }}</text>
     </view>
@@ -73,6 +78,7 @@ function onTap(tab) {
 }
 
 .tab-icon-wrap {
+  position: relative;
   width: 88rpx;
   height: 56rpx;
   border-radius: 999rpx;
@@ -80,6 +86,17 @@ function onTap(tab) {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+}
+
+/* 首页标签红点（尺寸对齐全局 .unread-dot） */
+.tab-dot {
+  position: absolute;
+  top: 0;
+  right: 16rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 999rpx;
+  background: var(--red);
 }
 
 .tab-item-active .tab-icon-wrap {

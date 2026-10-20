@@ -14,14 +14,15 @@ import type { Employee } from "../api/employee/types";
 import { formatTimeText } from "../utils/format";
 import { apiErrorMsg } from "../utils/error";
 
-/** 消息类型中文（与后端 schema chk_outbox_status 六类枚举一致） */
+/** 消息类型中文（与后端 schema chk_outbox_type 枚举一致） */
 const TYPE_TEXT: Record<string, string> = {
   point_changed: "积分变动",
   order_status: "订单状态",
   appeal_result: "申诉结果",
   task_review: "任务审核",
   application_review: "积分申请",
-  vote_invitation: "投票邀请"
+  vote_invitation: "投票邀请",
+  rule_update: "规则更新"
 };
 
 /** 状态中文与语义色（sent 绿 / failed 红 / pending 灰 / processing 橙） */

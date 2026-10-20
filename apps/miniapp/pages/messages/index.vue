@@ -34,7 +34,8 @@ const TYPE_META: Record<string, { label: string; icon: string; tile: string }> =
   task_review: { label: '任务审核', icon: 'clipboard', tile: 'amber' },
   application_review: { label: '积分申请', icon: 'file-text', tile: 'purple' },
   appeal_result: { label: '申诉结果', icon: 'shield', tile: 'green' },
-  vote_invitation: { label: '投票', icon: 'check-square', tile: 'purple' }
+  vote_invitation: { label: '投票', icon: 'check-square', tile: 'purple' },
+  rule_update: { label: '规则', icon: 'book-open', tile: 'gray' }
 }
 
 function typeMeta(item: Message) {
@@ -95,8 +96,8 @@ async function openMessage(item: Message) {
     uni.navigateTo({ url: item.voteId ? `/pages/vote/index?id=${encodeURIComponent(String(item.voteId))}` : '/pages/votes/index' })
     return
   }
-  // 深链业务 ID 透传（后端在消息行带出后，详情页可直达申诉表单——反馈清单 #3）
-  const deepLinkIds = (['applicationId', 'orderId', 'claimId', 'pointRecordId'] as const)
+  // 深链业务 ID 透传（后端在消息行带出后，详情页可直达申诉表单/规则中心——反馈清单 #3）
+  const deepLinkIds = (['applicationId', 'orderId', 'claimId', 'pointRecordId', 'ruleId'] as const)
     .filter((key) => item[key] != null && item[key] !== '')
     .map((key) => `${key}=${item[key]}`)
   const query = [

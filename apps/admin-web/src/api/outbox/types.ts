@@ -4,7 +4,7 @@
 export interface OutboxMessage {
   id: number
   employeeId: number
-  /** 消息类型：point_changed/order_status/appeal_result/task_review/application_review/vote_invitation */
+  /** 消息类型：point_changed/order_status/appeal_result/task_review/application_review/vote_invitation/rule_update */
   type: string
   /** 消息体 JSON 字符串（流水 ID、分值、备注等业务字段，按 type 而定） */
   payload: string

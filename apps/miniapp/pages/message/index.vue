@@ -15,7 +15,8 @@ const message = ref({
   applicationId: 0,
   orderId: 0,
   claimId: 0,
-  pointRecordId: 0
+  pointRecordId: 0,
+  ruleId: 0
 })
 
 onLoad((query) => {
@@ -27,12 +28,17 @@ onLoad((query) => {
     applicationId: Number(query?.applicationId) || 0,
     orderId: Number(query?.orderId) || 0,
     claimId: Number(query?.claimId) || 0,
-    pointRecordId: Number(query?.pointRecordId) || 0
+    pointRecordId: Number(query?.pointRecordId) || 0,
+    ruleId: Number(query?.ruleId) || 0
   }
 })
 
 function typeMeta() {
   const text = `${message.value.type || ''} ${message.value.title || ''} ${message.value.summary || ''}`
+  if (message.value.type === 'rule_update' || /规则/.test(text)) {
+    // pill 默认灰底灰字，规则通知用中性灰
+    return { label: '规则', cls: '' }
+  }
   if (/投票/.test(text)) {
     return { label: '投票', cls: 'purple' }
   }
@@ -117,6 +123,14 @@ function appealTip() {
 function openVotes() {
   uni.navigateTo({ url: '/pages/votes/index' })
 }
+
+function isRule() {
+  return message.value.type === 'rule_update'
+}
+
+function openRules() {
+  uni.navigateTo({ url: '/pages/rules/index' })
+}
 </script>
 
 <template>
@@ -146,6 +160,7 @@ function openVotes() {
     <text v-if="canAppeal()" class="muted tip">{{ appealTip() }}</text>
 
     <view v-if="isVote()" class="button ghost" @tap="openVotes">查看投票</view>
+    <view v-if="isRule()" class="button ghost" @tap="openRules">查看规则</view>
 
     <AppTabBar />
   </view>

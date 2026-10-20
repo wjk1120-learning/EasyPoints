@@ -93,6 +93,23 @@ describe("通知中心（契约 10.1~10.3 / 附录 E / PRD 4.8）", () => {
     expect(stub.navigations[0]).toContain("orderId=88"); // 深链业务 ID 透传（反馈清单 #3）
   });
 
+  it("规则更新消息：类型标签映射规则，点击透传 ruleId 深链", async () => {
+    vi.mocked(fetchMessages).mockResolvedValue({
+      data: [
+        { id: 9, type: "rule_update", title: "规则更新通知", summary: "规则：积分管理制度（第 3 版）已发布，请查看最新内容", isRead: false, voteId: null, ruleId: 5, createdAt: "2026-10-20 10:00:00" }
+      ],
+      meta: { total: 1, page: 1, pageSize: 20 }
+    } as never);
+    const wrapper = await mountMessages();
+
+    expect(wrapper.find(".msg-tag").text()).toBe("规则");
+    await wrapper.findAll(".msg")[0].trigger("tap");
+    await flushPromises();
+
+    expect(stub.navigations[0]).toContain("/pages/message/index?id=9");
+    expect(stub.navigations[0]).toContain("ruleId=5");
+  });
+
   it("上拉加载第二页：追加且到总数后 footer 显示已全部", async () => {
     const wrapper = await mountMessages();
     expect(wrapper.find(".list-footer").text()).toBe("上拉加载更多");
