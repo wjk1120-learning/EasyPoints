@@ -28,6 +28,9 @@ import { apiErrorMsg } from "../utils/error";
 
 const rows = ref<Vote[]>([]);
 const loading = ref(false);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
 const filter = reactive({ title: "", status: "" });
 const saveLock = createSubmitLock();
 const actionLock = createSubmitLock();
@@ -39,8 +42,9 @@ const statusTag = (vote: Vote) => statusMeta(VOTE_STATUS_MAP, deriveVoteStatus(v
 async function load() {
   loading.value = true;
   try {
-    const result = await votesPaged({ page: 1, pageSize: 200, title: filter.title, status: filter.status });
+    const result = await votesPaged({ page: page.value, pageSize: pageSize.value, title: filter.title, status: filter.status });
     rows.value = result.data;
+    total.value = result.meta.total;
   } catch (error) {
     ElMessage.error(apiErrorMsg(error, "加载投票列表失败"));
   } finally {
@@ -50,7 +54,10 @@ async function load() {
 
 watch(
   () => [filter.title, filter.status],
-  () => load()
+  () => {
+    page.value = 1;
+    load();
+  }
 );
 
 // ==============================
@@ -342,6 +349,17 @@ onMounted(async () => {
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-bar">
+        <el-pagination
+          background
+          layout="total, prev, pager, next, jumper"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="(p: number) => { page = p; load(); }"
+        />
+      </div>
     </div>
   </div>
 
@@ -528,6 +546,12 @@ onMounted(async () => {
 
 .panel-body {
   padding: 20px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .filter-bar {

@@ -279,7 +279,7 @@ async function loadMeta() {
           :total="total"
           :page-size="pageSize"
           :current-page="page"
-          @current-change="(p: number) => { page = p; }"
+          @current-change="(p: number) => { page = p; load(); }"
         />
       </div>
     </div>

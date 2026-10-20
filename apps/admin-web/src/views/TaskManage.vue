@@ -23,6 +23,9 @@ import { apiErrorMsg } from "../utils/error";
 const rows = ref<Task[]>([]);
 const loading = ref(false);
 const saving = ref(false);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
 const actLock = createSubmitLock();
 /** 正在操作的任务（行级防重复提交） */
 const actingId = ref<number | null>(null);
@@ -48,8 +51,9 @@ const recordTag = (value: string) => statusMeta(TASK_RECORD_STATUS_MAP, value).t
 async function load() {
   loading.value = true;
   try {
-    const result = await tasksPaged({ page: 1, pageSize: 200 });
+    const result = await tasksPaged({ page: page.value, pageSize: pageSize.value });
     rows.value = result.data;
+    total.value = result.meta.total;
   } catch (error) {
     ElMessage.error(apiErrorMsg(error, "加载任务失败"));
   } finally {
@@ -227,6 +231,17 @@ onMounted(load);
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-bar">
+        <el-pagination
+          background
+          layout="total, prev, pager, next, jumper"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="(p: number) => { page = p; load(); }"
+        />
+      </div>
     </div>
   </div>
 
@@ -340,6 +355,12 @@ onMounted(load);
 
 .panel-body {
   padding: 20px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .delta-add {

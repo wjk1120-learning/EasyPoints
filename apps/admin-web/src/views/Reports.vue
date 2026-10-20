@@ -125,7 +125,8 @@ async function exportVote() {
 
 onMounted(async () => {
   employees.value = await fetchEmployees().catch(() => []);
-  const votesResult = await votesPaged({ page: 1, pageSize: 200 }).catch(() => ({ data: [] as Vote[] }));
+  // 投票下拉是导出入口的选择器（非列表展示），不翻页；pageSize 调大降低截断风险
+  const votesResult = await votesPaged({ page: 1, pageSize: 1000 }).catch(() => ({ data: [] as Vote[] }));
   votes.value = votesResult.data;
 });
 </script>
