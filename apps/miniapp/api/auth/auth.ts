@@ -110,7 +110,7 @@ function clearOAuthCodeFromUrl(): void {
   try {
     const { origin, pathname, hash } = window.location
     window.history.replaceState(null, "", `${origin}${pathname}${hash}`)
-  } catch {}
+  } catch { }
   // #endif
 }
 
@@ -133,7 +133,7 @@ export async function ensureEmployeeLogin(): Promise<void> {
   }
   const { corpid, agentid } = wecomOAuthConfig()
   if (corpid && agentid && isWecomBrowser()) {
-    window.location.replace(buildOAuthUrl(corpid, agentid, `${window.location.origin}/`))
+    window.location.replace(buildOAuthUrl(corpid, agentid, `${window.location.origin}/h5/`))
     return
   }
   // #endif
