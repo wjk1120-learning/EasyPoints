@@ -4,7 +4,10 @@ import { ensureEmployeeLogin } from "./api/auth/auth";
 export default {
   onLaunch() {
     // 启动预登录：有 token 复用；企微内走 OAuth 网页授权免登（生产），浏览器联调走 dev 直登
-    ensureEmployeeLogin().catch(() => {});
+    // 失败不再静默吞掉：后端 msg 原文（如「员工不存在」）或网络错误文案直接提示
+    ensureEmployeeLogin().catch((error) => {
+      uni.showToast({ title: String(error?.message || "登录失败，请重试"), icon: "none", duration: 3000 });
+    });
   }
 };
 </script>

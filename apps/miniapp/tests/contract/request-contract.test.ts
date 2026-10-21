@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createUniStub } from "../helpers/uni-stub";
 import { LOGIN_REJECTED, LOGIN_SUCCESS, POINT_RECORDS, SUBMIT_EMPTY_CONTENT, TASKS_PAGED } from "../fixtures/auth";
-import { ensureEmployeeLogin, loginEmployee } from "../../api/auth/auth";
+import { __resetLoginFlowForTest, ensureEmployeeLogin, loginEmployee } from "../../api/auth/auth";
 import { request, requestPaged } from "../../utils/request";
 
 /** L2 契约：请求内核（BaseResult 解包 / PageResult 归一 / 401 重登重试 / msg 透传）。fixture=docs/Easy-Points-API.md v4.3 示例 */
@@ -175,6 +175,7 @@ describe("ensureEmployeeLogin：企微自建应用 H5 免登（第 4 步）", ()
     setTestUrl("https://app.example.com/");
   });
   afterEach(() => {
+    __resetLoginFlowForTest(); // 跳授权分支流程永不落定，模块级单飞锁需跨用例清理
     delete (globalThis as unknown as { uni?: unknown }).uni;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -201,12 +202,13 @@ describe("ensureEmployeeLogin：企微自建应用 H5 免登（第 4 步）", ()
     expect(stub.storage.get("employeeToken")).toBe("emp-token-1");
   });
 
-  it("企微内置浏览器 + 已配置 corpid/agentid：跳 OAuth 静默授权（不发登录请求）", async () => {
+  it("企微内置浏览器 + 已配置 corpid/agentid：跳 OAuth 静默授权（不发登录请求，流程挂起不落锁）", async () => {
     stubOAuthEnv("wwcorp123", "1000002");
     vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Linux; Android) wxwork/4.1" });
     const replaceSpy = vi.spyOn(window.location, "replace").mockImplementation(() => {});
 
-    await ensureEmployeeLogin();
+    void ensureEmployeeLogin(); // 跳转已发起后流程故意不落定（页面随导航卸载），不能 await
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     const url = String(replaceSpy.mock.calls[0][0]);
@@ -214,6 +216,39 @@ describe("ensureEmployeeLogin：企微自建应用 H5 免登（第 4 步）", ()
     expect(url).toContain("appid=wwcorp123");
     expect(url).toContain("agentid=1000002");
     expect(url).toContain("scope=snsapi_base");
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  it("并发单飞（回调页竞态回归）：code 换令牌进行中，后续调用等同一流程，不再跳授权也不重复登录", async () => {
+    stubOAuthEnv("wwcorp123", "1000002");
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Linux; Android) wxwork/4.1" });
+    // happy-dom 的 history.replaceState 是 no-op，这里映射到 setURL 让 clearOAuthCodeFromUrl 真正清掉 code（模拟真实浏览器）
+    vi.spyOn(window.history, "replaceState").mockImplementation(((url: string | URL) => {
+      setTestUrl(String(url));
+    }) as typeof window.history.replaceState);
+    setTestUrl("https://app.example.com/?code=h5-code-8&state=easypoints");
+    const replaceSpy = vi.spyOn(window.location, "replace").mockImplementation(() => {});
+    stub.responders.push({ statusCode: 200, data: LOGIN_SUCCESS });
+
+    // 模拟首进回调页：App 启动正用 code 换令牌，首批页面请求同时触发免登
+    await Promise.all([ensureEmployeeLogin(), ensureEmployeeLogin(), ensureEmployeeLogin()]);
+
+    expect(replaceSpy).not.toHaveBeenCalled();
+    const loginCalls = stub.calls.filter((c) => c.url.includes("/miniapp/auth/login"));
+    expect(loginCalls).toHaveLength(1);
+    expect(loginCalls[0].options.data).toEqual({ code: "h5-code-8" });
+    expect(stub.storage.get("employeeToken")).toBe("emp-token-1");
+  });
+
+  it("并发单飞（授权跳转模式）：导航窗口期内只发起一次跳授权", async () => {
+    stubOAuthEnv("wwcorp123", "1000002");
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Linux; Android) wxwork/4.1" });
+    const replaceSpy = vi.spyOn(window.location, "replace").mockImplementation(() => {});
+
+    void Promise.all([ensureEmployeeLogin(), ensureEmployeeLogin()]); // 两个流程都挂起，不能 await
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
     expect(stub.calls).toHaveLength(0);
   });
 

@@ -49,6 +49,21 @@ export function getApiBase(): string {
   // #endif
 }
 
+/**
+ * 静态资源（/uploads/** 等后端文件）拼前缀专用：必须产出带协议的完整 URL。
+ * 原因：uni H5 的 image 组件对 / 开头路径会经 getRealPath/addBase 自动拼上
+ * router base（如 /h5/），后端资源路径会被改写成不存在的 /h5/uploads/**；
+ * 而带协议的地址（https://...）在 uni 内部原样放行，不受影响。
+ */
+export function getAssetBase(): string {
+  const apiBase = getApiBase();
+  if (apiBase) return apiBase;
+  // #ifdef H5
+  if (typeof window !== "undefined") return window.location.origin;
+  // #endif
+  return "";
+}
+
 function cacheStorageKey(path: string): string {
   return `cache:${path}`;
 }

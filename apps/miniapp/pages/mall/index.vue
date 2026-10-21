@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getApiBase } from '../../utils/request'
+import { getAssetBase } from '../../utils/request'
 import { fetchGifts } from '../../api/mall/mall'
 import type { Gift } from '../../api/mall/types'
 import { createOrder } from '../../api/order/order'
@@ -16,7 +16,7 @@ const gifts = ref<Gift[]>([])
 const balance = ref(0)
 const dialog = ref<{ gift: Gift; enough: boolean; after: number } | null>(null)
 const filter = ref<'all' | 'redeemable'>('all')
-const apiBase = getApiBase()
+const apiBase = getAssetBase()
 
 const visibleGifts = computed(() => gifts.value.filter((gift) => gift.status !== 'inactive' && gift.status !== 'unpublished'))
 

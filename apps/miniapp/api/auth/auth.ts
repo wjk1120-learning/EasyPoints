@@ -10,6 +10,9 @@ export type { EmployeeLoginVo, LoginPayload } from "./types"
 
 let loginPromise: Promise<EmployeeLoginVo> | null = null
 
+/** 整段免登流程单飞锁：授权跳转/code 换令牌进行中时，后续调用等待同一流程，防止回调页首批请求重复触发授权跳转 */
+let loginFlowPromise: Promise<void> | null = null
+
 export function clearEmployeeAuth(reason?: string): void {
   uni.removeStorageSync("employeeToken")
   if (reason) uni.setStorageSync("employeeAuthError", String(reason))
@@ -115,15 +118,26 @@ function clearOAuthCodeFromUrl(): void {
 }
 
 /**
- * 登录编排（第 4 步：企微自建应用内 H5 免登）：
+ * 登录编排（第 4 步：企微自建应用内 H5 免登，整段单飞）：
  * 1. 有 token 直接复用；
  * 2. URL 带企微 OAuth 回调 code → 生产登录（契约 1.4，后端 code2user/getuserinfo）；
  * 3. 企微内置浏览器（wxwork UA）且配置了 VITE_WECOM_CORPID/VITE_WECOM_AGENTID → 跳 OAuth 静默授权；
  * 4. 其余（本地浏览器联调、未配置）→ dev 直登（默认 zhangsan，调试面板可覆盖）。
- * App 启动与 request 内核 401 重登统一走这里。
+ * App 启动与 request 内核 401 重登统一走这里。授权跳转/code 换令牌进行中时，并发调用
+ * 等待同一流程而不是再跳一次授权（修测试机首进反复跳 open.weixin.qq.com 的竞态）。
  */
 export async function ensureEmployeeLogin(): Promise<void> {
   if (uni.getStorageSync("employeeToken")) return
+  if (!loginFlowPromise) {
+    loginFlowPromise = runLoginFlow().finally(() => {
+      loginFlowPromise = null
+    })
+  }
+  return loginFlowPromise
+}
+
+/** 实际免登流程，仅由 ensureEmployeeLogin 启动（单飞）；失败时同一批等待方一起收到错误 */
+async function runLoginFlow(): Promise<void> {
   // #ifdef H5
   const oauthCode = readOAuthCodeFromUrl()
   if (oauthCode) {
@@ -133,9 +147,15 @@ export async function ensureEmployeeLogin(): Promise<void> {
   }
   const { corpid, agentid } = wecomOAuthConfig()
   if (corpid && agentid && isWecomBrowser()) {
+    // 跳转已发起=授权进行中：流程保持挂起不落锁，导航窗口期内的后续调用等同一流程，不再二次跳授权
     window.location.replace(buildOAuthUrl(corpid, agentid, `${window.location.origin}/h5/`))
-    return
+    return new Promise<void>(() => {})
   }
   // #endif
   await loginEmployee()
+}
+
+/** 仅供单测清理单飞锁（跳转分支流程永不落定，模块级锁会跨用例残留） */
+export function __resetLoginFlowForTest(): void {
+  loginFlowPromise = null
 }
