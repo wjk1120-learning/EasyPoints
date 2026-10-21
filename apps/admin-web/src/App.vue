@@ -12,7 +12,7 @@ import { appealsPaged } from "./api/appeal/appeal";
 import { outboxMeta } from "./api/outbox/outbox";
 import { apiErrorMsg } from "./utils/error";
 
-const form = reactive({ username: "admin", password: "admin123" });
+const form = reactive({ username: "", password: "" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
 const admin = ref<AdminInfo | null>(loadAdmin());
@@ -190,11 +190,10 @@ watch(
         <el-form-item label="密码">
           <el-input v-model="form.password" type="password" autocomplete="current-password" show-password />
         </el-form-item>
-        <el-button type="primary" :loading="loading" @click="submitLogin">登录</el-button>
+        <el-form-item>
+          <el-button type="primary" :loading="loading" style="margin-left: auto" @click="submitLogin">登录</el-button>
+        </el-form-item>
       </el-form>
-      <div style="margin-top: 10px; color: var(--el-text-color-secondary); font-size: 12px">
-        默认账号：admin / admin123
-      </div>
     </el-card>
   </div>
 
