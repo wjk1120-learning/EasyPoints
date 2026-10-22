@@ -75,7 +75,8 @@ async function loadDashboard() {
 async function loadDashboardLegacy() {
   try {
     const [employees, appeals, orders, gifts, applicationsResult, tasksResult, taskRecordsResult] = await Promise.all([
-      fetchEmployees(),
+      // 在岗口径与 11.3 聚合接口一致（仅 active）
+      fetchEmployees({ status: "active" }),
       fetchAppeals(),
       fetchOrders(),
       mallGifts(),
@@ -138,7 +139,7 @@ onMounted(() => {
     <!-- 数据概览 -->
     <div class="stats-grid">
       <div class="stat-tile stat-tile--primary">
-        <span class="stat-label">员工总人数</span>
+        <span class="stat-label">在岗员工</span>
         <strong class="stat-value">{{ employeesCount }}</strong>
       </div>
       <div class="stat-tile stat-tile--info">
