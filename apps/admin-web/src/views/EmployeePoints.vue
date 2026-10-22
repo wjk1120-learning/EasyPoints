@@ -86,7 +86,7 @@ const departmentOptions = computed(() => {
 function formatStatus(value: unknown) {
   const status = String(value || "");
   if (status === "active") return "在职";
-  if (status === "inactive") return "停用";
+  if (status === "inactive") return "离岗";
   return status || "";
 }
 
@@ -116,13 +116,13 @@ function resetFilters() {
   loadEmployees();
 }
 
-/** 企微通讯录一键同步（10.8）：后端拉取部门/成员落库（新员工入库、离职自动停用），完成后刷新列表 */
+/** 企微通讯录一键同步（10.8）：后端拉取部门/成员落库（新员工入库、离职自动置为离岗），完成后刷新列表 */
 async function handleSync() {
   if (!syncLock.acquire()) return;
   syncing.value = true;
   try {
     const result = await syncContacts();
-    ElMessage.success(`同步完成：新增 ${result.created} 人、更新 ${result.updated} 人、停用 ${result.disabled} 人（企微名单共 ${result.total} 人）`);
+    ElMessage.success(`同步完成：新增 ${result.created} 人、更新 ${result.updated} 人、离岗 ${result.disabled} 人（企微名单共 ${result.total} 人）`);
     await loadEmployees();
   } catch (error) {
     ElMessage.error(apiErrorMsg(error, "同步失败，请稍后重试"));
