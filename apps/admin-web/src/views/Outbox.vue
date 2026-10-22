@@ -11,7 +11,7 @@ import { outboxMeta, outboxPaged, retryOutboxFailed, retryOutboxOne } from "../a
 import type { OutboxMessage } from "../api/outbox/types";
 import { employees } from "../api/employee/employee";
 import type { Employee } from "../api/employee/types";
-import { formatTimeText } from "../utils/format";
+import { formatTimeText, cleanWecomFailReason } from "../utils/format";
 import { apiErrorMsg } from "../utils/error";
 
 /** 消息类型中文（与后端 schema chk_outbox_type 枚举一致） */
@@ -38,6 +38,13 @@ const STATUS_TAG: Record<string, "success" | "warning" | "info" | "danger"> = {
   pending: "info",
   failed: "danger"
 };
+
+/** 失败原因简略展示：仅企微接口错误（errcode= 开头）拼业务前缀并清洗噪音；其余形态原样展示 */
+function failReasonBrief(row: OutboxMessage): string {
+  const reason = String(row.failReason || "");
+  if (!reason.startsWith("errcode=")) return reason;
+  return `${TYPE_TEXT[row.type] ?? row.type}推送失败：${cleanWecomFailReason(reason)}`;
+}
 
 const rows = ref<OutboxMessage[]>([]);
 const loading = ref(false);
@@ -251,7 +258,8 @@ async function loadMeta() {
         <el-table-column prop="retryCount" label="重试" width="70" align="center" />
         <el-table-column label="失败原因" min-width="320" show-overflow-tooltip>
           <template #default="{ row }">
-            <span :class="{ 'fail-text': row.failReason }">{{ row.failReason || "—" }}</span>
+            <!-- 列表展示「类型推送失败：清洗后主句（提示）」简略版；hint/链接等原文走展开行「失败原因全文」 -->
+            <span :class="{ 'fail-text': row.failReason }">{{ row.failReason ? failReasonBrief(row) : "—" }}</span>
           </template>
         </el-table-column>
         <el-table-column label="入队时间" width="190">

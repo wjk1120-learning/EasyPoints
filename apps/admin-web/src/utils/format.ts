@@ -17,3 +17,13 @@ export function formatTimeText(value: string | number | null | undefined): strin
   const s = String(date.getSeconds()).padStart(2, "0");
   return `${y}-${m}-${d} ${h}:${min}:${s}`;
 }
+
+/** 企微失败原因展示清洗：切掉 hint 追踪串与 more info 链接，只留主句（与后端 WeComErrcodeHints 同规则；库内原文保留） */
+export function cleanWecomFailReason(reason: string | null | undefined): string {
+  let msg = String(reason || "");
+  const hintIdx = msg.indexOf(" hint: ");
+  if (hintIdx >= 0) msg = msg.slice(0, hintIdx);
+  const moreIdx = msg.indexOf(" more info at ");
+  if (moreIdx >= 0) msg = msg.slice(0, moreIdx);
+  return msg.endsWith(",") ? msg.slice(0, -1) : msg;
+}
