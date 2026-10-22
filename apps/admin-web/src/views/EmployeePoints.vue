@@ -19,6 +19,8 @@ const syncLock = createSubmitLock();
 const keyword = ref("");
 const selectedEmployeeId = ref<number | null>(null);
 const selectedDepartmentId = ref<number | string>("");
+// 状态筛选走后端（契约 11.1 status 参数）：默认只看在职，离岗/全部显式切换
+const selectedStatus = ref<"active" | "inactive" | "all">("active");
 const meta = reactive({ page: 1, pageSize: 10 });
 
 const adjustDialog = reactive({
@@ -72,6 +74,12 @@ watch([keyword, selectedDepartmentId], () => {
   meta.page = 1;
 });
 
+// 状态切换重新请求后端；重置回默认态也走这里触发，避免双请求
+watch(selectedStatus, () => {
+  meta.page = 1;
+  loadEmployees();
+});
+
 const departmentOptions = computed(() => {
   const seen = new Map<number, { departmentId: number; name: string }>();
   for (const emp of employees.value) {
@@ -113,7 +121,11 @@ function formatType(value: unknown) {
 function resetFilters() {
   keyword.value = "";
   selectedDepartmentId.value = "";
-  loadEmployees();
+  if (selectedStatus.value === "active") {
+    loadEmployees();
+  } else {
+    selectedStatus.value = "active"; // 由 selectedStatus 的 watch 统一触发加载
+  }
 }
 
 /** 企微通讯录一键同步（10.8）：后端拉取部门/成员落库（新员工入库、离职自动置为离岗），完成后刷新列表 */
@@ -135,7 +147,7 @@ async function handleSync() {
 async function loadEmployees() {
   loading.value = true;
   try {
-    employees.value = await fetchEmployees();
+    employees.value = await fetchEmployees(selectedStatus.value === "all" ? {} : { status: selectedStatus.value });
     if (employees.value.length && selectedEmployeeId.value == null) selectedEmployeeId.value = employees.value[0].id;
   } catch (error) {
     ElMessage.error(apiErrorMsg(error, "加载员工列表失败"));
@@ -240,6 +252,11 @@ onMounted(async () => {
         <el-select v-model="selectedDepartmentId" clearable placeholder="全部部门" class="filter-item">
           <el-option v-for="item in departmentOptions" :key="item.departmentId" :label="item.name" :value="item.departmentId" />
         </el-select>
+        <el-radio-group v-model="selectedStatus" class="filter-item">
+          <el-radio-button value="active">在职</el-radio-button>
+          <el-radio-button value="inactive">离岗</el-radio-button>
+          <el-radio-button value="all">全部</el-radio-button>
+        </el-radio-group>
         <el-button type="primary" plain :icon="Connection" :loading="syncing" @click="handleSync">同步企微通讯录</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="resetFilters">重置</el-button>
       </div>
@@ -279,7 +296,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="操作" width="350">
             <template #default="{ row }">
-              <el-button plain size="small" class="btn-action" @click="openAdjust(row)">加减积分</el-button>
+              <el-button plain size="small" class="btn-action" :disabled="row.status !== 'active'" @click="openAdjust(row)">加减积分</el-button>
               <el-button plain size="small" class="btn-action btn-action-secondary" @click="openDrawer(row)">查看流水</el-button>
             </template>
           </el-table-column>

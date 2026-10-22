@@ -84,13 +84,26 @@ describe("员工积分页", () => {
     expect(rowIds(wrapper)[0]).toBe("3"); // 王五累计 2980 最高
   });
 
-  it("停用员工展示状态徽标", async () => {
+  it("状态筛选：默认只拉在职（status=active），切全部可见离岗徽标", async () => {
+    // mock 按请求参数过滤（模拟后端 status 筛选）：带 status 只回对应状态，不传回全量
+    mockedEmployees.mockImplementation(async (params) => {
+      const list = fixtureList();
+      return params?.status ? list.filter((e) => e.status === params.status) : list;
+    });
     const wrapper = mountPage();
     await flushPromises();
 
+    expect(mockedEmployees).toHaveBeenCalledWith({ status: "active" }); // 默认只拉在职
     const text = wrapper.find(".el-table").text();
     expect(text).toContain("在职");
-    expect(text).toContain("停用");
+    expect(text).not.toContain("离岗"); // 默认视图无离岗员工
+
+    const allRadio = wrapper.findAll(".el-radio-button").find((b) => b.text() === "全部");
+    await allRadio!.find("input").setValue(true);
+    await flushPromises();
+
+    expect(mockedEmployees).toHaveBeenLastCalledWith({}); // 全部=不传 status
+    expect(wrapper.find(".el-table").text()).toContain("离岗"); // 切换后离岗徽标可见
   });
 
   it("加载失败：页面不崩，表格保持空态", async () => {
