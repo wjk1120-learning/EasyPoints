@@ -12,6 +12,7 @@ import { appealsPaged } from "./api/appeal/appeal";
 import { outboxMeta } from "./api/outbox/outbox";
 import { apiErrorMsg } from "./utils/error";
 
+
 const form = reactive({ username: "", password: "" });
 const loading = ref(false);
 const token = ref(localStorage.getItem("token") || "");
